@@ -144,8 +144,7 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadClo
 
 	session, err := s.client.NewSession()
 	if err != nil {
-		s.client.Close()
-		return nil, err
+		return nil, fmt.Errorf("cannot open session: %v", err)
 	}
 	defer session.Close()
 
