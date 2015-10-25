@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
@@ -137,5 +138,53 @@ func (s *GitUploadPackService) Disconnect() (err error) {
 }
 
 func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadCloser, error) {
-	return nil, nil
+	if !s.connected {
+		return nil, fmt.Errorf("not connected")
+	}
+
+	session, err := s.client.NewSession()
+	if err != nil {
+		s.client.Close()
+		return nil, err
+	}
+	defer session.Close()
+
+	si, err := session.StdinPipe()
+	if err != nil {
+		return nil, fmt.Errorf("cannot get ssh session stdin: %v", err)
+	}
+	go func() {
+		fmt.Fprintln(si, r.String())
+		si.Close()
+	}()
+
+	so, err := session.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+
+	err = session.Start("git-upload-pack " + s.vcs.FullName + ".git")
+	if err != nil {
+		return nil, err
+	}
+
+	session.Wait()
+
+	data, err := ioutil.ReadAll(so)
+	if err != nil {
+		return nil, err
+	}
+	// remove first answer
+	var i int
+	token := "\n0000"
+	for i = 0; i < len(data)-len(token); i++ {
+		if token == string(data[i:i+len(token)]) {
+			break
+		}
+	}
+	data = data[i+len(token):]
+	data = data[len("0008NAK\n"):]
+
+	buf := bytes.NewBuffer(data)
+	return ioutil.NopCloser(buf), nil
 }
