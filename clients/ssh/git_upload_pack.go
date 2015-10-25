@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -137,6 +138,8 @@ func (s *GitUploadPackService) Disconnect() (err error) {
 	return nil
 }
 
+// TODO: fetch should really reuse the info session instead of openning a new
+// one
 func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadCloser, error) {
 	if !s.connected {
 		return nil, fmt.Errorf("not connected")
@@ -153,15 +156,15 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadClo
 		return nil, fmt.Errorf("cannot get ssh session stdin: %v", err)
 	}
 
-	go func() {
-		fmt.Fprintln(si, r.String())
-		si.Close()
-	}()
-
 	so, err := session.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("cannot get ssh session stdout: %v", err)
 	}
+
+	go func() {
+		fmt.Fprintln(si, r.String())
+		si.Close()
+	}()
 
 	err = session.Start("git-upload-pack " + s.vcs.FullName + ".git")
 	if err != nil {
@@ -169,21 +172,23 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadClo
 	}
 	session.Wait()
 
-	data, err := ioutil.ReadAll(so)
-	if err != nil {
-		return nil, err
-	}
-	// remove first answer
-	var i int
-	token := "\n0000"
-	for i = 0; i < len(data)-len(token); i++ {
-		if token == string(data[i:i+len(token)]) {
+	// read until the header of the second answer
+	soBuf := bufio.NewReader(so)
+	token := "0000"
+	for {
+		line, err := soBuf.ReadString('\n')
+		if err == io.EOF {
+			return nil, fmt.Errorf("Bad answer format to git-upload-pack")
+		}
+		if line[0:len(token)] == token {
 			break
 		}
 	}
-	data = data[i+len(token):]
-	data = data[len("0008NAK\n"):]
 
+	data, err := ioutil.ReadAll(soBuf)
+	if err != nil {
+		return nil, err
+	}
 	buf := bytes.NewBuffer(data)
 	return ioutil.NopCloser(buf), nil
 }
