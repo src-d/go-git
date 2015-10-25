@@ -18,10 +18,9 @@ import (
 )
 
 type GitUploadPackService struct {
-	vcs     *vcsurl.RepoInfo
-	client  *ssh.Client
-	session *ssh.Session
-	user    string
+	connected bool
+	vcs       *vcsurl.RepoInfo
+	client    *ssh.Client
 }
 
 func NewGitUploadPackService() *GitUploadPackService {
@@ -29,9 +28,13 @@ func NewGitUploadPackService() *GitUploadPackService {
 }
 
 func (s *GitUploadPackService) Connect(ep common.Endpoint) (err error) {
+	if s.connected {
+		return fmt.Errorf("already connected")
+	}
+
 	s.vcs, err = vcsurl.Parse(string(ep))
 	if err != nil {
-		return
+		return fmt.Errorf("cannot parse vcs endpoint: %v", err)
 	}
 
 	url, err := vcsToUrl(s.vcs)
@@ -39,29 +42,30 @@ func (s *GitUploadPackService) Connect(ep common.Endpoint) (err error) {
 		return
 	}
 
-	s.client, s.session, err = connect(url.Host, url.User.Username())
+	s.client, err = connect(url.Host, url.User.Username())
 	if err != nil {
-		return
+		return fmt.Errorf("cannot connect: %v")
 	}
-
+	s.connected = true
 	return
 }
 
 func vcsToUrl(vcs *vcsurl.RepoInfo) (u *url.URL, err error) {
 	if vcs.VCS != vcsurl.Git {
-		return nil, fmt.Errorf("only git repos are supported, found %s\n", vcs.VCS)
+		return nil, fmt.Errorf("only git repos are supported, found %s", vcs.VCS)
 	}
 	if vcs.RepoHost != vcsurl.GitHub {
-		return nil, fmt.Errorf("only github.com host is supported, found %s\n", vcs.RepoHost)
+		return nil, fmt.Errorf("only github.com host is supported, found %s", vcs.RepoHost)
 	}
 	s := "ssh://git@" + string(vcs.RepoHost) + ":22/" + vcs.FullName
 	u, err = url.Parse(s)
 	return
 }
 
-func connect(host, user string) (*ssh.Client, *ssh.Session, error) {
+func connect(host, user string) (*ssh.Client, error) {
 
 	// try ssh-agent first
+	// then password auth
 	conn, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
 	if err != nil {
 		return connectWithPasswd(host, user)
@@ -76,21 +80,15 @@ func connect(host, user string) (*ssh.Client, *ssh.Session, error) {
 
 	client, err := ssh.Dial("tcp", host, sshConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to dial:", err)
+		return nil, fmt.Errorf("failed to dial: %v", err)
 	}
 
-	session, err := client.NewSession()
-	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to create session:", err)
-	}
-
-	return client, session, nil
+	return client, nil
 }
 
-func connectWithPasswd(host, user string) (*ssh.Client, *ssh.Session, error) {
-	var pass string
-	fmt.Print("Password: ")
-	fmt.Scanf("%s\n", &pass)
+// TODO: this must be done securely
+func connectWithPasswd(host, user string) (*ssh.Client, error) {
+	var pass string = "your password"
 
 	sshConfig := &ssh.ClientConfig{
 		User: user,
@@ -99,37 +97,41 @@ func connectWithPasswd(host, user string) (*ssh.Client, *ssh.Session, error) {
 
 	client, err := ssh.Dial("tcp", host, sshConfig)
 	if err != nil {
-		return nil, nil, err
+		return nil, fmt.Errorf("failed to dia: %v", err)
 	}
 
-	session, err := client.NewSession()
-	if err != nil {
-		client.Close()
-		return nil, nil, err
-	}
-
-	return client, session, nil
+	return client, nil
 }
 
-func (s *GitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
-	out, err := s.session.CombinedOutput("git-upload-pack " + s.vcs.FullName + ".git")
-	if err != nil {
-		return nil, err
+func (s *GitUploadPackService) Info() (i *common.GitUploadPackInfo, err error) {
+	if !s.connected {
+		return nil, fmt.Errorf("not connected")
 	}
-	buf := bytes.NewBuffer(out)
-	dec := pktline.NewDecoder(buf)
+
+	session, err := s.client.NewSession()
+	if err != nil {
+		return nil, fmt.Errorf("cannot open session: %v", err)
+	}
+	defer session.Close()
+
+	out, err := session.Output("git-upload-pack " + s.vcs.FullName + ".git")
+	if err != nil {
+		return nil, fmt.Errorf("ssh.session.Output: %v", err)
+	}
+
+	reader := bytes.NewReader(out)
+	dec := pktline.NewDecoder(reader)
 	return common.NewGitUploadPackInfo(dec)
 }
 
 func (s *GitUploadPackService) Disconnect() (err error) {
-	if s.client == nil {
-		return fmt.Errorf("cannot close a non-connected ssh upload pack service")
+	if !s.connected {
+		return fmt.Errorf("not connected")
 	}
 	if err = s.client.Close(); err != nil {
 		return err
 	}
 	s.client = nil
-	s.session = nil
 	s.vcs = nil
 	return nil
 }
