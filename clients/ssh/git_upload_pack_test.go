@@ -12,14 +12,14 @@ const fixtureRepo = "git@github.com:tyba/git-fixture.git"
 
 func TestConnect(t *testing.T) {
 	s := NewGitUploadPackService()
-	if err := s.Connect(fixtureRepo); err == nil {
+	if err := s.Connect(fixtureRepo); err != nil {
 		t.Error("cannot connect:", err)
 	}
 }
 
 func TestInfo(t *testing.T) {
 	s := NewGitUploadPackService()
-	if err := s.Connect(fixtureRepo); err == nil {
+	if err := s.Connect(fixtureRepo); err != nil {
 		t.Fatal("cannot connect:", err)
 	}
 
@@ -33,7 +33,7 @@ func TestInfo(t *testing.T) {
 
 func TestDefaultBranch(t *testing.T) {
 	s := NewGitUploadPackService()
-	if err := s.Connect(fixtureRepo); err == nil {
+	if err := s.Connect(fixtureRepo); err != nil {
 		t.Fatal("cannot connect:", err)
 	}
 
@@ -53,7 +53,7 @@ func TestDefaultBranch(t *testing.T) {
 
 func TestCapabilities(t *testing.T) {
 	s := NewGitUploadPackService()
-	if err := s.Connect(fixtureRepo); err == nil {
+	if err := s.Connect(fixtureRepo); err != nil {
 		t.Fatal("cannot connect:", err)
 	}
 
