@@ -15,6 +15,7 @@ func TestConnect(t *testing.T) {
 	if err := s.Connect(fixtureRepo); err != nil {
 		t.Error("cannot connect:", err)
 	}
+	defer s.Disconnect()
 }
 
 func TestInfo(t *testing.T) {
@@ -22,6 +23,7 @@ func TestInfo(t *testing.T) {
 	if err := s.Connect(fixtureRepo); err != nil {
 		t.Fatal("cannot connect:", err)
 	}
+	defer s.Disconnect()
 
 	i, err := s.Info()
 	if err != nil {
@@ -36,6 +38,7 @@ func TestDefaultBranch(t *testing.T) {
 	if err := s.Connect(fixtureRepo); err != nil {
 		t.Fatal("cannot connect:", err)
 	}
+	defer s.Disconnect()
 
 	i, err := s.Info()
 	if err != nil {
@@ -56,6 +59,7 @@ func TestCapabilities(t *testing.T) {
 	if err := s.Connect(fixtureRepo); err != nil {
 		t.Fatal("cannot connect:", err)
 	}
+	defer s.Disconnect()
 
 	i, err := s.Info()
 	if err != nil {
@@ -76,6 +80,7 @@ func TestFetch(t *testing.T) {
 	if err := s.Connect(fixtureRepo); err == nil {
 		t.Fatal("cannot connect:", err)
 	}
+	defer s.Disconnect()
 
 	r, err := s.Fetch(&common.GitUploadPackRequest{
 		Want: []string{"6ecf0ef2c2dffb796033e5a02219af86ec6584e5"},

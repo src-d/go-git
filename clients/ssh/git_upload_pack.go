@@ -116,10 +116,22 @@ func (s *GitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.client.Close()
 	buf := bytes.NewBuffer(out)
 	dec := pktline.NewDecoder(buf)
 	return common.NewGitUploadPackInfo(dec)
+}
+
+func (s *GitUploadPackService) Disconnect() (err error) {
+	if s.client == nil {
+		return fmt.Errorf("cannot close a non-connected ssh upload pack service")
+	}
+	if err = s.client.Close(); err != nil {
+		return err
+	}
+	s.client = nil
+	s.session = nil
+	s.vcs = nil
+	return nil
 }
 
 func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadCloser, error) {
