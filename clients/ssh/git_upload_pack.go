@@ -14,7 +14,7 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 
 	"gopkg.in/src-d/go-git.v2/clients/common"
-	"gopkg.in/src-d/go-git.v2/pktline"
+	"gopkg.in/src-d/go-git.v2/formats/pktline"
 )
 
 type GitUploadPackService struct {
