@@ -152,6 +152,7 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadClo
 	if err != nil {
 		return nil, fmt.Errorf("cannot get ssh session stdin: %v", err)
 	}
+
 	go func() {
 		fmt.Fprintln(si, r.String())
 		si.Close()
@@ -159,7 +160,7 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadClo
 
 	so, err := session.StdoutPipe()
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("cannot get ssh session stdout: %v", err)
 	}
 
 	err = session.Start("git-upload-pack " + s.vcs.FullName + ".git")
