@@ -165,9 +165,8 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadClo
 
 	err = session.Start("git-upload-pack " + s.vcs.FullName + ".git")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ssh.session.Start: %v", err)
 	}
-
 	session.Wait()
 
 	data, err := ioutil.ReadAll(so)
