@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"gopkg.in/src-d/go-git.v2/clients/common"
+	"gopkg.in/src-d/go-git.v2/core"
 	"gopkg.in/src-d/go-git.v2/formats/pktline"
 )
 
@@ -14,6 +15,7 @@ type GitUploadPackService struct {
 	Client *http.Client
 
 	endpoint common.Endpoint
+	auth     HTTPAuthMethod
 }
 
 func NewGitUploadPackService() *GitUploadPackService {
@@ -28,6 +30,18 @@ func (s *GitUploadPackService) Connect(url common.Endpoint) error {
 	return nil
 }
 
+func (s *GitUploadPackService) ConnectWithAuth(url common.Endpoint, auth common.AuthMethod) error {
+	httpAuth, ok := auth.(HTTPAuthMethod)
+	if !ok {
+		return InvalidAuthMethodErr
+	}
+
+	s.endpoint = url
+	s.auth = httpAuth
+
+	return nil
+}
+
 func (s *GitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
 	url := fmt.Sprintf("%s/info/refs?service=%s", s.endpoint, common.GitUploadPackServiceName)
 	res, err := s.doRequest("GET", url, nil)
@@ -37,8 +51,8 @@ func (s *GitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
 
 	defer res.Body.Close()
 
-	dec := pktline.NewDecoder(res.Body)
-	return common.NewGitUploadPackInfo(dec)
+	i := common.NewGitUploadPackInfo()
+	return i, i.Decode(pktline.NewDecoder(res.Body))
 }
 
 func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadCloser, error) {
@@ -50,7 +64,7 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadClo
 
 	h := make([]byte, 8)
 	if _, err := res.Body.Read(h); err != nil {
-		return nil, err
+		return nil, core.NewUnexpectedError(err)
 	}
 
 	return res.Body, nil
@@ -64,14 +78,15 @@ func (s *GitUploadPackService) doRequest(method, url string, content *strings.Re
 
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		return nil, err
+		return nil, core.NewPermanentError(err)
 	}
 
 	s.applyHeadersToRequest(req, content)
+	s.applyAuthToRequest(req)
 
 	res, err := s.Client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, core.NewUnexpectedError(err)
 	}
 
 	if err := NewHTTPError(res); err != nil {
@@ -92,4 +107,12 @@ func (s *GitUploadPackService) applyHeadersToRequest(req *http.Request, content 
 		req.Header.Add("Content-Type", "application/x-git-upload-pack-request")
 		req.Header.Add("Content-Length", string(content.Len()))
 	}
+}
+
+func (s *GitUploadPackService) applyAuthToRequest(req *http.Request) {
+	if s.auth == nil {
+		return
+	}
+
+	s.auth.setAuth(req)
 }

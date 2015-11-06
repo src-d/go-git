@@ -5,6 +5,7 @@ import (
 
 	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v2/clients/common"
+	"gopkg.in/src-d/go-git.v2/core"
 )
 
 type SuiteRemote struct{}
@@ -16,6 +17,23 @@ const RepositoryFixture = "https://github.com/tyba/git-fixture"
 func (s *SuiteRemote) TestConnect(c *C) {
 	r := NewGitUploadPackService()
 	c.Assert(r.Connect(RepositoryFixture), IsNil)
+}
+
+func (s *SuiteRemote) TestConnectWithAuth(c *C) {
+	auth := &BasicAuth{}
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(RepositoryFixture, auth), IsNil)
+	c.Assert(r.auth, Equals, auth)
+}
+
+type mockAuth struct{}
+
+func (*mockAuth) Name() string   { return "" }
+func (*mockAuth) String() string { return "" }
+
+func (s *SuiteRemote) TestConnectWithAuthWrongType(c *C) {
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(RepositoryFixture, &mockAuth{}), Equals, InvalidAuthMethodErr)
 }
 
 func (s *SuiteRemote) TestDefaultBranch(c *C) {
@@ -33,7 +51,7 @@ func (s *SuiteRemote) TestCapabilities(c *C) {
 
 	info, err := r.Info()
 	c.Assert(err, IsNil)
-	c.Assert(info.Capabilities.Get("agent"), HasLen, 1)
+	c.Assert(info.Capabilities.Get("agent").Values, HasLen, 1)
 }
 
 func (s *SuiteRemote) TestFetch(c *C) {
@@ -41,7 +59,9 @@ func (s *SuiteRemote) TestFetch(c *C) {
 	c.Assert(r.Connect(RepositoryFixture), IsNil)
 
 	reader, err := r.Fetch(&common.GitUploadPackRequest{
-		Want: []string{"6ecf0ef2c2dffb796033e5a02219af86ec6584e5"},
+		Want: []core.Hash{
+			core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"),
+		},
 	})
 
 	c.Assert(err, IsNil)

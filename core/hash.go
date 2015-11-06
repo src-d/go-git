@@ -1,4 +1,4 @@
-package common
+package core
 
 import (
 	"crypto/sha1"
@@ -28,6 +28,11 @@ func NewHash(s string) Hash {
 	copy(h[:], b)
 
 	return h
+}
+
+func (h Hash) IsZero() bool {
+	var empty Hash
+	return h == empty
 }
 
 func (h Hash) String() string {

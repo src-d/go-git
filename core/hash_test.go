@@ -1,4 +1,4 @@
-package common
+package core
 
 import (
 	"testing"
@@ -24,4 +24,12 @@ func (s *HashSuite) TestNewHash(c *C) {
 	hash := ComputeHash(BlobObject, []byte("Hello, World!\n"))
 
 	c.Assert(hash, Equals, NewHash(hash.String()))
+}
+
+func (s *HashSuite) TestIsZero(c *C) {
+	hash := NewHash("foo")
+	c.Assert(hash.IsZero(), Equals, true)
+
+	hash = NewHash("8ab686eafeb1f44702738c8b0f24f2567c36da6d")
+	c.Assert(hash.IsZero(), Equals, false)
 }
