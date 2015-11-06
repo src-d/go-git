@@ -3,6 +3,7 @@ package ssh
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,10 +19,38 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
+var InvalidAuthMethodErr = errors.New("invalid ssh auth method: a ssh.SSHAuthMethod should be provided.")
+
+type SSHAuthMethod interface {
+	common.AuthMethod
+}
+
+type SSHAgent struct {
+	env string
+}
+
+// Env is the ssh agent Unix socket env var.
+// an empty env wil set the default "SSH_AUTH_SOCK"
+func NewSSHAgent(env string) *SSHAgent {
+	if env == "" {
+		return &SSHAgent{"SSH_AUTH_SOCK"}
+	}
+	return &SSHAgent{env}
+}
+
+func (a *SSHAgent) Name() string {
+	return "ssh agent"
+}
+
+func (a *SSHAgent) String() string {
+	return a.Name()
+}
+
 type GitUploadPackService struct {
 	connected bool
 	vcs       *vcsurl.RepoInfo
 	client    *ssh.Client
+	auth      SSHAuthMethod
 }
 
 func NewGitUploadPackService() *GitUploadPackService {
@@ -29,6 +58,16 @@ func NewGitUploadPackService() *GitUploadPackService {
 }
 
 func (s *GitUploadPackService) Connect(ep common.Endpoint) (err error) {
+	return errors.New("cannot connect: Auth required")
+}
+
+func (s *GitUploadPackService) ConnectWithAuth(ep common.Endpoint, auth common.AuthMethod) (err error) {
+	sshAuth, ok := auth.(SSHAuthMethod)
+	if !ok {
+		return InvalidAuthMethodErr
+	}
+	s.auth = sshAuth
+
 	if s.connected {
 		return fmt.Errorf("already connected")
 	}
@@ -43,9 +82,9 @@ func (s *GitUploadPackService) Connect(ep common.Endpoint) (err error) {
 		return
 	}
 
-	s.client, err = connect(url.Host, url.User.Username())
+	s.client, err = connect(url.Host, url.User.Username(), sshAuth)
 	if err != nil {
-		return fmt.Errorf("cannot connect: %v")
+		return err
 	}
 	s.connected = true
 	return
@@ -63,10 +102,15 @@ func vcsToUrl(vcs *vcsurl.RepoInfo) (u *url.URL, err error) {
 	return
 }
 
-func connect(host, user string) (*ssh.Client, error) {
+func connect(host, user string, auth SSHAuthMethod) (*ssh.Client, error) {
+
+	agentAuth, ok := auth.(*SSHAgent)
+	if !ok {
+		return nil, InvalidAuthMethodErr
+	}
 
 	// connect with ssh agent
-	conn, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
+	conn, err := net.Dial("unix", os.Getenv(agentAuth.env))
 	if err != nil {
 		return nil, err
 	}

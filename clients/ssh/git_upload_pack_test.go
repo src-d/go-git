@@ -1,114 +1,78 @@
-package ssh_test
+package ssh
 
 import (
 	"io/ioutil"
 	"testing"
 
-	. "github.com/alcortesm/go-git/clients/ssh"
+	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v2/clients/common"
 	"gopkg.in/src-d/go-git.v2/core"
 )
 
+func Test(t *testing.T) { TestingT(t) }
+
+type SuiteRemote struct{}
+
+var _ = Suite(&SuiteRemote{})
+
 const fixtureRepo = "git@github.com:tyba/git-fixture.git"
 
-func TestConnect(t *testing.T) {
-	s := NewGitUploadPackService()
-	if err := s.Connect(fixtureRepo); err != nil {
-		t.Error("cannot connect:", err)
-	}
-	defer s.Disconnect()
+func (s *SuiteRemote) TestConnect(c *C) {
+	r := NewGitUploadPackService()
+	c.Assert(r.Connect(fixtureRepo), ErrorMatches, "cannot connect: Auth required")
 }
 
-func TestInfo(t *testing.T) {
-	s := NewGitUploadPackService()
-	if err := s.Connect(fixtureRepo); err != nil {
-		t.Fatal("cannot connect:", err)
-	}
-	defer s.Disconnect()
-
-	i, err := s.Info()
-	if err != nil {
-		t.Error(err)
-	} else if i == nil {
-		t.Error("nil info")
-	}
+func (s *SuiteRemote) TestConnectWithAuth(c *C) {
+	auth := NewSSHAgent("")
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixtureRepo, auth), IsNil)
+	c.Assert(r.auth, Equals, auth)
 }
 
-func TestDefaultBranch(t *testing.T) {
-	s := NewGitUploadPackService()
-	if err := s.Connect(fixtureRepo); err != nil {
-		t.Fatal("cannot connect:", err)
-	}
-	defer s.Disconnect()
+type mockAuth struct{}
 
-	i, err := s.Info()
-	if err != nil {
-		t.Fatal("cannot get info:", err)
-	} else if i == nil {
-		t.Fatal("nil info")
-	}
+func (*mockAuth) Name() string   { return "" }
+func (*mockAuth) String() string { return "" }
 
-	expHead := "refs/heads/master"
-	head := i.Capabilities.SymbolicReference("HEAD")
-	if head != expHead {
-		t.Errorf("wrong head\n\texpected head = %s\n\treceived head = %s\n", expHead, head)
-	}
+func (s *SuiteRemote) TestConnectWithAuthWrongType(c *C) {
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixtureRepo, &mockAuth{}), Equals, InvalidAuthMethodErr)
 }
 
-func TestCapabilities(t *testing.T) {
-	s := NewGitUploadPackService()
-	if err := s.Connect(fixtureRepo); err != nil {
-		t.Fatal("cannot connect:", err)
-	}
-	defer s.Disconnect()
+func (s *SuiteRemote) TestDefaultBranch(c *C) {
+	r := NewGitUploadPackService()
+	auth := NewSSHAgent("")
+	c.Assert(r.ConnectWithAuth(fixtureRepo, auth), IsNil)
 
-	i, err := s.Info()
-	if err != nil {
-		t.Fatal("cannot get info:", err)
-	} else if i == nil {
-		t.Fatal("nil info")
-	}
-
-	expLen := 1
-	length := len(i.Capabilities.Get("agent").Values)
-	if expLen != length {
-		t.Errorf("wrong length:\n\texpected = %d\n\tfound = %d\n", expLen, length)
-	}
+	info, err := r.Info()
+	c.Assert(err, IsNil)
+	c.Assert(info.Capabilities.SymbolicReference("HEAD"), Equals, "refs/heads/master")
 }
 
-func TestFetch(t *testing.T) {
-	s := NewGitUploadPackService()
-	if err := s.Connect(fixtureRepo); err != nil {
-		t.Fatal("cannot connect:", err)
-	}
-	defer s.Disconnect()
+func (s *SuiteRemote) TestCapabilities(c *C) {
+	r := NewGitUploadPackService()
+	auth := NewSSHAgent("")
+	c.Assert(r.ConnectWithAuth(fixtureRepo, auth), IsNil)
 
-	i, err := s.Info()
-	if err != nil {
-		t.Fatal("cannot get info:", err)
-	} else if i == nil {
-		t.Fatal("nil info")
-	}
+	info, err := r.Info()
+	c.Assert(err, IsNil)
+	c.Assert(info.Capabilities.Get("agent").Values, HasLen, 1)
+}
 
-	r, err := s.Fetch(&common.GitUploadPackRequest{
+func (s *SuiteRemote) TestFetch(c *C) {
+	r := NewGitUploadPackService()
+	auth := NewSSHAgent("")
+	c.Assert(r.ConnectWithAuth(fixtureRepo, auth), IsNil)
+
+	reader, err := r.Fetch(&common.GitUploadPackRequest{
 		Want: []core.Hash{
 			core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"),
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if r == nil {
-		t.Fatal("nil fetch")
-	}
 
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		t.Fatal("cannot ReadAll from fetch")
-	}
-	expLen := 85374
-	length := len(b)
-	if expLen != length {
-		t.Errorf("wrong length:\n\texpected = %d\n\tfound = %d\n", expLen, length)
-	}
+	c.Assert(err, IsNil)
+
+	b, err := ioutil.ReadAll(reader)
+	c.Assert(err, IsNil)
+	c.Assert(b, HasLen, 85374)
 }
