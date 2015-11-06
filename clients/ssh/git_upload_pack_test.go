@@ -20,7 +20,7 @@ const fixtureRepo = "git@github.com:tyba/git-fixture.git"
 
 func (s *SuiteRemote) TestConnect(c *C) {
 	r := NewGitUploadPackService()
-	c.Assert(r.Connect(fixtureRepo), Equals, AuthRequiredErr)
+	c.Assert(r.Connect(fixtureRepo), Equals, ErrAuthRequired)
 }
 
 func (s *SuiteRemote) TestConnectWithDefaultSSHAgent(c *C) {
@@ -44,18 +44,18 @@ func (*mockAuth) String() string { return "" }
 
 func (s *SuiteRemote) TestConnectWithHTTPAuth(c *C) {
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, http.NewBasicAuth("foo", "bla")), Equals, InvalidAuthMethodErr)
+	c.Assert(r.ConnectWithAuth(fixtureRepo, http.NewBasicAuth("foo", "bla")), Equals, ErrInvalidAuthMethod)
 }
 
 func (s *SuiteRemote) TestConnectWithAuthWrongType(c *C) {
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, &mockAuth{}), Equals, InvalidAuthMethodErr)
+	c.Assert(r.ConnectWithAuth(fixtureRepo, &mockAuth{}), Equals, ErrInvalidAuthMethod)
 }
 
 func (s *SuiteRemote) TestAlreadyConnected(c *C) {
 	r := NewGitUploadPackService()
 	c.Assert(r.ConnectWithAuth(fixtureRepo, NewSSHAgent("")), IsNil)
-	c.Assert(r.ConnectWithAuth(fixtureRepo, NewSSHAgent("")), Equals, AlreadyConnectedErr)
+	c.Assert(r.ConnectWithAuth(fixtureRepo, NewSSHAgent("")), Equals, ErrAlreadyConnected)
 }
 
 func (s *SuiteRemote) TestDisconnect(c *C) {
@@ -68,7 +68,7 @@ func (s *SuiteRemote) TestAlreadyDisconnected(c *C) {
 	r := NewGitUploadPackService()
 	c.Assert(r.ConnectWithAuth(fixtureRepo, NewSSHAgent("")), IsNil)
 	c.Assert(r.Disconnect(), IsNil)
-	c.Assert(r.Disconnect(), Equals, NotConnectedErr)
+	c.Assert(r.Disconnect(), Equals, ErrNotConnected)
 }
 
 func (s *SuiteRemote) TestDefaultBranch(c *C) {

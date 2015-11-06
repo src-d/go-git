@@ -20,13 +20,13 @@ import (
 )
 
 var (
-	InvalidAuthMethodErr      = errors.New("invalid ssh auth method: a ssh.SSHAuthMethod should be provided.")
-	AuthRequiredErr           = errors.New("cannot connect: auth required.")
-	NotConnectedErr           = errors.New("not connected")
-	AlreadyConnectedErr       = errors.New("already connected")
-	UploadPackAnswerFormatErr = errors.New("git-upload-pack bad answer format")
-	UnsupportedVCSErr         = errors.New("only git is supported")
-	UnsupportedRepoErr        = errors.New("only github.com is supported")
+	ErrInvalidAuthMethod      = errors.New("invalid ssh auth method: a ssh.SSHAuthMethod should be provided.")
+	ErrAuthRequired           = errors.New("cannot connect: auth required.")
+	ErrNotConnected           = errors.New("not connected")
+	ErrAlreadyConnected       = errors.New("already connected")
+	ErrUploadPackAnswerFormat = errors.New("git-upload-pack bad answer format")
+	ErrUnsupportedVCS         = errors.New("only git is supported")
+	ErrUnsupportedRepo        = errors.New("only github.com is supported")
 )
 
 type SSHAuthMethod interface {
@@ -66,17 +66,17 @@ func NewGitUploadPackService() *GitUploadPackService {
 }
 
 func (s *GitUploadPackService) Connect(ep common.Endpoint) (err error) {
-	return AuthRequiredErr
+	return ErrAuthRequired
 }
 
 func (s *GitUploadPackService) ConnectWithAuth(ep common.Endpoint, auth common.AuthMethod) (err error) {
 	if s.connected {
-		return AlreadyConnectedErr
+		return ErrAlreadyConnected
 	}
 
 	sshAuth, ok := auth.(SSHAuthMethod)
 	if !ok {
-		return InvalidAuthMethodErr
+		return ErrInvalidAuthMethod
 	}
 	s.auth = sshAuth
 
@@ -100,10 +100,10 @@ func (s *GitUploadPackService) ConnectWithAuth(ep common.Endpoint, auth common.A
 
 func vcsToUrl(vcs *vcsurl.RepoInfo) (u *url.URL, err error) {
 	if vcs.VCS != vcsurl.Git {
-		return nil, UnsupportedVCSErr
+		return nil, ErrUnsupportedVCS
 	}
 	if vcs.RepoHost != vcsurl.GitHub {
-		return nil, UnsupportedRepoErr
+		return nil, ErrUnsupportedRepo
 	}
 	s := "ssh://git@" + string(vcs.RepoHost) + ":22/" + vcs.FullName
 	u, err = url.Parse(s)
@@ -114,7 +114,7 @@ func connect(host, user string, auth SSHAuthMethod) (*ssh.Client, error) {
 
 	agentAuth, ok := auth.(*SSHAgent)
 	if !ok {
-		return nil, InvalidAuthMethodErr
+		return nil, ErrInvalidAuthMethod
 	}
 
 	// connect with ssh agent
@@ -140,7 +140,7 @@ func connect(host, user string, auth SSHAuthMethod) (*ssh.Client, error) {
 
 func (s *GitUploadPackService) Info() (i *common.GitUploadPackInfo, err error) {
 	if !s.connected {
-		return nil, NotConnectedErr
+		return nil, ErrNotConnected
 	}
 
 	session, err := s.client.NewSession()
@@ -160,7 +160,7 @@ func (s *GitUploadPackService) Info() (i *common.GitUploadPackInfo, err error) {
 
 func (s *GitUploadPackService) Disconnect() (err error) {
 	if !s.connected {
-		return NotConnectedErr
+		return ErrNotConnected
 	}
 	s.connected = false
 	return s.client.Close()
@@ -170,7 +170,7 @@ func (s *GitUploadPackService) Disconnect() (err error) {
 // one
 func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadCloser, error) {
 	if !s.connected {
-		return nil, NotConnectedErr
+		return nil, ErrNotConnected
 	}
 
 	session, err := s.client.NewSession()
@@ -206,7 +206,7 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadClo
 	for {
 		line, err := soBuf.ReadString('\n')
 		if err == io.EOF {
-			return nil, UploadPackAnswerFormatErr
+			return nil, ErrUploadPackAnswerFormat
 		}
 		if line[0:len(token)] == token {
 			break
