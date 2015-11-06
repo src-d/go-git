@@ -10,13 +10,12 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/sourcegraph/go-vcsurl"
-
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
-
 	"gopkg.in/src-d/go-git.v2/clients/common"
 	"gopkg.in/src-d/go-git.v2/formats/pktline"
+
+	"github.com/sourcegraph/go-vcsurl"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 )
 
 type GitUploadPackService struct {
