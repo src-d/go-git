@@ -162,12 +162,9 @@ func (s *GitUploadPackService) Disconnect() (err error) {
 	if !s.connected {
 		return NotConnectedErr
 	}
-	if err = s.client.Close(); err != nil {
-		return err
-	}
 	s.client = nil
 	s.vcs = nil
-	return nil
+	return s.client.Close()
 }
 
 // TODO: fetch should really reuse the info session instead of openning a new
