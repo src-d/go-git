@@ -70,15 +70,15 @@ func (s *GitUploadPackService) Connect(ep common.Endpoint) (err error) {
 }
 
 func (s *GitUploadPackService) ConnectWithAuth(ep common.Endpoint, auth common.AuthMethod) (err error) {
+	if s.connected {
+		return AlreadyConnectedErr
+	}
+
 	sshAuth, ok := auth.(SSHAuthMethod)
 	if !ok {
 		return InvalidAuthMethodErr
 	}
 	s.auth = sshAuth
-
-	if s.connected {
-		return AlreadyConnectedErr
-	}
 
 	s.vcs, err = vcsurl.Parse(string(ep))
 	if err != nil {
@@ -162,8 +162,7 @@ func (s *GitUploadPackService) Disconnect() (err error) {
 	if !s.connected {
 		return NotConnectedErr
 	}
-	s.client = nil
-	s.vcs = nil
+	s.connected = false
 	return s.client.Close()
 }
 

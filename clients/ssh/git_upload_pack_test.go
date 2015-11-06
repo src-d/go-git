@@ -6,6 +6,7 @@ import (
 
 	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v2/clients/common"
+	"gopkg.in/src-d/go-git.v2/clients/http"
 	"gopkg.in/src-d/go-git.v2/core"
 )
 
@@ -22,8 +23,15 @@ func (s *SuiteRemote) TestConnect(c *C) {
 	c.Assert(r.Connect(fixtureRepo), Equals, AuthRequiredErr)
 }
 
-func (s *SuiteRemote) TestConnectWithAuth(c *C) {
+func (s *SuiteRemote) TestConnectWithDefaultSSHAgent(c *C) {
 	auth := NewSSHAgent("")
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixtureRepo, auth), IsNil)
+	c.Assert(r.auth, Equals, auth)
+}
+
+func (s *SuiteRemote) TestConnectWithSSHAgent(c *C) {
+	auth := NewSSHAgent("SSH_AUTH_SOCK")
 	r := NewGitUploadPackService()
 	c.Assert(r.ConnectWithAuth(fixtureRepo, auth), IsNil)
 	c.Assert(r.auth, Equals, auth)
@@ -34,9 +42,33 @@ type mockAuth struct{}
 func (*mockAuth) Name() string   { return "" }
 func (*mockAuth) String() string { return "" }
 
+func (s *SuiteRemote) TestConnectWithHTTPAuth(c *C) {
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixtureRepo, http.NewBasicAuth("foo", "bla")), Equals, InvalidAuthMethodErr)
+}
+
 func (s *SuiteRemote) TestConnectWithAuthWrongType(c *C) {
 	r := NewGitUploadPackService()
 	c.Assert(r.ConnectWithAuth(fixtureRepo, &mockAuth{}), Equals, InvalidAuthMethodErr)
+}
+
+func (s *SuiteRemote) TestAlreadyConnected(c *C) {
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixtureRepo, NewSSHAgent("")), IsNil)
+	c.Assert(r.ConnectWithAuth(fixtureRepo, NewSSHAgent("")), Equals, AlreadyConnectedErr)
+}
+
+func (s *SuiteRemote) TestDisconnect(c *C) {
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixtureRepo, NewSSHAgent("")), IsNil)
+	c.Assert(r.Disconnect(), IsNil)
+}
+
+func (s *SuiteRemote) TestAlreadyDisconnected(c *C) {
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixtureRepo, NewSSHAgent("")), IsNil)
+	c.Assert(r.Disconnect(), IsNil)
+	c.Assert(r.Disconnect(), Equals, NotConnectedErr)
 }
 
 func (s *SuiteRemote) TestDefaultBranch(c *C) {
