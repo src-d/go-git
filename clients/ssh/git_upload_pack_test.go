@@ -19,7 +19,7 @@ const fixtureRepo = "git@github.com:tyba/git-fixture.git"
 
 func (s *SuiteRemote) TestConnect(c *C) {
 	r := NewGitUploadPackService()
-	c.Assert(r.Connect(fixtureRepo), ErrorMatches, "cannot connect: Auth required")
+	c.Assert(r.Connect(fixtureRepo), Equals, AuthRequiredErr)
 }
 
 func (s *SuiteRemote) TestConnectWithAuth(c *C) {
