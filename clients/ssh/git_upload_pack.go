@@ -121,9 +121,8 @@ func (s *GitUploadPackService) Info() (i *common.GitUploadPackInfo, err error) {
 		return nil, fmt.Errorf("ssh.session.Output: %v", err)
 	}
 
-	reader := bytes.NewReader(out)
-	dec := pktline.NewDecoder(reader)
-	return common.NewGitUploadPackInfo(dec)
+	i = common.NewGitUploadPackInfo()
+	return i, i.Decode(pktline.NewDecoder(bytes.NewReader(out)))
 }
 
 func (s *GitUploadPackService) Disconnect() (err error) {

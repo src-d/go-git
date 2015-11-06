@@ -4,8 +4,9 @@ import (
 	"io/ioutil"
 	"testing"
 
+	. "github.com/alcortesm/go-git/clients/ssh"
 	"gopkg.in/src-d/go-git.v2/clients/common"
-	. "gopkg.in/src-d/go-git.v2/clients/ssh"
+	"gopkg.in/src-d/go-git.v2/core"
 )
 
 const fixtureRepo = "git@github.com:tyba/git-fixture.git"
@@ -69,7 +70,7 @@ func TestCapabilities(t *testing.T) {
 	}
 
 	expLen := 1
-	length := len(i.Capabilities.Get("agent"))
+	length := len(i.Capabilities.Get("agent").Values)
 	if expLen != length {
 		t.Errorf("wrong length:\n\texpected = %d\n\tfound = %d\n", expLen, length)
 	}
@@ -90,7 +91,9 @@ func TestFetch(t *testing.T) {
 	}
 
 	r, err := s.Fetch(&common.GitUploadPackRequest{
-		Want: []string{"6ecf0ef2c2dffb796033e5a02219af86ec6584e5"},
+		Want: []core.Hash{
+			core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"),
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
