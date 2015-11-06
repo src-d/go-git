@@ -65,11 +65,10 @@ func vcsToUrl(vcs *vcsurl.RepoInfo) (u *url.URL, err error) {
 
 func connect(host, user string) (*ssh.Client, error) {
 
-	// try ssh-agent first
-	// then password auth
+	// connect with ssh agent
 	conn, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
 	if err != nil {
-		return connectWithPasswd(host, user)
+		return nil, err
 	}
 	defer conn.Close()
 
@@ -82,23 +81,6 @@ func connect(host, user string) (*ssh.Client, error) {
 	client, err := ssh.Dial("tcp", host, sshConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial: %v", err)
-	}
-
-	return client, nil
-}
-
-// TODO: this must be done securely
-func connectWithPasswd(host, user string) (*ssh.Client, error) {
-	var pass string = "your password"
-
-	sshConfig := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{ssh.Password(pass)},
-	}
-
-	client, err := ssh.Dial("tcp", host, sshConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to dia: %v", err)
 	}
 
 	return client, nil
