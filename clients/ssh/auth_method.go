@@ -19,7 +19,8 @@ type AuthMethod interface {
 }
 
 // The names of the AuthMethod implementations. To be returned by the
-// Name() method.
+// Name() method. Most git servers only allow PublicKeysName and
+// PublicKeysCallbackName.
 const (
 	KeyboardInteractiveName = "ssh-keyboard-interactive"
 	PasswordName            = "ssh-password"
@@ -28,11 +29,102 @@ const (
 	PublicKeysCallbackName  = "ssh-public-key-callback"
 )
 
+// KeyboardInteractive implements AuthMethod by using a
+// prompt/response sequence controlled by the server.
+type KeyboardInteractive struct {
+	user      string
+	challenge ssh.KeyboardInteractiveChallenge
+}
+
+// Name returns KeyboardInteractive.
+func (a *KeyboardInteractive) Name() string {
+	return KeyboardInteractiveName
+}
+
+func (a *KeyboardInteractive) String() string {
+	return fmt.Sprintf("user: %s, name: %s", a.user, a.Name())
+}
+
+func (a *KeyboardInteractive) clientConfig() *ssh.ClientConfig {
+	return &ssh.ClientConfig{
+		User: a.user,
+		Auth: []ssh.AuthMethod{ssh.KeyboardInteractiveChallenge(a.challenge)},
+	}
+}
+
+// Password implements AuthMethod by using the given password.
+type Password struct {
+	user string
+	pass string
+}
+
+// Name returns Password.
+func (a *Password) Name() string {
+	return PasswordName
+}
+
+func (a *Password) String() string {
+	return fmt.Sprintf("user: %s, name: %s", a.user, a.Name())
+}
+
+func (a *Password) clientConfig() *ssh.ClientConfig {
+	return &ssh.ClientConfig{
+		User: a.user,
+		Auth: []ssh.AuthMethod{ssh.Password(a.pass)},
+	}
+}
+
+// PasswordCallback implements AuthMethod by using a callback
+// to fetch the password.
+type PasswordCallback struct {
+	user     string
+	callback func() (pass string, err error)
+}
+
+// Name returns PasswordCallback.
+func (a *PasswordCallback) Name() string {
+	return PasswordCallbackName
+}
+
+func (a *PasswordCallback) String() string {
+	return fmt.Sprintf("user: %s, name: %s", a.user, a.Name())
+}
+
+func (a *PasswordCallback) clientConfig() *ssh.ClientConfig {
+	return &ssh.ClientConfig{
+		User: a.user,
+		Auth: []ssh.AuthMethod{ssh.PasswordCallback(a.callback)},
+	}
+}
+
+// PublicKeys implements AuthMethod by using the given
+// key pairs.
+type PublicKeys struct {
+	user   string
+	signer ssh.Signer
+}
+
+// Name returns PublicKeys.
+func (a *PublicKeys) Name() string {
+	return PublicKeysName
+}
+
+func (a *PublicKeys) String() string {
+	return fmt.Sprintf("user: %s, name: %s", a.user, a.Name())
+}
+
+func (a *PublicKeys) clientConfig() *ssh.ClientConfig {
+	return &ssh.ClientConfig{
+		User: a.user,
+		Auth: []ssh.AuthMethod{ssh.PublicKeys(a.signer)},
+	}
+}
+
 // PublicKeysCallback implements AuthMethod by storing an
 // ssh.agent.Agent to act as a signer.
 type PublicKeysCallback struct {
-	user    string
-	setAuth func() ([]ssh.Signer, error)
+	user     string
+	callback func() (signers []ssh.Signer, err error)
 }
 
 // Name returns PublicKeysCallback.
@@ -47,6 +139,6 @@ func (a *PublicKeysCallback) String() string {
 func (a *PublicKeysCallback) clientConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
 		User: a.user,
-		Auth: []ssh.AuthMethod{ssh.PublicKeysCallback(a.setAuth)},
+		Auth: []ssh.AuthMethod{ssh.PublicKeysCallback(a.callback)},
 	}
 }

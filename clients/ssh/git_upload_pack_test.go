@@ -46,8 +46,8 @@ func newSSHAgentConn() (*sshAgentConn, error) {
 	return &sshAgentConn{
 		pipe: pipe,
 		auth: &PublicKeysCallback{
-			user:    "git",
-			setAuth: agent.NewClient(pipe).Signers,
+			user:     "git",
+			callback: agent.NewClient(pipe).Signers,
 		},
 	}, nil
 }
