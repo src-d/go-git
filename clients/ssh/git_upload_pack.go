@@ -10,21 +10,18 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/url"
-	"os"
 
 	"gopkg.in/src-d/go-git.v2/clients/common"
 	"gopkg.in/src-d/go-git.v2/formats/pktline"
 
 	"github.com/sourcegraph/go-vcsurl"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
 )
 
 // New errors introduced by this package.
 var (
-	ErrInvalidAuthMethod      = errors.New("invalid ssh auth method: a ssh.SSHAuthMethod should be provided")
+	ErrInvalidAuthMethod      = errors.New("invalid ssh auth method")
 	ErrAuthRequired           = errors.New("cannot connect: auth required")
 	ErrNotConnected           = errors.New("not connected")
 	ErrAlreadyConnected       = errors.New("already connected")
@@ -33,39 +30,7 @@ var (
 	ErrUnsupportedRepo        = errors.New("only github.com is supported")
 )
 
-// AuthMethod is the interface all auth methods for the ssh client
-// must implement.
-type AuthMethod interface {
-	common.AuthMethod
-}
-
-// Agent is an authentication method that uses a running ssh agent to
-// handle all ssh authentication. Its zero value is not safe, use
-// NewSSHAgent() instead.
-type Agent struct {
-	env string
-}
-
-// NewSSHAgent initialises a SSHAgent. Env is the ssh agent Unix socket
-// environment variable. Pass an empty string as env to use the default
-// value "SSH_AUTH_SOCK".
-func NewSSHAgent(env string) *Agent {
-	if env == "" {
-		return &Agent{"SSH_AUTH_SOCK"}
-	}
-	return &Agent{env}
-}
-
-// Name returns an id for this authentication method.
-func (a *Agent) Name() string {
-	return "ssh agent"
-}
-
-func (a *Agent) String() string {
-	return a.Name()
-}
-
-// GitUploadPackService for SSH clients.
+// GitUploadPackService holds the service information.
 // The zero value is safe to use.
 // TODO: remove NewGitUploadPackService().
 type GitUploadPackService struct {
@@ -92,11 +57,11 @@ func (s *GitUploadPackService) ConnectWithAuth(ep common.Endpoint, auth common.A
 		return ErrAlreadyConnected
 	}
 
-	sshAuth, ok := auth.(AuthMethod)
+	var ok bool
+	s.auth, ok = auth.(AuthMethod)
 	if !ok {
 		return ErrInvalidAuthMethod
 	}
-	s.auth = sshAuth
 
 	s.vcs, err = vcsurl.Parse(string(ep))
 	if err != nil {
@@ -108,10 +73,11 @@ func (s *GitUploadPackService) ConnectWithAuth(ep common.Endpoint, auth common.A
 		return
 	}
 
-	s.client, err = connect(url.Host, url.User.Username(), sshAuth)
+	s.client, err = ssh.Dial("tcp", url.Host, s.auth.clientConfig())
 	if err != nil {
 		return err
 	}
+
 	s.connected = true
 	return
 }
@@ -126,34 +92,6 @@ func vcsToURL(vcs *vcsurl.RepoInfo) (u *url.URL, err error) {
 	s := "ssh://git@" + string(vcs.RepoHost) + ":22/" + vcs.FullName
 	u, err = url.Parse(s)
 	return
-}
-
-func connect(host, user string, auth AuthMethod) (*ssh.Client, error) {
-
-	agentAuth, ok := auth.(*Agent)
-	if !ok {
-		return nil, ErrInvalidAuthMethod
-	}
-
-	// connect with ssh agent
-	conn, err := net.Dial("unix", os.Getenv(agentAuth.env))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	agent := agent.NewClient(conn)
-	sshConfig := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{ssh.PublicKeysCallback(agent.Signers)},
-	}
-
-	client, err := ssh.Dial("tcp", host, sshConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return client, nil
 }
 
 // Info returns the GitUploadPackInfo of the repository.

@@ -2,11 +2,14 @@ package ssh
 
 import (
 	"io/ioutil"
+	"net"
+	"os"
 	"testing"
+
+	"golang.org/x/crypto/ssh/agent"
 
 	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v2/clients/common"
-	"gopkg.in/src-d/go-git.v2/clients/http"
 	"gopkg.in/src-d/go-git.v2/core"
 )
 
@@ -23,58 +26,127 @@ func (s *SuiteRemote) TestConnect(c *C) {
 	c.Assert(r.Connect(fixtureRepo), Equals, ErrAuthRequired)
 }
 
-func (s *SuiteRemote) TestConnectWithDefaultSSHAgent(c *C) {
-	auth := NewSSHAgent("")
-	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, auth), IsNil)
-	c.Assert(r.auth, Equals, auth)
+// We will use a running ssh agent for testing
+// ssh authentication.
+type sshAgentConn struct {
+	pipe net.Conn
+	auth *PublicKeysCallback
 }
 
-func (s *SuiteRemote) TestConnectWithSSHAgent(c *C) {
-	auth := NewSSHAgent("SSH_AUTH_SOCK")
-	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, auth), IsNil)
-	c.Assert(r.auth, Equals, auth)
+// Opens a pipe with the ssh agent and uses the pipe
+// as the implementer of the public key callback function.
+func newSshAgentConn() (*sshAgentConn, error) {
+	pipe, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
+	if err != nil {
+		return nil, err
+	}
+	return &sshAgentConn{
+		pipe: pipe,
+		auth: &PublicKeysCallback{
+			user:  "git",
+			agent: agent.NewClient(pipe),
+		},
+	}, nil
 }
 
+// Closes the pipe with the ssh agent
+func (c *sshAgentConn) close() error {
+	return c.pipe.Close()
+}
+
+func (s *SuiteRemote) TestConnectWithPublicKeysCallback(c *C) {
+	agent, err := newSshAgentConn()
+	c.Assert(err, IsNil)
+	defer func() { c.Assert(agent.close(), IsNil) }()
+
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	defer r.Disconnect()
+	c.Assert(r.connected, Equals, true)
+	c.Assert(r.auth, Equals, agent.auth)
+}
+
+// A mock implementation of client.common.AuthMethod
+// to test non ssh auth method detection.
 type mockAuth struct{}
 
 func (*mockAuth) Name() string   { return "" }
 func (*mockAuth) String() string { return "" }
 
-func (s *SuiteRemote) TestConnectWithHTTPAuth(c *C) {
-	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, http.NewBasicAuth("foo", "bla")), Equals, ErrInvalidAuthMethod)
-}
-
 func (s *SuiteRemote) TestConnectWithAuthWrongType(c *C) {
 	r := NewGitUploadPackService()
 	c.Assert(r.ConnectWithAuth(fixtureRepo, &mockAuth{}), Equals, ErrInvalidAuthMethod)
+	c.Assert(r.connected, Equals, false)
 }
 
 func (s *SuiteRemote) TestAlreadyConnected(c *C) {
+	agent, err := newSshAgentConn()
+	c.Assert(err, IsNil)
+	defer func() { c.Assert(agent.close(), IsNil) }()
+
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, NewSSHAgent("")), IsNil)
-	c.Assert(r.ConnectWithAuth(fixtureRepo, NewSSHAgent("")), Equals, ErrAlreadyConnected)
+	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	defer r.Disconnect()
+	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), Equals, ErrAlreadyConnected)
+	c.Assert(r.connected, Equals, true)
 }
 
 func (s *SuiteRemote) TestDisconnect(c *C) {
+	agent, err := newSshAgentConn()
+	c.Assert(err, IsNil)
+	defer func() { c.Assert(agent.close(), IsNil) }()
+
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, NewSSHAgent("")), IsNil)
+	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
 	c.Assert(r.Disconnect(), IsNil)
+	c.Assert(r.connected, Equals, false)
 }
 
-func (s *SuiteRemote) TestAlreadyDisconnected(c *C) {
+func (s *SuiteRemote) TestDisconnectedWhenNonConnected(c *C) {
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, NewSSHAgent("")), IsNil)
-	c.Assert(r.Disconnect(), IsNil)
 	c.Assert(r.Disconnect(), Equals, ErrNotConnected)
 }
 
-func (s *SuiteRemote) TestDefaultBranch(c *C) {
+func (s *SuiteRemote) TestAlreadyDisconnected(c *C) {
+	agent, err := newSshAgentConn()
+	c.Assert(err, IsNil)
+	defer func() { c.Assert(agent.close(), IsNil) }()
+
 	r := NewGitUploadPackService()
-	auth := NewSSHAgent("")
-	c.Assert(r.ConnectWithAuth(fixtureRepo, auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.Disconnect(), IsNil)
+	c.Assert(r.Disconnect(), Equals, ErrNotConnected)
+	c.Assert(r.connected, Equals, false)
+}
+
+func (s *SuiteRemote) TestServeralConnections(c *C) {
+	agent, err := newSshAgentConn()
+	c.Assert(err, IsNil)
+	defer func() { c.Assert(agent.close(), IsNil) }()
+
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.Disconnect(), IsNil)
+
+	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.connected, Equals, true)
+	c.Assert(r.Disconnect(), IsNil)
+	c.Assert(r.connected, Equals, false)
+
+	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.connected, Equals, true)
+	c.Assert(r.Disconnect(), IsNil)
+	c.Assert(r.connected, Equals, false)
+}
+
+func (s *SuiteRemote) TestDefaultBranch(c *C) {
+	agent, err := newSshAgentConn()
+	c.Assert(err, IsNil)
+	defer func() { c.Assert(agent.close(), IsNil) }()
+
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	defer r.Disconnect()
 
 	info, err := r.Info()
 	c.Assert(err, IsNil)
@@ -82,9 +154,13 @@ func (s *SuiteRemote) TestDefaultBranch(c *C) {
 }
 
 func (s *SuiteRemote) TestCapabilities(c *C) {
+	agent, err := newSshAgentConn()
+	c.Assert(err, IsNil)
+	defer func() { c.Assert(agent.close(), IsNil) }()
+
 	r := NewGitUploadPackService()
-	auth := NewSSHAgent("")
-	c.Assert(r.ConnectWithAuth(fixtureRepo, auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	defer r.Disconnect()
 
 	info, err := r.Info()
 	c.Assert(err, IsNil)
@@ -92,9 +168,13 @@ func (s *SuiteRemote) TestCapabilities(c *C) {
 }
 
 func (s *SuiteRemote) TestFetch(c *C) {
+	agent, err := newSshAgentConn()
+	c.Assert(err, IsNil)
+	defer func() { c.Assert(agent.close(), IsNil) }()
+
 	r := NewGitUploadPackService()
-	auth := NewSSHAgent("")
-	c.Assert(r.ConnectWithAuth(fixtureRepo, auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	defer r.Disconnect()
 
 	reader, err := r.Fetch(&common.GitUploadPackRequest{
 		Want: []core.Hash{
