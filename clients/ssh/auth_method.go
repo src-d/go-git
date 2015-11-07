@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
 	"gopkg.in/src-d/go-git.v2/clients/common"
 )
 
@@ -19,16 +18,21 @@ type AuthMethod interface {
 	clientConfig() *ssh.ClientConfig
 }
 
-// The names of the current AuthMethod implementations
+// The names of the AuthMethod implementations. To be returned by the
+// Name() method.
 const (
-	PublicKeysCallbackName = "ssh-public-key-callback"
+	KeyboardInteractiveName = "ssh-keyboard-interactive"
+	PasswordName            = "ssh-password"
+	PasswordCallbackName    = "ssh-password-callback"
+	PublicKeysName          = "ssh-public-keys"
+	PublicKeysCallbackName  = "ssh-public-key-callback"
 )
 
 // PublicKeysCallback implements AuthMethod by storing an
 // ssh.agent.Agent to act as a signer.
 type PublicKeysCallback struct {
-	user  string
-	agent agent.Agent
+	user    string
+	setAuth func() ([]ssh.Signer, error)
 }
 
 // Name returns PublicKeysCallback.
@@ -43,6 +47,6 @@ func (a *PublicKeysCallback) String() string {
 func (a *PublicKeysCallback) clientConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
 		User: a.user,
-		Auth: []ssh.AuthMethod{ssh.PublicKeysCallback(a.agent.Signers)},
+		Auth: []ssh.AuthMethod{ssh.PublicKeysCallback(a.setAuth)},
 	}
 }
