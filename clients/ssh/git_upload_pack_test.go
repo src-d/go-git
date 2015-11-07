@@ -38,7 +38,7 @@ type sshAgentConn struct {
 
 // Opens a pipe with the ssh agent and uses the pipe
 // as the implementer of the public key callback function.
-func newSshAgentConn() (*sshAgentConn, error) {
+func newSSHAgentConn() (*sshAgentConn, error) {
 	pipe, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
 	if err != nil {
 		return nil, err
@@ -58,13 +58,13 @@ func (c *sshAgentConn) close() error {
 }
 
 func (s *SuiteRemote) TestConnectWithPublicKeysCallback(c *C) {
-	agent, err := newSshAgentConn()
+	agent, err := newSSHAgentConn()
 	c.Assert(err, IsNil)
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
 	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
-	defer r.Disconnect()
+	defer func() { c.Assert(r.Disconnect(), IsNil) }()
 	c.Assert(r.connected, Equals, true)
 	c.Assert(r.auth, Equals, agent.auth)
 }
@@ -98,19 +98,19 @@ func (s *SuiteRemote) TestConnectWithAuthWrongType(c *C) {
 }
 
 func (s *SuiteRemote) TestAlreadyConnected(c *C) {
-	agent, err := newSshAgentConn()
+	agent, err := newSSHAgentConn()
 	c.Assert(err, IsNil)
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
 	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
-	defer r.Disconnect()
+	defer func() { c.Assert(r.Disconnect(), IsNil) }()
 	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), Equals, ErrAlreadyConnected)
 	c.Assert(r.connected, Equals, true)
 }
 
 func (s *SuiteRemote) TestDisconnect(c *C) {
-	agent, err := newSshAgentConn()
+	agent, err := newSSHAgentConn()
 	c.Assert(err, IsNil)
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
@@ -126,7 +126,7 @@ func (s *SuiteRemote) TestDisconnectedWhenNonConnected(c *C) {
 }
 
 func (s *SuiteRemote) TestAlreadyDisconnected(c *C) {
-	agent, err := newSshAgentConn()
+	agent, err := newSSHAgentConn()
 	c.Assert(err, IsNil)
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
@@ -138,7 +138,7 @@ func (s *SuiteRemote) TestAlreadyDisconnected(c *C) {
 }
 
 func (s *SuiteRemote) TestServeralConnections(c *C) {
-	agent, err := newSshAgentConn()
+	agent, err := newSSHAgentConn()
 	c.Assert(err, IsNil)
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
@@ -164,13 +164,13 @@ func (s *SuiteRemote) TestInfoNotConnected(c *C) {
 }
 
 func (s *SuiteRemote) TestDefaultBranch(c *C) {
-	agent, err := newSshAgentConn()
+	agent, err := newSSHAgentConn()
 	c.Assert(err, IsNil)
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
 	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
-	defer r.Disconnect()
+	defer func() { c.Assert(r.Disconnect(), IsNil) }()
 
 	info, err := r.Info()
 	c.Assert(err, IsNil)
@@ -178,13 +178,13 @@ func (s *SuiteRemote) TestDefaultBranch(c *C) {
 }
 
 func (s *SuiteRemote) TestCapabilities(c *C) {
-	agent, err := newSshAgentConn()
+	agent, err := newSSHAgentConn()
 	c.Assert(err, IsNil)
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
 	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
-	defer r.Disconnect()
+	defer func() { c.Assert(r.Disconnect(), IsNil) }()
 
 	info, err := r.Info()
 	c.Assert(err, IsNil)
@@ -202,20 +202,19 @@ func (s *SuiteRemote) TestFetchNotConnected(c *C) {
 }
 
 func (s *SuiteRemote) TestFetch(c *C) {
-	agent, err := newSshAgentConn()
+	agent, err := newSSHAgentConn()
 	c.Assert(err, IsNil)
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
 	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
-	defer r.Disconnect()
+	defer func() { c.Assert(r.Disconnect(), IsNil) }()
 
 	reader, err := r.Fetch(&common.GitUploadPackRequest{
 		Want: []core.Hash{
 			core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"),
 		},
 	})
-
 	c.Assert(err, IsNil)
 
 	b, err := ioutil.ReadAll(reader)

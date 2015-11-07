@@ -9,21 +9,29 @@ import (
 )
 
 // AuthMethod is the interface all auth methods for the ssh client
-// must implement.
+// must implement. The clientConfig method returns the ssh client
+// configuration needed to establish an ssh connection.
+//
+// Current implementations:
+// - PublicKeysCallback
 type AuthMethod interface {
 	common.AuthMethod
 	clientConfig() *ssh.ClientConfig
 }
 
+// The names of the current AuthMethod implementations
 const (
 	PublicKeysCallbackName = "ssh-public-key-callback"
 )
 
+// PublicKeysCallback implements AuthMethod by storing an
+// ssh.agent.Agent to act as a signer.
 type PublicKeysCallback struct {
 	user  string
 	agent agent.Agent
 }
 
+// Name returns PublicKeysCallback.
 func (a *PublicKeysCallback) Name() string {
 	return PublicKeysCallbackName
 }

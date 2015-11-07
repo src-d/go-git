@@ -1,6 +1,6 @@
 // Package ssh implements a ssh client for go-git.
 //
-// The Connect() method is not allowed, use ConnectWithAuth() instead.
+// The Connect() method is not allowed in ssh, use ConnectWithAuth() instead.
 package ssh
 
 import (
@@ -46,12 +46,14 @@ func NewGitUploadPackService() *GitUploadPackService {
 	return &GitUploadPackService{}
 }
 
-// Connect cannot be used with SSH clients and always return an error. Use ConnectWithAuth instead.
+// Connect cannot be used with SSH clients and always return
+// ErrAuthRequired. Use ConnectWithAuth instead.
 func (s *GitUploadPackService) Connect(ep common.Endpoint) (err error) {
 	return ErrAuthRequired
 }
 
-// ConnectWithAuth connects to ep using SSH. Authentication is handled by auth.
+// ConnectWithAuth connects to ep using SSH. Authentication is handled
+// by auth.
 func (s *GitUploadPackService) ConnectWithAuth(ep common.Endpoint, auth common.AuthMethod) (err error) {
 	if s.connected {
 		return ErrAlreadyConnected
@@ -107,7 +109,11 @@ func (s *GitUploadPackService) Info() (i *common.GitUploadPackInfo, err error) {
 	if err != nil {
 		return nil, err
 	}
-	defer session.Close()
+	defer func() {
+		// the session can be closed by the other endpoint,
+		// therefore we must ignore a close error.
+		_ = session.Close()
+	}()
 
 	out, err := session.Output("git-upload-pack " + s.vcs.FullName + ".git")
 	if err != nil {
@@ -132,7 +138,7 @@ func (s *GitUploadPackService) Disconnect() (err error) {
 // (using the ConnectWithAuth() method).
 // TODO: fetch should really reuse the info session instead of openning a new
 // one
-func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadCloser, error) {
+func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (rc io.ReadCloser, err error) {
 	if !s.connected {
 		return nil, ErrNotConnected
 	}
@@ -141,7 +147,11 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadClo
 	if err != nil {
 		return nil, err
 	}
-	defer session.Close()
+	defer func() {
+		// the session can be closed by the other endpoint,
+		// therefore we must ignore a close error.
+		_ = session.Close()
+	}()
 
 	si, err := session.StdinPipe()
 	if err != nil {
@@ -155,14 +165,22 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadClo
 
 	go func() {
 		fmt.Fprintln(si, r.String())
-		si.Close()
+		err = si.Close()
 	}()
 
 	err = session.Start("git-upload-pack " + s.vcs.FullName + ".git")
 	if err != nil {
 		return nil, err
 	}
-	session.Wait()
+	// TODO: inestigate this *ExitError type (command fails or
+	// doesn't complete successfully), as it is happenning all
+	// the time, but everyting seems to work fine.
+	err = session.Wait()
+	if err != nil {
+		if _, ok := err.(*ssh.ExitError); !ok {
+			return nil, err
+		}
+	}
 
 	// read until the header of the second answer
 	soBuf := bufio.NewReader(so)
