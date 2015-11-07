@@ -57,12 +57,6 @@ func (s *GitUploadPackService) ConnectWithAuth(ep common.Endpoint, auth common.A
 		return ErrAlreadyConnected
 	}
 
-	var ok bool
-	s.auth, ok = auth.(AuthMethod)
-	if !ok {
-		return ErrInvalidAuthMethod
-	}
-
 	s.vcs, err = vcsurl.Parse(string(ep))
 	if err != nil {
 		return err
@@ -71,6 +65,12 @@ func (s *GitUploadPackService) ConnectWithAuth(ep common.Endpoint, auth common.A
 	url, err := vcsToURL(s.vcs)
 	if err != nil {
 		return
+	}
+
+	var ok bool
+	s.auth, ok = auth.(AuthMethod)
+	if !ok {
+		return ErrInvalidAuthMethod
 	}
 
 	s.client, err = ssh.Dial("tcp", url.Host, s.auth.clientConfig())

@@ -1,10 +1,10 @@
 package ssh
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
-	"testing"
 
 	"golang.org/x/crypto/ssh/agent"
 
@@ -13,17 +13,20 @@ import (
 	"gopkg.in/src-d/go-git.v2/core"
 )
 
-func Test(t *testing.T) { TestingT(t) }
-
 type SuiteRemote struct{}
 
 var _ = Suite(&SuiteRemote{})
 
-const fixtureRepo = "git@github.com:tyba/git-fixture.git"
+const (
+	fixRepo             = "git@github.com:tyba/git-fixture.git"
+	fixRepoBadVcs       = "www.example.com"
+	fixRepoNonGit       = "https://code.google.com/p/go"
+	fixGitRepoNonGithub = "https://bitbucket.org/user/repo.git"
+)
 
 func (s *SuiteRemote) TestConnect(c *C) {
 	r := NewGitUploadPackService()
-	c.Assert(r.Connect(fixtureRepo), Equals, ErrAuthRequired)
+	c.Assert(r.Connect(fixRepo), Equals, ErrAuthRequired)
 }
 
 // We will use a running ssh agent for testing
@@ -60,10 +63,25 @@ func (s *SuiteRemote) TestConnectWithPublicKeysCallback(c *C) {
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
 	defer r.Disconnect()
 	c.Assert(r.connected, Equals, true)
 	c.Assert(r.auth, Equals, agent.auth)
+}
+
+func (s *SuiteRemote) TestConnectBadVcs(c *C) {
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixRepoBadVcs, nil), ErrorMatches, fmt.Sprintf(".*%s.*", fixRepoBadVcs))
+}
+
+func (s *SuiteRemote) TestConnectNonGit(c *C) {
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixRepoNonGit, nil), Equals, ErrUnsupportedVCS)
+}
+
+func (s *SuiteRemote) TestConnectNonGithub(c *C) {
+	r := NewGitUploadPackService()
+	c.Assert(r.ConnectWithAuth(fixGitRepoNonGithub, nil), Equals, ErrUnsupportedRepo)
 }
 
 // A mock implementation of client.common.AuthMethod
@@ -75,7 +93,7 @@ func (*mockAuth) String() string { return "" }
 
 func (s *SuiteRemote) TestConnectWithAuthWrongType(c *C) {
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, &mockAuth{}), Equals, ErrInvalidAuthMethod)
+	c.Assert(r.ConnectWithAuth(fixRepo, &mockAuth{}), Equals, ErrInvalidAuthMethod)
 	c.Assert(r.connected, Equals, false)
 }
 
@@ -85,9 +103,9 @@ func (s *SuiteRemote) TestAlreadyConnected(c *C) {
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
 	defer r.Disconnect()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), Equals, ErrAlreadyConnected)
+	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), Equals, ErrAlreadyConnected)
 	c.Assert(r.connected, Equals, true)
 }
 
@@ -97,7 +115,7 @@ func (s *SuiteRemote) TestDisconnect(c *C) {
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
 	c.Assert(r.Disconnect(), IsNil)
 	c.Assert(r.connected, Equals, false)
 }
@@ -113,7 +131,7 @@ func (s *SuiteRemote) TestAlreadyDisconnected(c *C) {
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
 	c.Assert(r.Disconnect(), IsNil)
 	c.Assert(r.Disconnect(), Equals, ErrNotConnected)
 	c.Assert(r.connected, Equals, false)
@@ -125,18 +143,24 @@ func (s *SuiteRemote) TestServeralConnections(c *C) {
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
 	c.Assert(r.Disconnect(), IsNil)
 
-	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
 	c.Assert(r.connected, Equals, true)
 	c.Assert(r.Disconnect(), IsNil)
 	c.Assert(r.connected, Equals, false)
 
-	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
 	c.Assert(r.connected, Equals, true)
 	c.Assert(r.Disconnect(), IsNil)
 	c.Assert(r.connected, Equals, false)
+}
+
+func (s *SuiteRemote) TestInfoNotConnected(c *C) {
+	r := NewGitUploadPackService()
+	_, err := r.Info()
+	c.Assert(err, Equals, ErrNotConnected)
 }
 
 func (s *SuiteRemote) TestDefaultBranch(c *C) {
@@ -145,7 +169,7 @@ func (s *SuiteRemote) TestDefaultBranch(c *C) {
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
 	defer r.Disconnect()
 
 	info, err := r.Info()
@@ -159,12 +183,22 @@ func (s *SuiteRemote) TestCapabilities(c *C) {
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
 	defer r.Disconnect()
 
 	info, err := r.Info()
 	c.Assert(err, IsNil)
 	c.Assert(info.Capabilities.Get("agent").Values, HasLen, 1)
+}
+
+func (s *SuiteRemote) TestFetchNotConnected(c *C) {
+	r := NewGitUploadPackService()
+	_, err := r.Fetch(&common.GitUploadPackRequest{
+		Want: []core.Hash{
+			core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"),
+		},
+	})
+	c.Assert(err, Equals, ErrNotConnected)
 }
 
 func (s *SuiteRemote) TestFetch(c *C) {
@@ -173,7 +207,7 @@ func (s *SuiteRemote) TestFetch(c *C) {
 	defer func() { c.Assert(agent.close(), IsNil) }()
 
 	r := NewGitUploadPackService()
-	c.Assert(r.ConnectWithAuth(fixtureRepo, agent.auth), IsNil)
+	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
 	defer r.Disconnect()
 
 	reader, err := r.Fetch(&common.GitUploadPackRequest{

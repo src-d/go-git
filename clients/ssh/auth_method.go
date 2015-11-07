@@ -1,6 +1,8 @@
 package ssh
 
 import (
+	"fmt"
+
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"gopkg.in/src-d/go-git.v2/clients/common"
@@ -13,17 +15,21 @@ type AuthMethod interface {
 	clientConfig() *ssh.ClientConfig
 }
 
+const (
+	PublicKeysCallbackName = "ssh-public-key-callback"
+)
+
 type PublicKeysCallback struct {
 	user  string
 	agent agent.Agent
 }
 
 func (a *PublicKeysCallback) Name() string {
-	return "ssh-public-key-callback"
+	return PublicKeysCallbackName
 }
 
 func (a *PublicKeysCallback) String() string {
-	return "TODO"
+	return fmt.Sprintf("user: %s, name: %s", a.user, a.Name())
 }
 
 func (a *PublicKeysCallback) clientConfig() *ssh.ClientConfig {
