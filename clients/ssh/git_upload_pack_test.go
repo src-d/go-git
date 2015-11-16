@@ -193,11 +193,9 @@ func (s *SuiteRemote) TestCapabilities(c *C) {
 
 func (s *SuiteRemote) TestFetchNotConnected(c *C) {
 	r := NewGitUploadPackService()
-	_, err := r.Fetch(&common.GitUploadPackRequest{
-		Want: []core.Hash{
-			core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"),
-		},
-	})
+	pr := &common.GitUploadPackRequest{}
+	pr.Want(core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	_, err := r.Fetch(pr)
 	c.Assert(err, Equals, ErrNotConnected)
 }
 
@@ -210,11 +208,9 @@ func (s *SuiteRemote) TestFetch(c *C) {
 	c.Assert(r.ConnectWithAuth(fixRepo, agent.auth), IsNil)
 	defer func() { c.Assert(r.Disconnect(), IsNil) }()
 
-	reader, err := r.Fetch(&common.GitUploadPackRequest{
-		Want: []core.Hash{
-			core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"),
-		},
-	})
+	pr := &common.GitUploadPackRequest{}
+	pr.Want(core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	reader, err := r.Fetch(pr)
 	c.Assert(err, IsNil)
 
 	b, err := ioutil.ReadAll(reader)
