@@ -84,7 +84,7 @@ func (s *SuiteRemote) TestConnectNonGit(c *C) {
 }
 
 func (s *SuiteRemote) TestConnectNonGithub(c *C) {
-	fmt.Println("TestConnectNonGit")
+	fmt.Println("TestConnectNonGithub")
 	r := NewGitUploadPackService()
 	c.Assert(r.ConnectWithAuth(fixGitRepoNonGithub, nil), Equals, ErrUnsupportedRepo)
 }
