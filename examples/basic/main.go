@@ -15,6 +15,10 @@ func main() {
 		panic(err)
 	}
 
+	if err := r.Remotes[git.DefaultRemoteName].Connect(); err != nil {
+		panic(err)
+	}
+
 	if err := r.PullDefault(); err != nil {
 		panic(err)
 	}
