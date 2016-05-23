@@ -3,17 +3,40 @@ package clients
 import (
 	"fmt"
 	"io"
+	"os"
 	"testing"
 
-	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v3/clients/common"
+	"gopkg.in/src-d/go-git.v3/utils/tgz"
+
+	. "gopkg.in/check.v1"
 )
 
 func Test(t *testing.T) { TestingT(t) }
 
-type SuiteCommon struct{}
+type SuiteCommon struct {
+	dirRemotePath string
+}
 
 var _ = Suite(&SuiteCommon{})
+
+func (s *SuiteCommon) SetUpSuite(c *C) {
+	file, err := os.Open("../formats/gitdir/fixtures/spinnaker-gc.tgz")
+	c.Assert(err, IsNil)
+
+	defer func() {
+		err := file.Close()
+		c.Assert(err, IsNil)
+	}()
+
+	s.dirRemotePath, err = tgz.Extract(file)
+	c.Assert(err, IsNil)
+}
+
+func (s *SuiteCommon) TearDownSuite(c *C) {
+	err := os.RemoveAll(s.dirRemotePath)
+	c.Assert(err, IsNil)
+}
 
 func (s *SuiteCommon) TestNewGitUploadPackService(c *C) {
 	var tests = [...]struct {
@@ -26,12 +49,15 @@ func (s *SuiteCommon) TestNewGitUploadPackService(c *C) {
 		{"http://github.com/src-d/go-git", false, "*http.GitUploadPackService"},
 		{"https://github.com/src-d/go-git", false, "*http.GitUploadPackService"},
 		{"ssh://github.com/src-d/go-git", false, "*ssh.GitUploadPackService"},
+		{"file://" + s.dirRemotePath, false, "*dir.GitUploadPackService"},
 	}
 
 	for i, t := range tests {
 		output, err := NewGitUploadPackService(t.input)
-		c.Assert(err != nil, Equals, t.err, Commentf("%d) %q: wrong error value", i, t.input))
-		c.Assert(typeAsString(output), Equals, t.expected, Commentf("%d) %q: wrong type", i, t.input))
+		c.Assert(err != nil, Equals, t.err,
+			Commentf("%d) %q: wrong error value (was: %s)", i, t.input, err))
+		c.Assert(typeAsString(output), Equals, t.expected,
+			Commentf("%d) %q: wrong type", i, t.input))
 	}
 }
 
