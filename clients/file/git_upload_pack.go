@@ -3,12 +3,15 @@ package file
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
+	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v3/formats/gitdir"
 )
 
 type GitUploadPackService struct {
-	path string
+	dir *gitdir.Dir
 }
 
 func NewGitUploadPackService() *GitUploadPackService {
@@ -16,11 +19,20 @@ func NewGitUploadPackService() *GitUploadPackService {
 }
 
 func (s *GitUploadPackService) Connect(url common.Endpoint) error {
-	fmt.Println(url)
+	var err error
+
+	path := strings.TrimPrefix(string(url), "file://")
+	s.dir, err = gitdir.New(path)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (s *GitUploadPackService) ConnectWithAuth(url common.Endpoint, auth common.AuthMethod) error {
+func (s *GitUploadPackService) ConnectWithAuth(url common.Endpoint,
+	auth common.AuthMethod) error {
+
 	if auth == nil {
 		return s.Connect(url)
 	}
@@ -29,7 +41,17 @@ func (s *GitUploadPackService) ConnectWithAuth(url common.Endpoint, auth common.
 }
 
 func (s *GitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
-	return nil, nil
+	info := common.NewGitUploadPackInfo()
+	var err error
+
+	if info.Refs, err = s.dir.Refs(); err != nil {
+		return info, err
+	}
+
+	fmt.Println(info.Refs)
+
+	info.Head = core.ZeroHash
+	return info, nil
 }
 
 func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadCloser, error) {

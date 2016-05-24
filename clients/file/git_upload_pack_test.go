@@ -14,16 +14,16 @@ import (
 
 func Test(t *testing.T) { TestingT(t) }
 
-type SuiteFile struct {
+type SuiteFileClient struct {
 	fixtureURL  common.Endpoint
 	fixturePath string
 }
 
-var _ = Suite(&SuiteFile{})
+var _ = Suite(&SuiteFileClient{})
 
 const repositoryFixture = "../../formats/gitdir/fixtures/spinnaker-gc.tgz"
 
-func (s *SuiteFile) SetUpSuite(c *C) {
+func (s *SuiteFileClient) SetUpSuite(c *C) {
 	file, err := os.Open(repositoryFixture)
 	c.Assert(err, IsNil)
 
@@ -35,22 +35,21 @@ func (s *SuiteFile) SetUpSuite(c *C) {
 	s.fixturePath, err = tgz.Extract(file)
 	c.Assert(err, IsNil)
 
-	s.fixtureURL, err = common.NewEndpoint("file://" + s.fixturePath)
-	c.Assert(err, IsNil)
+	s.fixtureURL = common.Endpoint("file://" + s.fixturePath + "/.git")
 }
 
-func (s *SuiteFile) TearDownSuite(c *C) {
+func (s *SuiteFileClient) TearDownSuite(c *C) {
 	err := os.RemoveAll(s.fixturePath)
 	c.Assert(err, IsNil)
 }
 
-func (s *SuiteFile) TestConnect(c *C) {
+func (s *SuiteFileClient) TestConnect(c *C) {
 	r := NewGitUploadPackService()
 	err := r.Connect(s.fixtureURL)
 	c.Assert(err, IsNil)
 }
 
-func (s *SuiteFile) TestConnectWithAuth(c *C) {
+func (s *SuiteFileClient) TestConnectWithAuth(c *C) {
 	r := NewGitUploadPackService()
 	err := r.ConnectWithAuth(s.fixtureURL, nil)
 	c.Assert(err, IsNil)
@@ -66,7 +65,7 @@ type dummyAuth struct{}
 func (d dummyAuth) Name() string   { return "" }
 func (d dummyAuth) String() string { return "" }
 
-func (s *SuiteFile) TestDefaultBranch(c *C) {
+func (s *SuiteFileClient) TestDefaultBranch(c *C) {
 	r := NewGitUploadPackService()
 	err := r.Connect(s.fixtureURL)
 	c.Assert(err, IsNil)
@@ -76,7 +75,7 @@ func (s *SuiteFile) TestDefaultBranch(c *C) {
 	c.Assert(info.Capabilities.SymbolicReference("HEAD"), Equals, "refs/heads/master")
 }
 
-func (s *SuiteFile) TestFetch(c *C) {
+func (s *SuiteFileClient) TestFetch(c *C) {
 	r := NewGitUploadPackService()
 	c.Assert(r.Connect(s.fixtureURL), IsNil)
 
