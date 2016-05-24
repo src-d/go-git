@@ -15,7 +15,8 @@ import (
 func Test(t *testing.T) { TestingT(t) }
 
 type SuiteFile struct {
-	dirRemotePath string
+	fixtureURL  common.Endpoint
+	fixturePath string
 }
 
 var _ = Suite(&SuiteFile{})
@@ -31,29 +32,32 @@ func (s *SuiteFile) SetUpSuite(c *C) {
 		c.Assert(err, IsNil)
 	}()
 
-	s.dirRemotePath, err = tgz.Extract(file)
+	s.fixturePath, err = tgz.Extract(file)
+	c.Assert(err, IsNil)
+
+	s.fixtureURL, err = common.NewEndpoint("file://" + s.fixturePath)
 	c.Assert(err, IsNil)
 }
 
 func (s *SuiteFile) TearDownSuite(c *C) {
-	err := os.RemoveAll(s.dirRemotePath)
+	err := os.RemoveAll(s.fixturePath)
 	c.Assert(err, IsNil)
 }
 
 func (s *SuiteFile) TestConnect(c *C) {
 	r := NewGitUploadPackService()
-	err := r.Connect(repositoryFixture)
+	err := r.Connect(s.fixtureURL)
 	c.Assert(err, IsNil)
 }
 
 func (s *SuiteFile) TestConnectWithAuth(c *C) {
 	r := NewGitUploadPackService()
-	err := r.ConnectWithAuth(repositoryFixture, nil)
+	err := r.ConnectWithAuth(s.fixtureURL, nil)
 	c.Assert(err, IsNil)
 
 	r = NewGitUploadPackService()
 	auth := dummyAuth{}
-	err = r.ConnectWithAuth(repositoryFixture, auth)
+	err = r.ConnectWithAuth(s.fixtureURL, auth)
 	c.Assert(err, Equals, common.ErrAuthNotSupported)
 }
 
@@ -64,7 +68,7 @@ func (d dummyAuth) String() string { return "" }
 
 func (s *SuiteFile) TestDefaultBranch(c *C) {
 	r := NewGitUploadPackService()
-	err := r.Connect(repositoryFixture)
+	err := r.Connect(s.fixtureURL)
 	c.Assert(err, IsNil)
 
 	info, err := r.Info()
@@ -74,7 +78,7 @@ func (s *SuiteFile) TestDefaultBranch(c *C) {
 
 func (s *SuiteFile) TestFetch(c *C) {
 	r := NewGitUploadPackService()
-	c.Assert(r.Connect(repositoryFixture), IsNil)
+	c.Assert(r.Connect(s.fixtureURL), IsNil)
 
 	req := &common.GitUploadPackRequest{}
 	req.Want(core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))

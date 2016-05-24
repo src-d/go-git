@@ -1,12 +1,14 @@
 package file
 
 import (
+	"fmt"
 	"io"
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
 )
 
 type GitUploadPackService struct {
+	path string
 }
 
 func NewGitUploadPackService() *GitUploadPackService {
@@ -14,6 +16,7 @@ func NewGitUploadPackService() *GitUploadPackService {
 }
 
 func (s *GitUploadPackService) Connect(url common.Endpoint) error {
+	fmt.Println(url)
 	return nil
 }
 
