@@ -18,7 +18,11 @@ func (s *GitUploadPackService) Connect(url common.Endpoint) error {
 }
 
 func (s *GitUploadPackService) ConnectWithAuth(url common.Endpoint, auth common.AuthMethod) error {
-	return nil
+	if auth == nil {
+		return s.Connect(url)
+	}
+
+	return common.ErrAuthNotSupported
 }
 
 func (s *GitUploadPackService) Info() (*common.GitUploadPackInfo, error) {

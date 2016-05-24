@@ -17,6 +17,7 @@ import (
 var (
 	NotFoundErr           = errors.New("repository not found")
 	EmptyGitUploadPackErr = errors.New("empty git-upload-pack given")
+	ErrAuthNotSupported   = errors.New("authentication not supported by client")
 )
 
 const GitUploadPackServiceName = "git-upload-pack"
