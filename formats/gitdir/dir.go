@@ -24,8 +24,7 @@ type Dir struct {
 }
 
 // New returns a Dir value ready to be used. The path argument must be
-// an existing git repository directory (e.g. "foo/bar/.git") on which
-// the "git gc" command has been run.
+// an existing git repository directory (e.g. "/foo/bar/.git").
 func New(path string) (*Dir, error) {
 	dir := &Dir{}
 	var err error
@@ -55,7 +54,8 @@ func (d *Dir) isInvalidPath() bool {
 	return !strings.HasSuffix(d.path, suffix)
 }
 
-// Returns the references in a git directory.
+// Refs scans the git directory collecting references, which it returns.
+// Symbolic references are resolved and included in the output.
 func (d *Dir) Refs() (map[string]core.Hash, error) {
 	var err error
 

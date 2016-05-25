@@ -3,6 +3,7 @@ package file
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
@@ -35,7 +36,8 @@ func (s *SuiteFileClient) SetUpSuite(c *C) {
 	s.fixturePath, err = tgz.Extract(file)
 	c.Assert(err, IsNil)
 
-	s.fixtureURL = common.Endpoint("file://" + s.fixturePath + "/.git")
+	s.fixtureURL = common.Endpoint("file://" +
+		filepath.Join(s.fixturePath+".git"))
 }
 
 func (s *SuiteFileClient) TearDownSuite(c *C) {
