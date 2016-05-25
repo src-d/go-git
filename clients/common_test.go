@@ -15,26 +15,21 @@ import (
 func Test(t *testing.T) { TestingT(t) }
 
 type SuiteCommon struct {
-	dirRemotePath string
+	dirFixturePath string
 }
 
 var _ = Suite(&SuiteCommon{})
 
+const fixtureTGZ = "../formats/gitdir/fixtures/spinnaker-gc.tgz"
+
 func (s *SuiteCommon) SetUpSuite(c *C) {
-	file, err := os.Open("../formats/gitdir/fixtures/spinnaker-gc.tgz")
-	c.Assert(err, IsNil)
-
-	defer func() {
-		err := file.Close()
-		c.Assert(err, IsNil)
-	}()
-
-	s.dirRemotePath, err = tgz.Extract(file)
+	var err error
+	s.dirFixturePath, err = tgz.Extract(fixtureTGZ)
 	c.Assert(err, IsNil)
 }
 
 func (s *SuiteCommon) TearDownSuite(c *C) {
-	err := os.RemoveAll(s.dirRemotePath)
+	err := os.RemoveAll(s.dirFixturePath)
 	c.Assert(err, IsNil)
 }
 
@@ -49,7 +44,7 @@ func (s *SuiteCommon) TestNewGitUploadPackService(c *C) {
 		{"http://github.com/src-d/go-git", false, "*http.GitUploadPackService"},
 		{"https://github.com/src-d/go-git", false, "*http.GitUploadPackService"},
 		{"ssh://github.com/src-d/go-git", false, "*ssh.GitUploadPackService"},
-		{"file://" + s.dirRemotePath, false, "*file.GitUploadPackService"},
+		{"file://" + s.dirFixturePath, false, "*file.GitUploadPackService"},
 	}
 
 	for i, t := range tests {

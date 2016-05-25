@@ -25,15 +25,9 @@ var _ = Suite(&SuiteFileClient{})
 const fixtureTGZ = "../../formats/gitdir/fixtures/spinnaker-gc.tgz"
 
 func (s *SuiteFileClient) SetUpSuite(c *C) {
-	file, err := os.Open(fixtureTGZ)
-	c.Assert(err, IsNil)
+	var err error
 
-	defer func() {
-		err := file.Close()
-		c.Assert(err, IsNil)
-	}()
-
-	s.fixturePath, err = tgz.Extract(file)
+	s.fixturePath, err = tgz.Extract(fixtureTGZ)
 	c.Assert(err, IsNil)
 
 	s.fixtureURL = common.Endpoint("file://" +
@@ -77,7 +71,7 @@ func (s *SuiteFileClient) TestDefaultBranch(c *C) {
 	c.Assert(info.Capabilities.SymbolicReference("HEAD"), Equals, "refs/heads/master")
 }
 
-func (s *SuiteFileClient) ATestFetch(c *C) {
+func (s *SuiteFileClient) TestFetch(c *C) {
 	r := NewGitUploadPackService()
 	c.Assert(r.Connect(s.fixtureURL), IsNil)
 

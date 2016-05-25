@@ -34,16 +34,10 @@ func (s *SuiteGitDir) SetUpSuite(c *C) {
 	for _, fixture := range fixtures {
 		comment := Commentf("fixture name = %s\n", fixture.name)
 
-		file, err := os.Open(fixture.tgz)
-		c.Assert(err, IsNil, comment)
-
-		path, err := tgz.Extract(file)
+		path, err := tgz.Extract(fixture.tgz)
 		c.Assert(err, IsNil, comment)
 
 		s.fixturePath[fixture.name] = filepath.Join(path, ".git")
-
-		err = file.Close()
-		c.Assert(err, IsNil, comment)
 	}
 }
 

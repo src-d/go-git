@@ -22,13 +22,25 @@ const (
 // On error, a non-nil error and an empty string are returned if the
 // newly created directory is was correctly deleted. If not, its path is
 // returned instead of the empty string.
-func Extract(srcFile io.Reader) (string, error) {
-	dstPath, err := ioutil.TempDir(useDefaultTempDir, tmpPrefix)
+func Extract(srcPath string) (dstPath string, err error) {
+	file, err := os.Open(srcPath)
+	if err != nil {
+		return "", err
+	}
+
+	defer func() {
+		errClose := file.Close()
+		if err == nil {
+			err = errClose
+		}
+	}()
+
+	dstPath, err = ioutil.TempDir(useDefaultTempDir, tmpPrefix)
 	if err != nil {
 		return "", nil
 	}
 
-	tarReader, err := zipTarReader(srcFile)
+	tarReader, err := zipTarReader(file)
 	if err != nil {
 		return deleteDir(dstPath, err)
 	}
