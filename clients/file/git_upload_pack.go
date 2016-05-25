@@ -1,13 +1,16 @@
 package file
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"strings"
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
-	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/formats/gitdir"
+)
+
+var (
+	ErrHeadSymRefNotFound = errors.New("HEAD symbolic reference not found")
 )
 
 type GitUploadPackService struct {
@@ -48,9 +51,16 @@ func (s *GitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
 		return info, err
 	}
 
-	fmt.Println(info.Refs)
+	if info.Capabilities, err = s.dir.Capabilities(); err != nil {
+		return info, err
+	}
 
-	info.Head = core.ZeroHash
+	headSymRef := info.Capabilities.SymbolicReference("HEAD")
+	var ok bool
+	if info.Head, ok = info.Refs[headSymRef]; !ok {
+		return info, ErrHeadSymRefNotFound
+	}
+
 	return info, nil
 }
 

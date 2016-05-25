@@ -2,9 +2,12 @@ package gitdir
 
 import (
 	"errors"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
+	"gopkg.in/src-d/go-git.v3/clients/common"
 	"gopkg.in/src-d/go-git.v3/core"
 )
 
@@ -69,4 +72,39 @@ func (d *Dir) Refs() (map[string]core.Hash, error) {
 	}
 
 	return d.refs, err
+}
+
+// Capabilities scans the git directory collection capabilities, which it returns.
+func (d *Dir) Capabilities() (*common.Capabilities, error) {
+	caps := common.NewCapabilities()
+
+	d.addSymRefCapability(caps)
+
+	return caps, nil
+}
+
+func (d *Dir) addSymRefCapability(cap *common.Capabilities) (err error) {
+	file, err := os.Open(filepath.Join(d.path, "HEAD"))
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		errClose := file.Close()
+		if err == nil {
+			err = errClose
+		}
+	}()
+
+	bytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+	contents := strings.TrimSpace(string(bytes))
+
+	capablity := "symref"
+	ref := strings.TrimPrefix(contents, symRefPrefix)
+	cap.Set(capablity, "HEAD:"+ref)
+
+	return nil
 }
