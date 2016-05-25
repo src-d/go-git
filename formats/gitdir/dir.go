@@ -2,8 +2,6 @@ package gitdir
 
 import (
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"path/filepath"
 	"strings"
 
@@ -22,6 +20,7 @@ var (
 
 type Dir struct {
 	path string
+	refs map[string]core.Hash
 }
 
 // New returns a Dir value ready to be used. The path argument must be
@@ -58,56 +57,16 @@ func (d *Dir) isInvalidPath() bool {
 
 // Returns the references in a git directory.
 func (d *Dir) Refs() (map[string]core.Hash, error) {
-	refs, err := d.refsFromPackedRefs()
+	var err error
+
+	d.refs, err = d.initRefsFromPackedRefs()
 	if err != nil {
 		return nil, err
 	}
 
-	if err := d.refsFromRefDir(refs); err != nil {
+	if err = d.addRefsFromRefDir(); err != nil {
 		return nil, err
 	}
 
-	return refs, err
-}
-
-func (d *Dir) refsFromRefDir(result map[string]core.Hash) error {
-	return nil
-}
-
-/*
-func refsTree(basePath, relPath string, result map[string]core.Hash) error {
-	fmt.Printf("calling refs(%s, %s, %v)\n", basePath, relPath, result)
-	files, err := ioutil.ReadDir(basePath + relPath)
-	if err != nil {
-		return err
-	}
-
-	for _, file := range files {
-		newRelPath := relPath + file.Name()
-		if file.IsDir() {
-			refs(basePath, newRelPath+"/", result)
-		} else {
-			_ = basePath + newRelPath
-				hash, err := ReadHashFile(path)
-				if err != nil {
-					return err
-				}
-				result[newRelPath] = core.NewHash(string(content))
-		}
-	}
-
-	return nil
-}
-*/
-
-// ReadHashFile reads a single hash from a file.  If a symbolic
-// reference is found instead of a hash, the reference is resolved and
-// the proper hash is returned.
-func ReadHashFile(repo, relPath string) (core.Hash, error) {
-	content, err := ioutil.ReadFile(repo)
-	if err != nil {
-		return core.ZeroHash, err
-	}
-	fmt.Println(string(content))
-	return core.ZeroHash, nil
+	return d.refs, err
 }

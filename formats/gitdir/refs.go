@@ -3,6 +3,7 @@ package gitdir
 import (
 	"bufio"
 	"errors"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,9 +14,14 @@ import (
 var (
 	ErrPackedRefsDuplicatedRef = errors.New("duplicated ref found in packed-ref file")
 	ErrPackedRefsBadFormat     = errors.New("malformed packed-ref")
+	ErrSymRefTargetNotFound    = errors.New("symbolic reference target not found")
 )
 
-func (d *Dir) refsFromPackedRefs() (m map[string]core.Hash, err error) {
+const (
+	symRefPrefix = "ref: "
+)
+
+func (d *Dir) initRefsFromPackedRefs() (m map[string]core.Hash, err error) {
 	result := make(map[string]core.Hash)
 
 	path := filepath.Join(d.path, packedRefsPath)
@@ -48,6 +54,7 @@ func (d *Dir) refsFromPackedRefs() (m map[string]core.Hash, err error) {
 	return result, nil
 }
 
+// process lines from a packed-refs file
 func processLine(line string, refs map[string]core.Hash) error {
 	switch line[0] {
 	case '#': // comment - ignore
@@ -68,4 +75,66 @@ func processLine(line string, refs map[string]core.Hash) error {
 	}
 
 	return nil
+}
+
+func (d *Dir) addRefsFromRefDir() error {
+	return d.walkTree("refs")
+}
+
+func (d *Dir) walkTree(relPath string) error {
+	files, err := ioutil.ReadDir(filepath.Join(d.path, relPath))
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		newRelPath := filepath.Join(relPath, file.Name())
+
+		if file.IsDir() {
+			if err = d.walkTree(newRelPath); err != nil {
+				return err
+			}
+		} else {
+			filePath := filepath.Join(d.path, newRelPath)
+			hash, err := d.readHashFile(filePath)
+			if err != nil {
+				return err
+			}
+			d.refs[newRelPath] = hash
+		}
+	}
+
+	return nil
+}
+
+// ReadHashFile reads a single hash from a file.  If a symbolic
+// reference is found instead of a hash, the reference is resolved and
+// the proper hash is returned.
+func (d *Dir) readHashFile(path string) (core.Hash, error) {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return core.ZeroHash, err
+	}
+	content := strings.TrimSpace(string(bytes))
+
+	if isSymRef(content) {
+		return d.resolveSymRef(content)
+	}
+
+	return core.NewHash(content), nil
+}
+
+func isSymRef(contents string) bool {
+	return strings.HasPrefix(contents, symRefPrefix)
+}
+
+func (d *Dir) resolveSymRef(symRef string) (core.Hash, error) {
+	ref := strings.TrimPrefix(symRef, symRefPrefix)
+
+	hash, ok := d.refs[ref]
+	if !ok {
+		return core.ZeroHash, ErrSymRefTargetNotFound
+	}
+
+	return hash, nil
 }
