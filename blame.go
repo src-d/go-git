@@ -3,8 +3,8 @@ package git
 import (
 	"bytes"
 	"errors"
+		"strconv"
 	"fmt"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -14,7 +14,7 @@ import (
 
 type Blame struct {
 	Path  string
-	Rev   core.Hash
+		Rev   core.Hash
 	Lines []*line
 }
 
@@ -65,7 +65,7 @@ type Blame struct {
 func (c *Commit) Blame(path string) (*Blame, error) {
 	b := new(blame)
 	b.fRev = c
-	b.path = path
+		b.path = path
 
 	// get all the file revisions
 	if err := b.fillRevs(); err != nil {
