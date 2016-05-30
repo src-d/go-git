@@ -1,7 +1,5 @@
 package packfile
 
-import "io"
-
 const deltaSizeMin = 4
 
 func deltaHeaderSize(b []byte) (uint, []byte) {
@@ -18,7 +16,8 @@ func deltaHeaderSize(b []byte) (uint, []byte) {
 	return size, b[j:]
 }
 
-func patchDelta(src, delta []byte) []byte {
+// PatchDelta returns the result of applying the modification deltas in delta to src.
+func PatchDelta(src, delta []byte) []byte {
 	if len(delta) < deltaSizeMin {
 		return nil
 	}
@@ -29,7 +28,7 @@ func patchDelta(src, delta []byte) []byte {
 	size, delta = deltaHeaderSize(delta)
 	origSize := size
 
-	dest := make([]byte, 0)
+	var dest []byte
 
 	// var offset uint
 	var cmd byte
@@ -37,46 +36,46 @@ func patchDelta(src, delta []byte) []byte {
 		cmd = delta[0]
 		delta = delta[1:]
 		if (cmd & 0x80) != 0 {
-			var cp_off, cp_size uint
+			var cpOff, cpSize uint
 			if (cmd & 0x01) != 0 {
-				cp_off = uint(delta[0])
+				cpOff = uint(delta[0])
 				delta = delta[1:]
 			}
 			if (cmd & 0x02) != 0 {
-				cp_off |= uint(delta[0]) << 8
+				cpOff |= uint(delta[0]) << 8
 				delta = delta[1:]
 			}
 			if (cmd & 0x04) != 0 {
-				cp_off |= uint(delta[0]) << 16
+				cpOff |= uint(delta[0]) << 16
 				delta = delta[1:]
 			}
 			if (cmd & 0x08) != 0 {
-				cp_off |= uint(delta[0]) << 24
+				cpOff |= uint(delta[0]) << 24
 				delta = delta[1:]
 			}
 
 			if (cmd & 0x10) != 0 {
-				cp_size = uint(delta[0])
+				cpSize = uint(delta[0])
 				delta = delta[1:]
 			}
 			if (cmd & 0x20) != 0 {
-				cp_size |= uint(delta[0]) << 8
+				cpSize |= uint(delta[0]) << 8
 				delta = delta[1:]
 			}
 			if (cmd & 0x40) != 0 {
-				cp_size |= uint(delta[0]) << 16
+				cpSize |= uint(delta[0]) << 16
 				delta = delta[1:]
 			}
-			if cp_size == 0 {
-				cp_size = 0x10000
+			if cpSize == 0 {
+				cpSize = 0x10000
 			}
-			if cp_off+cp_size < cp_off ||
-				cp_off+cp_size > uint(len(src)) ||
-				cp_size > origSize {
+			if cpOff+cpSize < cpOff ||
+				cpOff+cpSize > uint(len(src)) ||
+				cpSize > origSize {
 				break
 			}
-			dest = append(dest, src[cp_off:cp_off+cp_size]...)
-			size -= cp_size
+			dest = append(dest, src[cpOff:cpOff+cpSize]...)
+			size -= cpSize
 		} else if cmd != 0 {
 			if uint(cmd) > origSize {
 				break
@@ -92,26 +91,4 @@ func patchDelta(src, delta []byte) []byte {
 		}
 	}
 	return dest
-}
-
-func decodeOffset(src io.ByteReader, steps int64) (int64, error) {
-	b, err := src.ReadByte()
-	if err != nil {
-		return 0, err
-	}
-
-	var offset = int64(b & 0x7f)
-	for (b & 0x80) != 0 {
-		offset++ // WHY?
-		b, err = src.ReadByte()
-		if err != nil {
-			return 0, err
-		}
-
-		offset = (offset << 7) + int64(b&0x7f)
-	}
-
-	// offset needs to be aware of the bytes we read for `o.typ` and `o.size`
-	offset += steps
-	return -offset, nil
 }

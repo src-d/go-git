@@ -5,11 +5,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"gopkg.in/src-d/go-git.v3/core"
-
-	"github.com/klauspost/compress/zlib"
+	"gopkg.in/src-d/go-git.v3/storage/memory"
 )
 
 type Format int
@@ -40,7 +38,7 @@ type Reader struct {
 	// MaxObjectsLimit is the limit of objects to be load in the packfile, if
 	// a packfile excess this number an error is throw, the default value
 	// is defined by DefaultMaxObjectsLimit, usually the default limit is more
-	// than enough to work with any repository, working extremely big repositories
+	// than enough to work with any repository, working extremly big repositories
 	// where the number of object is bigger the memory can be exhausted.
 	MaxObjectsLimit uint32
 
@@ -134,7 +132,7 @@ func (r *Reader) readObjects(count uint32) error {
 			r.offsets[start] = obj.Hash()
 		}
 
-		r.s.Set(obj)
+		_, err = r.s.Set(obj)
 		if err == io.EOF {
 			break
 		}
@@ -144,174 +142,49 @@ func (r *Reader) readObjects(count uint32) error {
 }
 
 func (r *Reader) newObject() (core.Object, error) {
-	raw, err := r.s.New()
+	var typ core.ObjectType
+	var length int64
+	var content []byte
+
+	objectStart := r.r.position
+
+	typ, length, err := readTypeAndLength(r.r)
 	if err != nil {
 		return nil, err
 	}
-	var steps int64
 
-	var buf [1]byte
-	if _, err := r.r.Read(buf[:]); err != nil {
-		return nil, err
-	}
-
-	typ := core.ObjectType((buf[0] >> 4) & 7)
-	size := int64(buf[0] & 15)
-	steps++ // byte we just read to get `o.typ` and `o.size`
-
-	var shift uint = 4
-	for buf[0]&0x80 == 0x80 {
-		if _, err := r.r.Read(buf[:]); err != nil {
-			return nil, err
-		}
-
-		size += int64(buf[0]&0x7f) << shift
-		steps++ // byte we just read to update `o.size`
-		shift += 7
-	}
-
-	raw.SetType(typ)
-	raw.SetSize(size)
-
-	switch raw.Type() {
+	switch typ {
 	case core.REFDeltaObject:
-		err = r.readREFDelta(raw)
+		content, typ, err = readContentREFDelta(r.r, r)
+		length = int64(len(content))
 	case core.OFSDeltaObject:
-		err = r.readOFSDelta(raw, steps)
+		content, typ, err = readContentOFSDelta(r.r, objectStart, r)
+		length = int64(len(content))
 	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
-		err = r.readObject(raw)
+		content, err = readContent(r.r)
 	default:
-		err = InvalidObjectErr.n("tag %q", raw.Type)
+		err = InvalidObjectErr.n("tag %q", typ)
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	return raw, err
+	return memory.NewObject(typ, length, content), err
 }
 
-func (r *Reader) readREFDelta(raw core.Object) (err error) {
-	var ref core.Hash
-	if _, err := io.ReadFull(r.r, ref[:]); err != nil {
-		return err
-	}
-
-	buf := bytes.NewBuffer(nil)
-	if err := r.inflate(buf); err != nil {
-		return err
-	}
-
-	referenced, err := r.s.Get(ref)
-	if err != nil {
-		if err == core.ErrObjectNotFound {
-			return ErrObjectNotFound.n("%s", ref)
-		}
-		return err
-	}
-
-	reader, err := referenced.Reader()
-	if err != nil {
-		return err
-	}
-	defer checkClose(reader, &err)
-
-	d, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return err
-	}
-
-	patched := patchDelta(d, buf.Bytes())
-	if patched == nil {
-		return PatchingErr.n("hash %q", ref)
-	}
-
-	raw.SetType(referenced.Type())
-	raw.SetSize(int64(len(patched)))
-
-	writer, err := raw.Writer()
-	if err != nil {
-		return err
-	}
-	defer checkClose(writer, &err)
-
-	writer.Write(patched)
-
-	return nil
+// Returns an already seen object by its hash, part of Rememberer interface.
+func (r *Reader) ByHash(hash core.Hash) (core.Object, error) {
+	return r.s.Get(hash)
 }
 
-func (r *Reader) readOFSDelta(raw core.Object, steps int64) (err error) {
-	start := r.r.position
-	offset, err := decodeOffset(r.r, steps)
-	if err != nil {
-		return err
-	}
-
-	buf := bytes.NewBuffer(nil)
-	if err = r.inflate(buf); err != nil {
-		return err
-	}
-
-	ref, ok := r.offsets[start+offset]
+// Returns an already seen object by its offset in the packfile, part of Rememberer interface.
+func (r *Reader) ByOffset(offset int64) (core.Object, error) {
+	hash, ok := r.offsets[offset]
 	if !ok {
-		return PackEntryNotFoundErr.n("offset %d", start+offset)
+		return nil, PackEntryNotFoundErr.n("offset %d", offset)
 	}
 
-	referenced, err := r.s.Get(ref)
-	if err != nil {
-		return err
-	}
-
-	reader, err := referenced.Reader()
-	if err != nil {
-		return err
-	}
-	defer checkClose(reader, &err)
-
-	d, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return err
-	}
-
-	patched := patchDelta(d, buf.Bytes())
-	if patched == nil {
-		return PatchingErr.n("hash %q", ref)
-	}
-
-	raw.SetType(referenced.Type())
-	raw.SetSize(int64(len(patched)))
-
-	writer, err := raw.Writer()
-	if err != nil {
-		return err
-	}
-	defer checkClose(writer, &err)
-
-	writer.Write(patched)
-
-	return nil
-}
-
-func (r *Reader) readObject(raw core.Object) (err error) {
-	writer, err := raw.Writer()
-	if err != nil {
-		return err
-	}
-	defer checkClose(writer, &err)
-
-	return r.inflate(writer)
-}
-
-func (r *Reader) inflate(w io.Writer) error {
-	zr, err := zlib.NewReader(r.r)
-	if err != nil {
-		if err == zlib.ErrHeader {
-			return zlib.ErrHeader
-		}
-
-		return ZLibErr.n("%s", err)
-	}
-
-	defer zr.Close()
-
-	_, err = io.Copy(w, zr)
-	return err
+	return r.ByHash(hash)
 }
 
 type ReaderError struct {
