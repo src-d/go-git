@@ -87,7 +87,8 @@ func (s *SuiteRepository) TestCommits(c *C) {
 	c.Assert(r.Pull("origin", "refs/heads/master"), IsNil)
 
 	count := 0
-	commits := r.Commits()
+	commits, err := r.Commits()
+	c.Assert(err, IsNil)
 	for {
 		commit, err := commits.Next()
 		if err != nil {
@@ -123,7 +124,11 @@ func (s *SuiteRepository) TestTags(c *C) {
 	for i, t := range tagTests {
 		r, ok := s.repos[t.repo]
 		c.Assert(ok, Equals, true)
-		testTagIter(c, r.Tags(), t.tags, fmt.Sprintf("subtest %d, ", i))
+
+		tags, err := r.Tags()
+		c.Assert(err, IsNil)
+
+		testTagIter(c, tags, t.tags, fmt.Sprintf("subtest %d, ", i))
 	}
 }
 
@@ -150,6 +155,7 @@ func (s *SuiteRepository) TestCommitIterClosePanic(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(r.Pull("origin", "refs/heads/master"), IsNil)
 
-	commits := r.Commits()
+	commits, err := r.Commits()
+	c.Assert(err, IsNil)
 	commits.Close()
 }

@@ -65,7 +65,7 @@ func (o *ObjectStorage) Get(h core.Hash) (core.Object, error) {
 }
 
 // Iter returns a core.ObjectIter for the given core.ObjectTybe
-func (o *ObjectStorage) Iter(t core.ObjectType) core.ObjectIter {
+func (o *ObjectStorage) Iter(t core.ObjectType) (core.ObjectIter, error) {
 	var series []core.Object
 	switch t {
 	case core.CommitObject:
@@ -77,7 +77,7 @@ func (o *ObjectStorage) Iter(t core.ObjectType) core.ObjectIter {
 	case core.TagObject:
 		series = flattenObjectMap(o.Tags)
 	}
-	return core.NewObjectSliceIter(series)
+	return core.NewObjectSliceIter(series), nil
 }
 
 func flattenObjectMap(m map[core.Hash]core.Object) []core.Object {

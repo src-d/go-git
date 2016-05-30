@@ -118,8 +118,13 @@ func (r *Repository) Commit(h core.Hash) (*Commit, error) {
 }
 
 // Commits decode the objects into commits
-func (r *Repository) Commits() *CommitIter {
-	return NewCommitIter(r, r.Storage.Iter(core.CommitObject))
+func (r *Repository) Commits() (*CommitIter, error) {
+	iter, err := r.Storage.Iter(core.CommitObject)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewCommitIter(r, iter), nil
 }
 
 // Tree return the tree with the given hash
@@ -166,8 +171,13 @@ func (r *Repository) Tag(h core.Hash) (*Tag, error) {
 
 // Tags returns a TagIter that can step through all of the annotated tags
 // in the repository.
-func (r *Repository) Tags() *TagIter {
-	return NewTagIter(r, r.Storage.Iter(core.TagObject))
+func (r *Repository) Tags() (*TagIter, error) {
+	iter, err := r.Storage.Iter(core.TagObject)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTagIter(r, iter), nil
 }
 
 // Object returns an object with the given hash.

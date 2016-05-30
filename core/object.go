@@ -34,6 +34,7 @@ type Object interface {
 	SetType(ObjectType)
 	Size() int64
 	SetSize(int64)
+	Content() []byte
 	Reader() (ObjectReader, error)
 	Writer() (ObjectWriter, error)
 }
@@ -43,7 +44,7 @@ type ObjectStorage interface {
 	New() (Object, error)
 	Set(Object) (Hash, error)
 	Get(Hash) (Object, error)
-	Iter(ObjectType) ObjectIter
+	Iter(ObjectType) (ObjectIter, error)
 }
 
 // ObjectType internal object type's
