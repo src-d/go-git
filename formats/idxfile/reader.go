@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/src-d/go-git.v2/core"
+	"gopkg.in/src-d/go-git.v3/core"
 )
 
 const (
@@ -214,8 +214,8 @@ func (r *Reader) readInt64() (uint64, error) {
 	return value, nil
 }
 
-func calculateFanout(idx *Idx) [255]uint32 {
-	fanout := [255]uint32{}
+func calculateFanout(idx *Idx) [256]uint32 {
+	fanout := [256]uint32{}
 	var c uint32
 	for _, e := range idx.Objects {
 		c++

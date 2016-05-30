@@ -61,10 +61,6 @@ func (w *Writer) writeFanout(idx *Idx) (int, error) {
 		}
 	}
 
-	if err := w.writeInt32(uint32(len(idx.Objects))); err != nil {
-		return 0, err
-	}
-
 	return 1024, nil
 }
 
