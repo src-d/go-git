@@ -2,21 +2,54 @@ package git
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"gopkg.in/src-d/go-git.v3/clients/http"
 	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v3/storage/seekable"
+	"gopkg.in/src-d/go-git.v3/utils/tgz"
 
 	. "gopkg.in/check.v1"
 )
 
+var dirFixtures = [...]struct {
+	name string
+	tgz  string
+}{
+	{
+		name: "spinnaker",
+		tgz:  "formats/gitdir/fixtures/spinnaker-gc.tgz",
+	},
+}
+
 type SuiteRepository struct {
-	repos map[string]*Repository
+	repos           map[string]*Repository
+	dirFixturePaths map[string]string
 }
 
 var _ = Suite(&SuiteRepository{})
 
 func (s *SuiteRepository) SetUpSuite(c *C) {
 	s.repos = unpackFixtures(c, tagFixtures, treeWalkerFixtures)
+
+	s.dirFixturePaths = make(map[string]string, len(dirFixtures))
+	for _, fixture := range dirFixtures {
+		comment := Commentf("fixture name = %s\n", fixture.name)
+
+		path, err := tgz.Extract(fixture.tgz)
+		c.Assert(err, IsNil, comment)
+
+		s.dirFixturePaths[fixture.name] = filepath.Join(path, ".git")
+	}
+}
+
+func (s *SuiteRepository) TearDownSuite(c *C) {
+	for name, path := range s.dirFixturePaths {
+		err := os.RemoveAll(path)
+		c.Assert(err, IsNil, Commentf("cannot delete tmp dir for fixture %s: %s\n",
+			name, path))
+	}
 }
 
 func (s *SuiteRepository) TestNewRepository(c *C) {
@@ -31,6 +64,20 @@ func (s *SuiteRepository) TestNewRepositoryWithAuth(c *C) {
 	r, err := NewRepository(RepositoryFixture, auth)
 	c.Assert(err, IsNil)
 	c.Assert(r.Remotes["origin"].Auth, Equals, auth)
+}
+
+func (s *SuiteRepository) TestNewSeekableRepository(c *C) {
+	for name, path := range s.dirFixturePaths {
+		comment := Commentf("dir fixture %q → %q\n", name, path)
+		repo, err := NewRepository("dir://"+path, nil)
+		c.Assert(err, IsNil, comment)
+
+		err = repo.PullDefault()
+		c.Assert(err, IsNil, comment)
+
+		c.Assert(repo.Storage, NotNil, comment)
+		c.Assert(repo.Storage, FitsTypeOf, &seekable.ObjectStorage{}, comment)
+	}
 }
 
 func (s *SuiteRepository) TestPull(c *C) {
@@ -124,11 +171,9 @@ func (s *SuiteRepository) TestTags(c *C) {
 	for i, t := range tagTests {
 		r, ok := s.repos[t.repo]
 		c.Assert(ok, Equals, true)
-
-		tags, err := r.Tags()
+		tagsIter, err := r.Tags()
 		c.Assert(err, IsNil)
-
-		testTagIter(c, tags, t.tags, fmt.Sprintf("subtest %d, ", i))
+		testTagIter(c, tagsIter, t.tags, fmt.Sprintf("subtest %d, ", i))
 	}
 }
 

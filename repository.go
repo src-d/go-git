@@ -3,11 +3,14 @@ package git
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
 	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v3/formats/gitdir"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
 	"gopkg.in/src-d/go-git.v3/storage/memory"
+	"gopkg.in/src-d/go-git.v3/storage/seekable"
 )
 
 var (
@@ -66,6 +69,16 @@ func (r *Repository) Pull(remoteName, branch string) (err error) {
 		return fmt.Errorf("unable to find remote %q", remoteName)
 	}
 
+	url := string(remote.Endpoint)
+	if isDirRepo(url) {
+		r.Storage, err = storeFromDir(url)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	if err := remote.Connect(); err != nil {
 		return err
 	}
@@ -96,6 +109,41 @@ func (r *Repository) Pull(remoteName, branch string) (err error) {
 	}
 
 	return nil
+}
+
+const dirScheme = "dir://"
+
+func isDirRepo(url string) bool {
+	fmt.Println("pulling ", url)
+	if strings.HasPrefix(url, dirScheme) {
+		return true
+	}
+
+	return false
+}
+
+func storeFromDir(url string) (*seekable.ObjectStorage, error) {
+	path := strings.TrimPrefix(url, dirScheme)
+	dir, err := gitdir.New(path)
+	if err != nil {
+		return nil, err
+	}
+
+	packfile, err := dir.Packfile()
+	if err != nil {
+		return nil, err
+	}
+
+	idxfile, err := dir.Idxfile()
+	if err != nil {
+		// if there is no idx file, just keep on, we will manage to create one
+		// on the fly.
+		if err != gitdir.ErrIdxNotFound {
+			return nil, err
+		}
+	}
+
+	return seekable.New(packfile, idxfile)
 }
 
 // PullDefault like Pull but retrieve the default branch from the default remote

@@ -1,7 +1,10 @@
 package gitdir
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -19,6 +22,7 @@ const (
 
 var (
 	ErrBadGitDirName = errors.New(`Bad git dir name (must end in ".git")`)
+	ErrIdxNotFound   = errors.New("idx file not found")
 )
 
 type Dir struct {
@@ -107,4 +111,63 @@ func (d *Dir) addSymRefCapability(cap *common.Capabilities) (err error) {
 	cap.Set(capablity, "HEAD:"+ref)
 
 	return nil
+}
+
+func (d *Dir) Packfile() (io.ReadSeeker, error) {
+	pattern := d.pattern(true)
+	list, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(list) == 0 {
+		return nil, fmt.Errorf("packfile not found")
+	}
+
+	if len(list) > 1 {
+		return nil, fmt.Errorf("found more than one packfile")
+	}
+
+	return os.Open(list[0])
+}
+
+func (d *Dir) pattern(isPackfile bool) string {
+	// packfile pattern: dpath + /objects/pack/pack-????????????????????????????????????????.pack
+	//      idx pattern: dpath + /objects/pack/pack-????????????????????????????????????????.idx
+	var buf bytes.Buffer
+	buf.WriteString(d.path)
+	buf.WriteByte(os.PathSeparator)
+	buf.WriteString("objects")
+	buf.WriteByte(os.PathSeparator)
+	buf.WriteString("pack")
+	buf.WriteByte(os.PathSeparator)
+	buf.WriteString("pack-")
+	for i := 0; i < 40; i++ {
+		buf.WriteString("[0-9a-f]")
+	}
+	if isPackfile {
+		buf.WriteString(".pack")
+	} else {
+		buf.WriteString(".idx")
+	}
+
+	return buf.String()
+}
+
+func (d *Dir) Idxfile() (io.Reader, error) {
+	pattern := d.pattern(false)
+	list, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(list) == 0 {
+		return nil, ErrIdxNotFound
+	}
+
+	if len(list) > 1 {
+		return nil, fmt.Errorf("found more than one idxfile")
+	}
+
+	return os.Open(list[0])
 }

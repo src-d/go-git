@@ -2,6 +2,7 @@ package file
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 
@@ -65,5 +66,5 @@ func (s *GitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
 }
 
 func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadCloser, error) {
-	return nil, nil
+	return nil, fmt.Errorf("fetch makes no sense for dir clients")
 }
