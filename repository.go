@@ -114,7 +114,6 @@ func (r *Repository) Pull(remoteName, branch string) (err error) {
 const dirScheme = "dir://"
 
 func isDirRepo(url string) bool {
-	fmt.Println("pulling ", url)
 	if strings.HasPrefix(url, dirScheme) {
 		return true
 	}
