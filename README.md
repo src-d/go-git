@@ -67,6 +67,23 @@ for {
 }
 ```
 
+Bare and non-bare local repositories are also supported as remotes using the
+`dir://` scheme and the path of their `.git` directory:
+
+```go
+// pushd /tmp ; git clone https://github.com/src-d/go-git ; popd
+r, err := git.NewRepository("dir:///tmp/go-git/.git", nil)
+if err != nil {
+	panic(err)
+}
+
+if err := r.PullDefault(); err != nil {
+	panic(err)
+}
+
+// ...
+```
+
 Outputs:
 ```
 commit 2275fa7d0c75d20103f90b0e1616937d5a9fc5e6
@@ -111,7 +128,6 @@ if err != nil {
 
 fmt.Println(commit)
 ```
-
 
 Acknowledgements
 ----------------
