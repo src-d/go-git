@@ -136,51 +136,41 @@ func (d *Dir) Packfile() (io.ReadSeeker, error) {
 }
 
 func (d *Dir) pattern(isPackfile bool) (string, err) {
-	// packfile pattern: dpath + /objects/pack/pack-????????????????????????????????????????.pack
-	//      idx pattern: dpath + /objects/pack/pack-????????????????????????????????????????.idx
+	// packfile pattern: dpath + /objects/pack/pack-40hexs.pack
+	//      idx pattern: dpath + /objects/pack/pack-40hexs.idx
 	var buf bytes.Buffer
-	_, err := buf.WriteString(d.path)
-	if err != nil {
+	if _, err := buf.WriteString(d.path); err != nil {
 		return "", nil
 	}
-	_, err := buf.WriteByte(os.PathSeparator)
-	if err != nil {
+	if _, err := buf.WriteByte(os.PathSeparator); err != nil {
 		return "", nil
 	}
-	_, err := buf.WriteString("objects")
-	if err != nil {
+	if _, err := buf.WriteString("objects"); err != nil {
 		return "", nil
 	}
-	_, err := buf.WriteByte(os.PathSeparator)
-	if err != nil {
+	if _, err := buf.WriteByte(os.PathSeparator); err != nil {
 		return "", nil
 	}
-	_, err := buf.WriteString("pack")
-	if err != nil {
+	if _, err := buf.WriteString("pack"); err != nil {
 		return "", nil
 	}
-	_, err := buf.WriteByte(os.PathSeparator)
-	if err != nil {
+	if _, err := buf.WriteByte(os.PathSeparator); err != nil {
 		return "", nil
 	}
-	_, err := buf.WriteString("pack-")
-	if err != nil {
+	if _, err := buf.WriteString("pack-"); err != nil {
 		return "", nil
 	}
 	for i := 0; i < 40; i++ {
-		_, err := buf.WriteString("[0-9a-f]")
-		if err != nil {
+		if _, err := buf.WriteString("[0-9a-f]"); err != nil {
 			return "", nil
 		}
 	}
 	if isPackfile {
-		_, err := buf.WriteString(".pack")
-		if err != nil {
+		if _, err := buf.WriteString(".pack"); err != nil {
 			return "", nil
 		}
 	} else {
-		_, err := buf.WriteString(".idx")
-		if err != nil {
+		if _, err := buf.WriteString(".idx"); err != nil {
 			return "", nil
 		}
 	}
