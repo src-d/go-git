@@ -22,6 +22,9 @@ func (s *SuiteTGZ) TestExtract(c *C) {
 		path, err := Extract(test.tgz)
 		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err, comment)
+
+			_, err := os.Stat(path)
+			c.Assert(os.IsNotExist(err), Equals, true, comment)
 		} else {
 			c.Assert(err, IsNil, comment)
 
@@ -30,6 +33,9 @@ func (s *SuiteTGZ) TestExtract(c *C) {
 
 			sort.Strings(test.tree)
 			c.Assert(obtained, DeepEquals, test.tree, comment)
+
+			err = os.RemoveAll(path)
+			c.Assert(err, IsNil, comment)
 		}
 	}
 }
