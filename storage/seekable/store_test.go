@@ -21,8 +21,8 @@ type SeekableSuite struct{}
 var _ = Suite(&SeekableSuite{})
 
 func (s *SeekableSuite) TestNewFailNoData(c *C) {
-	_, err := seekable.New(nil, nil)
-	c.Assert(err, Equals, seekable.ErrNotEnoughData)
+	_, err := seekable.New("", nil)
+	c.Assert(err, ErrorMatches, ".* no such file or directory")
 }
 
 func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
@@ -42,15 +42,12 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 		err = packfileFile.Close()
 		c.Assert(err, IsNil, comment)
 
-		packfile, err := os.Open(packfilePath)
-		c.Assert(err, IsNil, comment)
-
 		lastDot := strings.LastIndex(packfilePath, ".")
 		idxPath := packfilePath[:lastDot] + ".idx"
 		idx, err := os.Open(idxPath)
 		c.Assert(err, IsNil, comment)
 
-		storage, err := seekable.New(packfile, idx)
+		storage, err := seekable.New(packfilePath, idx)
 		c.Assert(err, IsNil, comment)
 		err = idx.Close()
 		c.Assert(err, IsNil, comment)
@@ -85,9 +82,6 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 
 			iter.Close()
 		}
-
-		err = packfile.Close()
-		c.Assert(err, IsNil, comment)
 	}
 }
 
@@ -108,15 +102,12 @@ func (s *SeekableSuite) TestIterCompareWithMemoryStorage(c *C) {
 		err = packfileFile.Close()
 		c.Assert(err, IsNil, comment)
 
-		packfile, err := os.Open(packfilePath)
-		c.Assert(err, IsNil, comment)
-
 		lastDot := strings.LastIndex(packfilePath, ".")
 		idxPath := packfilePath[:lastDot] + ".idx"
 		idx, err := os.Open(idxPath)
 		c.Assert(err, IsNil, comment)
 
-		storage, err := seekable.New(packfile, idx)
+		storage, err := seekable.New(packfilePath, idx)
 		c.Assert(err, IsNil, comment)
 		err = idx.Close()
 		c.Assert(err, IsNil, comment)
@@ -138,9 +129,6 @@ func (s *SeekableSuite) TestIterCompareWithMemoryStorage(c *C) {
 				c.Assert(seekableObjects[i].Hash(), Equals, expected.Hash(), comment)
 			}
 		}
-
-		err = packfile.Close()
-		c.Assert(err, IsNil, comment)
 	}
 }
 

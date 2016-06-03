@@ -1,9 +1,9 @@
 package seekable
 
 import (
-	"errors"
 	"fmt"
 	"io"
+	"os"
 
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
@@ -22,35 +22,39 @@ import (
 // This means the memory footprint of this storage is much smaller
 // than a memory.ObjectStorage, but it will also be probably slower.
 type ObjectStorage struct {
-	packfile io.ReadSeeker
+	packfile string // path
 	index    index.Index
 }
-
-// ErrNotEnoughData is returned when there is not enough data to
-// create the ObjectStorage.
-var ErrNotEnoughData = errors.New("no packfile or idx provided")
 
 // New returns a new ObjectStorage for the packfile at path.
 //
 // If no idx reader is provided, the index will be generated
 // by reading the packfile.
-func New(packfile io.ReadSeeker, idx io.Reader) (*ObjectStorage, error) {
-	index, err := buildIndex(packfile, idx)
+func New(path string, idx io.Reader) (s *ObjectStorage, err error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		errClose := file.Close()
+		if err == nil {
+			err = errClose
+		}
+	}()
+
+	index, err := buildIndex(file, idx)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ObjectStorage{
-		packfile: packfile,
+		packfile: path,
 		index:    index,
 	}, nil
 }
 
 func buildIndex(packfile io.Reader, idx io.Reader) (index.Index, error) {
-	if packfile == nil && idx == nil {
-		return nil, ErrNotEnoughData
-	}
-
 	if idx != nil {
 		return index.NewFromIdx(idx)
 	}
@@ -78,7 +82,19 @@ func (s *ObjectStorage) Get(h core.Hash) (core.Object, error) {
 		return nil, err
 	}
 
-	return packfile.ObjectAt(s.packfile, offset, s)
+	file, err := os.Open(s.packfile)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		errClose := file.Close()
+		if err == nil {
+			err = errClose
+		}
+	}()
+
+	return packfile.ObjectAt(file, offset, s)
 }
 
 // Iter returns an iterator for all the objects in the packfile with the
@@ -112,5 +128,17 @@ func (s *ObjectStorage) ByHash(hash core.Hash) (core.Object, error) {
 // Given the nature of this storage, it also returns objects that
 // have not yet been seen.
 func (s *ObjectStorage) ByOffset(offset int64) (core.Object, error) {
-	return packfile.ObjectAt(s.packfile, offset, s)
+	file, err := os.Open(s.packfile)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		errClose := file.Close()
+		if err == nil {
+			err = errClose
+		}
+	}()
+
+	return packfile.ObjectAt(file, offset, s)
 }

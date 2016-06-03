@@ -29,16 +29,16 @@ const (
 	symRefPrefix = "ref: "
 )
 
-func (d *Dir) initRefsFromPackedRefs() (m map[string]core.Hash, err error) {
-	result := make(map[string]core.Hash)
+func (d *Dir) initRefsFromPackedRefs() (err error) {
+	d.refs = make(map[string]core.Hash)
 
 	path := filepath.Join(d.path, packedRefsPath)
 	file, err := os.Open(path)
 	if err != nil {
 		if err == os.ErrNotExist {
-			return result, nil
+			return nil
 		}
-		return nil, err
+		return err
 	}
 	defer func() {
 		errClose := file.Close()
@@ -50,20 +50,16 @@ func (d *Dir) initRefsFromPackedRefs() (m map[string]core.Hash, err error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if err = processLine(line, result); err != nil {
-			return nil, err
+		if err = d.processLine(line); err != nil {
+			return err
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return scanner.Err()
 }
 
 // process lines from a packed-refs file
-func processLine(line string, refs map[string]core.Hash) error {
+func (d *Dir) processLine(line string) error {
 	switch line[0] {
 	case '#': // comment - ignore
 		return nil
@@ -76,10 +72,10 @@ func processLine(line string, refs map[string]core.Hash) error {
 		}
 		hash, ref := words[0], words[1]
 
-		if _, ok := refs[ref]; ok {
+		if _, ok := d.refs[ref]; ok {
 			return ErrPackedRefsDuplicatedRef
 		}
-		refs[ref] = core.NewHash(hash)
+		d.refs[ref] = core.NewHash(hash)
 	}
 
 	return nil

@@ -1,7 +1,6 @@
 package gitdir
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -69,8 +68,7 @@ func (d *Dir) isInvalidPath() bool {
 func (d *Dir) Refs() (map[string]core.Hash, error) {
 	var err error
 
-	d.refs, err = d.initRefsFromPackedRefs()
-	if err != nil {
+	if err = d.initRefsFromPackedRefs(); err != nil {
 		return nil, err
 	}
 
@@ -116,66 +114,56 @@ func (d *Dir) addSymRefCapability(cap *common.Capabilities) (err error) {
 	return nil
 }
 
-// Packfile returns a readseeker of the packfile in the repository.
-func (d *Dir) Packfile() (io.ReadSeeker, error) {
-	pattern, err := d.pattern(true)
-	if err != nil {
-		return nil, err
-	}
+// ReadSeekCloser is an io.ReadSeeker with a Close method.
+type ReadSeekCloser interface {
+	io.ReadSeeker
+	Close() error
+}
+
+// Packfile returns the path of the packfile in the repository.
+func (d *Dir) Packfile() (string, error) {
+	pattern := d.pattern(true)
 
 	list, err := filepath.Glob(pattern)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	if len(list) == 0 {
-		return nil, fmt.Errorf("packfile not found")
+		return "", fmt.Errorf("packfile not found")
 	}
 
 	if len(list) > 1 {
-		return nil, fmt.Errorf("found more than one packfile")
+		return "", fmt.Errorf("found more than one packfile")
 	}
 
-	return os.Open(list[0])
+	return list[0], nil
 }
 
-func (d *Dir) pattern(isPackfile bool) (string, error) {
-	// packfile pattern: dpath + /objects/pack/pack-40hexs.pack
-	//      idx pattern: dpath + /objects/pack/pack-40hexs.idx
+func (d *Dir) pattern(isPackfile bool) string {
+	// packfile pattern: d.path + /objects/pack/pack-40hexs.pack
+	//      idx pattern: d.path + /objects/pack/pack-40hexs.idx
 	base := filepath.Join(d.path, "objects")
 	base = filepath.Join(base, "pack")
-	var buf bytes.Buffer
-	if _, err := buf.WriteString(base); err != nil {
-		return "", nil
-	}
-	if _, err := buf.WriteString("pack-"); err != nil {
-		return "", nil
-	}
-	for i := 0; i < 40; i++ {
-		if _, err := buf.WriteString("[0-9a-f]"); err != nil {
-			return "", nil
-		}
-	}
+	file := filePattern + extension(isPackfile)
+	return filepath.Join(base, file)
+}
+
+func extension(isPackfile bool) string {
 	if isPackfile {
-		if _, err := buf.WriteString(".pack"); err != nil {
-			return "", nil
-		}
-	} else {
-		if _, err := buf.WriteString(".idx"); err != nil {
-			return "", nil
-		}
+		return ".pack"
 	}
 
-	return buf.String(), nil
+	return ".idx"
 }
+
+// "pack-" followed by 40 chars representing hexadecimal numbers
+const filePattern = "pack-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]"
 
 // Idxfile returns a reader of the idx file in the repository.
 // TODO: should it return a readcloser instead?
 func (d *Dir) Idxfile() (io.Reader, error) {
-	pattern, err := d.pattern(false)
-	if err != nil {
-		return nil, err
-	}
+	pattern := d.pattern(false)
 
 	list, err := filepath.Glob(pattern)
 	if err != nil {

@@ -1,12 +1,12 @@
 package gitdir
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git.v3/clients/common"
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/utils/tgz"
 )
@@ -14,41 +14,63 @@ import (
 func Test(t *testing.T) { TestingT(t) }
 
 var initFixtures = [...]struct {
-	name string
-	tgz  string
+	name         string
+	tgz          string
+	capabilities [][2]string
+	packfile     string
 }{
 	{
 		name: "spinnaker",
 		tgz:  "fixtures/spinnaker-gc.tgz",
+		capabilities: [][2]string{
+			{"symref", "HEAD:refs/heads/master"},
+		},
+		packfile: "objects/pack/pack-584416f86235cac0d54bfabbdc399fb2b09a5269.pack",
 	},
 }
 
+type fixture struct {
+	path         string               // repo names to paths of the extracted tgz
+	capabilities *common.Capabilities // expected capabilities
+	packfile     string               // path of the packfile
+}
+
 type SuiteGitDir struct {
-	fixtures map[string]string // repo names to paths of the extracted tgz
+	fixtures map[string]fixture
 }
 
 var _ = Suite(&SuiteGitDir{})
 
 func (s *SuiteGitDir) SetUpSuite(c *C) {
-	s.fixtures = make(map[string]string, len(initFixtures))
+	s.fixtures = make(map[string]fixture, len(initFixtures))
 
-	for _, fixture := range initFixtures {
-		comment := Commentf("fixture name = %s\n", fixture.name)
+	for _, init := range initFixtures {
+		comment := Commentf("fixture name = %s\n", init.name)
 
-		path, err := tgz.Extract(fixture.tgz)
+		path, err := tgz.Extract(init.tgz)
 		c.Assert(err, IsNil, comment)
 
-		s.fixtures[fixture.name] = filepath.Join(path, ".git")
+		fixt := fixture{}
+
+		fixt.path = filepath.Join(path, ".git")
+
+		fixt.capabilities = common.NewCapabilities()
+		for _, pair := range init.capabilities {
+			fixt.capabilities.Add(pair[0], pair[1])
+		}
+
+		fixt.packfile = init.packfile
+
+		s.fixtures[init.name] = fixt
 	}
 }
 
 func (s *SuiteGitDir) TearDownSuite(c *C) {
-	for name, path := range s.fixtures {
-		dir := filepath.Base(path)
-		fmt.Println(dir, path)
-		err := os.RemoveAll(path)
+	for name, fixture := range s.fixtures {
+		dir := filepath.Dir(fixture.path)
+		err := os.RemoveAll(dir)
 		c.Assert(err, IsNil, Commentf("cannot delete tmp dir for fixture %s: %s\n",
-			name, path))
+			name, dir))
 	}
 }
 
@@ -60,6 +82,9 @@ func (s *SuiteGitDir) TestNewDir(c *C) {
 	}{
 		{
 			input: "",
+			err:   ErrBadGitDirName,
+		}, {
+			input: "foo",
 			err:   ErrBadGitDirName,
 		}, {
 			input: "/",
@@ -139,12 +164,60 @@ func (s *SuiteGitDir) TestRefs(c *C) {
 		},
 	} {
 		comment := Commentf("subtest %d", i)
-
-		dir, err := New(s.fixtures[test.fixture])
-		c.Assert(err, IsNil, comment)
+		_, dir := s.newFixtureDir(c, test.fixture)
 
 		refs, err := dir.Refs()
 		c.Assert(err, IsNil, comment)
 		c.Assert(refs, DeepEquals, test.refs, comment)
+	}
+}
+
+func (s *SuiteGitDir) newFixtureDir(c *C, fixName string) (*fixture, *Dir) {
+	fixture, ok := s.fixtures[fixName]
+	c.Assert(ok, Equals, true)
+
+	dir, err := New(fixture.path)
+	c.Assert(err, IsNil)
+
+	return &fixture, dir
+}
+
+func (s *SuiteGitDir) TestCapabilities(c *C) {
+	for i, test := range [...]struct {
+		fixture      string
+		capabilities *common.Capabilities
+	}{
+		{
+			fixture: "spinnaker",
+		},
+	} {
+		comment := Commentf("subtest %d", i)
+		fixture, dir := s.newFixtureDir(c, test.fixture)
+
+		capabilities, err := dir.Capabilities()
+		c.Assert(err, IsNil, comment)
+		c.Assert(capabilities, DeepEquals, fixture.capabilities, comment)
+	}
+}
+
+func (s *SuiteGitDir) TestPackfile(c *C) {
+	for i, test := range [...]struct {
+		fixture      string
+		capabilities *common.Capabilities
+	}{
+		{
+			fixture: "spinnaker",
+		},
+	} {
+		comment := Commentf("subtest %d", i)
+		fixture, dir := s.newFixtureDir(c, test.fixture)
+
+		packfile, err := dir.Packfile()
+		c.Assert(err, IsNil, comment)
+
+		relativeFixturePackfile, err := filepath.Rel(dir.path, packfile)
+		c.Assert(err, IsNil, comment)
+
+		c.Assert(relativeFixturePackfile, Equals, fixture.packfile)
 	}
 }
