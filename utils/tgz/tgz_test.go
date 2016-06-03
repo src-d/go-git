@@ -23,7 +23,7 @@ func (s *SuiteTGZ) TestExtract(c *C) {
 		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err, comment)
 
-			_, err := os.Stat(path)
+			_, err = os.Stat(path)
 			c.Assert(os.IsNotExist(err), Equals, true, comment)
 		} else {
 			c.Assert(err, IsNil, comment)
