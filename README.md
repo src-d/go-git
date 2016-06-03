@@ -87,8 +87,14 @@ Date:   2015-12-11 17:57:10 +0100 +0100
 ...
 ```
 
-Bare and non-bare local repositories are also supported as remotes using the
-`dir://` scheme and the path of their `.git` directory:
+Bare and non-bare local repositories are also supported using the `dir://`
+scheme and the path of the desired `.git` directory. To be able to use a git
+repository as a `dir://` remote, you must first prepare it by running `git gc`
+on it.
+
+When using this kind of remote, git objects are not cached in memory and all
+operations require a read from the packfile on disk, this is much slower than
+having all the repository contents in memory, but uses very little memory.
 
 ```go
 // pushd /tmp ; git clone https://github.com/src-d/go-git ; popd
