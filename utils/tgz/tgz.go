@@ -20,10 +20,10 @@ const (
 // On success, the path of new directory and a nil error is returned.
 //
 // On error, a non-nil error and an empty string are returned if the
-// newly created directory is was correctly deleted. If not, its path is
+// newly created directory was correctly deleted. If not, its path is
 // returned instead of the empty string.
-func Extract(srcPath string) (dstPath string, err error) {
-	file, err := os.Open(srcPath)
+func Extract(tgz string) (dir string, err error) {
+	file, err := os.Open(tgz)
 	if err != nil {
 		return "", err
 	}
@@ -35,30 +35,30 @@ func Extract(srcPath string) (dstPath string, err error) {
 		}
 	}()
 
-	dstPath, err = ioutil.TempDir(useDefaultTempDir, tmpPrefix)
+	dir, err = ioutil.TempDir(useDefaultTempDir, tmpPrefix)
 	if err != nil {
 		return "", nil
 	}
 
 	tarReader, err := zipTarReader(file)
 	if err != nil {
-		return deleteDir(dstPath, err)
+		return deleteDir(dir, err)
 	}
 
-	if err = unTar(tarReader, dstPath); err != nil {
-		return deleteDir(dstPath, err)
+	if err = unTar(tarReader, dir); err != nil {
+		return deleteDir(dir, err)
 	}
 
-	return dstPath, nil
+	return dir, nil
 }
 
-func deleteDir(dirPath string, prevErr error) (string, error) {
+func deleteDir(dir string, prevErr error) (string, error) {
 	path := ""
 	err := prevErr
 
-	errDelete := os.RemoveAll(dirPath)
+	errDelete := os.RemoveAll(dir)
 	if errDelete != nil {
-		path = dirPath
+		path = dir
 		if prevErr == nil {
 			err = errDelete
 		}
