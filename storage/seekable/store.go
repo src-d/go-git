@@ -30,26 +30,38 @@ type ObjectStorage struct {
 //
 // If no idx reader is provided, the index will be generated
 // by reading the packfile.
-func New(path string, idx io.Reader) (s *ObjectStorage, err error) {
-	file, err := os.Open(path)
+func New(packfilePath, idxPath string) (s *ObjectStorage, err error) {
+	packfile, err := os.Open(packfilePath)
 	if err != nil {
 		return nil, err
 	}
 
 	defer func() {
-		errClose := file.Close()
+		errClose := packfile.Close()
 		if err == nil {
 			err = errClose
 		}
 	}()
 
-	index, err := buildIndex(file, idx)
+	idxfile, err := os.Open(idxPath)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		errClose := idxfile.Close()
+		if err == nil {
+			err = errClose
+		}
+	}()
+
+	index, err := buildIndex(packfile, idxfile)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ObjectStorage{
-		packfile: path,
+		packfile: packfilePath,
 		index:    index,
 	}, nil
 }

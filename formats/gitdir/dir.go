@@ -160,23 +160,22 @@ func extension(isPackfile bool) string {
 // "pack-" followed by 40 chars representing hexadecimal numbers
 const filePattern = "pack-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]"
 
-// Idxfile returns a reader of the idx file in the repository.
-// TODO: should it return a readcloser instead?
-func (d *Dir) Idxfile() (io.Reader, error) {
+// Idxfile returns the path of the idx file in the repository.
+func (d *Dir) Idxfile() (string, error) {
 	pattern := d.pattern(false)
 
 	list, err := filepath.Glob(pattern)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	if len(list) == 0 {
-		return nil, ErrIdxNotFound
+		return "", ErrIdxNotFound
 	}
 
 	if len(list) > 1 {
-		return nil, fmt.Errorf("found more than one idxfile")
+		return "", fmt.Errorf("found more than one idxfile")
 	}
 
-	return os.Open(list[0])
+	return list[0], nil
 }

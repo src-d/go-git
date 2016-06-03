@@ -21,7 +21,7 @@ type SeekableSuite struct{}
 var _ = Suite(&SeekableSuite{})
 
 func (s *SeekableSuite) TestNewFailNoData(c *C) {
-	_, err := seekable.New("", nil)
+	_, err := seekable.New("", "")
 	c.Assert(err, ErrorMatches, ".* no such file or directory")
 }
 
@@ -44,12 +44,8 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 
 		lastDot := strings.LastIndex(packfilePath, ".")
 		idxPath := packfilePath[:lastDot] + ".idx"
-		idx, err := os.Open(idxPath)
-		c.Assert(err, IsNil, comment)
 
-		storage, err := seekable.New(packfilePath, idx)
-		c.Assert(err, IsNil, comment)
-		err = idx.Close()
+		storage, err := seekable.New(packfilePath, idxPath)
 		c.Assert(err, IsNil, comment)
 
 		for _, typ := range [...]core.ObjectType{
@@ -104,12 +100,8 @@ func (s *SeekableSuite) TestIterCompareWithMemoryStorage(c *C) {
 
 		lastDot := strings.LastIndex(packfilePath, ".")
 		idxPath := packfilePath[:lastDot] + ".idx"
-		idx, err := os.Open(idxPath)
-		c.Assert(err, IsNil, comment)
 
-		storage, err := seekable.New(packfilePath, idx)
-		c.Assert(err, IsNil, comment)
-		err = idx.Close()
+		storage, err := seekable.New(packfilePath, idxPath)
 		c.Assert(err, IsNil, comment)
 
 		for _, typ := range [...]core.ObjectType{

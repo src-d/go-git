@@ -18,6 +18,7 @@ var initFixtures = [...]struct {
 	tgz          string
 	capabilities [][2]string
 	packfile     string
+	idxfile      string
 }{
 	{
 		name: "spinnaker",
@@ -26,6 +27,11 @@ var initFixtures = [...]struct {
 			{"symref", "HEAD:refs/heads/master"},
 		},
 		packfile: "objects/pack/pack-584416f86235cac0d54bfabbdc399fb2b09a5269.pack",
+		idxfile:  "objects/pack/pack-584416f86235cac0d54bfabbdc399fb2b09a5269.idx",
+	},
+	{
+		name: "no-packfile",
+		tgz:  "fixtures/no-packfile.tgz",
 	},
 }
 
@@ -33,6 +39,7 @@ type fixture struct {
 	path         string               // repo names to paths of the extracted tgz
 	capabilities *common.Capabilities // expected capabilities
 	packfile     string               // path of the packfile
+	idxfile      string               // path of the idxfile
 }
 
 type SuiteGitDir struct {
@@ -60,6 +67,7 @@ func (s *SuiteGitDir) SetUpSuite(c *C) {
 		}
 
 		fixt.packfile = init.packfile
+		fixt.idxfile = init.idxfile
 
 		s.fixtures[init.name] = fixt
 	}
@@ -201,23 +209,53 @@ func (s *SuiteGitDir) TestCapabilities(c *C) {
 }
 
 func (s *SuiteGitDir) TestPackfile(c *C) {
-	for i, test := range [...]struct {
-		fixture      string
-		capabilities *common.Capabilities
+	for _, test := range [...]struct {
+		fixture string
+		err     string // error regexp
 	}{
 		{
 			fixture: "spinnaker",
+		}, {
+			fixture: "no-packfile",
+			err:     "packfile not found",
 		},
 	} {
-		comment := Commentf("subtest %d", i)
-		fixture, dir := s.newFixtureDir(c, test.fixture)
+		s.checkFile(c, true, test.fixture, test.err)
+	}
+}
 
-		packfile, err := dir.Packfile()
-		c.Assert(err, IsNil, comment)
+func (s *SuiteGitDir) TestIdxfile(c *C) {
+	for _, fixture := range []string{
+		"spinnaker",
+	} {
+		s.checkFile(c, false, fixture, "")
+	}
+}
 
-		relativeFixturePackfile, err := filepath.Rel(dir.path, packfile)
-		c.Assert(err, IsNil, comment)
+func (s *SuiteGitDir) checkFile(c *C, isPackfile bool,
+	fixtureName string, expectedErr string) {
 
-		c.Assert(relativeFixturePackfile, Equals, fixture.packfile)
+	fixt, dir := s.newFixtureDir(c, fixtureName)
+
+	var path string
+	var fixturePath string
+	var err error
+	if isPackfile {
+		path, err = dir.Packfile()
+		fixturePath = fixt.packfile
+	} else {
+		path, err = dir.Idxfile()
+		fixturePath = fixt.idxfile
+	}
+
+	if expectedErr != "" {
+		c.Assert(err, ErrorMatches, expectedErr)
+	} else {
+		c.Assert(err, IsNil)
+
+		relative, err := filepath.Rel(dir.path, path)
+		c.Assert(err, IsNil)
+
+		c.Assert(relative, Equals, fixturePath)
 	}
 }
