@@ -118,7 +118,11 @@ func (d *Dir) addSymRefCapability(cap *common.Capabilities) (err error) {
 
 // Packfile returns a readseeker of the packfile in the repository.
 func (d *Dir) Packfile() (io.ReadSeeker, error) {
-	pattern := d.pattern(true)
+	pattern, err := d.pattern(true)
+	if err != nil {
+		return nil, err
+	}
+
 	list, err := filepath.Glob(pattern)
 	if err != nil {
 		return nil, err
@@ -135,26 +139,13 @@ func (d *Dir) Packfile() (io.ReadSeeker, error) {
 	return os.Open(list[0])
 }
 
-func (d *Dir) pattern(isPackfile bool) (string, err) {
+func (d *Dir) pattern(isPackfile bool) (string, error) {
 	// packfile pattern: dpath + /objects/pack/pack-40hexs.pack
 	//      idx pattern: dpath + /objects/pack/pack-40hexs.idx
+	base := filepath.Join(d.path, "objects")
+	base = filepath.Join(base, "pack")
 	var buf bytes.Buffer
-	if _, err := buf.WriteString(d.path); err != nil {
-		return "", nil
-	}
-	if _, err := buf.WriteByte(os.PathSeparator); err != nil {
-		return "", nil
-	}
-	if _, err := buf.WriteString("objects"); err != nil {
-		return "", nil
-	}
-	if _, err := buf.WriteByte(os.PathSeparator); err != nil {
-		return "", nil
-	}
-	if _, err := buf.WriteString("pack"); err != nil {
-		return "", nil
-	}
-	if _, err := buf.WriteByte(os.PathSeparator); err != nil {
+	if _, err := buf.WriteString(base); err != nil {
 		return "", nil
 	}
 	if _, err := buf.WriteString("pack-"); err != nil {
@@ -175,13 +166,17 @@ func (d *Dir) pattern(isPackfile bool) (string, err) {
 		}
 	}
 
-	return buf.String()
+	return buf.String(), nil
 }
 
 // Idxfile returns a reader of the idx file in the repository.
 // TODO: should it return a readcloser instead?
 func (d *Dir) Idxfile() (io.Reader, error) {
-	pattern := d.pattern(false)
+	pattern, err := d.pattern(false)
+	if err != nil {
+		return nil, err
+	}
+
 	list, err := filepath.Glob(pattern)
 	if err != nil {
 		return nil, err
