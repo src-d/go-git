@@ -1,6 +1,7 @@
 package gitdir
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,7 +13,7 @@ import (
 
 func Test(t *testing.T) { TestingT(t) }
 
-var fixtures = [...]struct {
+var initFixtures = [...]struct {
 	name string
 	tgz  string
 }{
@@ -23,26 +24,28 @@ var fixtures = [...]struct {
 }
 
 type SuiteGitDir struct {
-	fixturePath map[string]string // repo names to paths of the extracted tgz
+	fixtures map[string]string // repo names to paths of the extracted tgz
 }
 
 var _ = Suite(&SuiteGitDir{})
 
 func (s *SuiteGitDir) SetUpSuite(c *C) {
-	s.fixturePath = make(map[string]string, len(fixtures))
+	s.fixtures = make(map[string]string, len(initFixtures))
 
-	for _, fixture := range fixtures {
+	for _, fixture := range initFixtures {
 		comment := Commentf("fixture name = %s\n", fixture.name)
 
 		path, err := tgz.Extract(fixture.tgz)
 		c.Assert(err, IsNil, comment)
 
-		s.fixturePath[fixture.name] = filepath.Join(path, ".git")
+		s.fixtures[fixture.name] = filepath.Join(path, ".git")
 	}
 }
 
 func (s *SuiteGitDir) TearDownSuite(c *C) {
-	for name, path := range s.fixturePath {
+	for name, path := range s.fixtures {
+		dir := filepath.Base(path)
+		fmt.Println(dir, path)
 		err := os.RemoveAll(path)
 		c.Assert(err, IsNil, Commentf("cannot delete tmp dir for fixture %s: %s\n",
 			name, path))
@@ -137,7 +140,7 @@ func (s *SuiteGitDir) TestRefs(c *C) {
 	} {
 		comment := Commentf("subtest %d", i)
 
-		dir, err := New(s.fixturePath[test.fixture])
+		dir, err := New(s.fixtures[test.fixture])
 		c.Assert(err, IsNil, comment)
 
 		refs, err := dir.Refs()

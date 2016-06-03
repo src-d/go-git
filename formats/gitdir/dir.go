@@ -16,15 +16,18 @@ import (
 
 const (
 	suffix         = ".git"
-	refsDir        = "refs/"
 	packedRefsPath = "packed-refs"
 )
 
 var (
+	// ErrBadGitDirName is returned when the passed path is not a .git directory.
 	ErrBadGitDirName = errors.New(`Bad git dir name (must end in ".git")`)
-	ErrIdxNotFound   = errors.New("idx file not found")
+	// ErrIdxNotFound is returned when the idx file is not found on the repository.
+	ErrIdxNotFound = errors.New("idx file not found")
 )
 
+// The Dir type represents a local git repository on disk. This
+// type is not zero-value-safe, use the New function to initialize it.
 type Dir struct {
 	path string
 	refs map[string]core.Hash
@@ -82,9 +85,9 @@ func (d *Dir) Refs() (map[string]core.Hash, error) {
 func (d *Dir) Capabilities() (*common.Capabilities, error) {
 	caps := common.NewCapabilities()
 
-	d.addSymRefCapability(caps)
+	err := d.addSymRefCapability(caps)
 
-	return caps, nil
+	return caps, err
 }
 
 func (d *Dir) addSymRefCapability(cap *common.Capabilities) (err error) {
@@ -113,6 +116,7 @@ func (d *Dir) addSymRefCapability(cap *common.Capabilities) (err error) {
 	return nil
 }
 
+// Packfile returns a readseeker of the packfile in the repository.
 func (d *Dir) Packfile() (io.ReadSeeker, error) {
 	pattern := d.pattern(true)
 	list, err := filepath.Glob(pattern)
@@ -131,29 +135,61 @@ func (d *Dir) Packfile() (io.ReadSeeker, error) {
 	return os.Open(list[0])
 }
 
-func (d *Dir) pattern(isPackfile bool) string {
+func (d *Dir) pattern(isPackfile bool) (string, err) {
 	// packfile pattern: dpath + /objects/pack/pack-????????????????????????????????????????.pack
 	//      idx pattern: dpath + /objects/pack/pack-????????????????????????????????????????.idx
 	var buf bytes.Buffer
-	buf.WriteString(d.path)
-	buf.WriteByte(os.PathSeparator)
-	buf.WriteString("objects")
-	buf.WriteByte(os.PathSeparator)
-	buf.WriteString("pack")
-	buf.WriteByte(os.PathSeparator)
-	buf.WriteString("pack-")
+	_, err := buf.WriteString(d.path)
+	if err != nil {
+		return "", nil
+	}
+	_, err := buf.WriteByte(os.PathSeparator)
+	if err != nil {
+		return "", nil
+	}
+	_, err := buf.WriteString("objects")
+	if err != nil {
+		return "", nil
+	}
+	_, err := buf.WriteByte(os.PathSeparator)
+	if err != nil {
+		return "", nil
+	}
+	_, err := buf.WriteString("pack")
+	if err != nil {
+		return "", nil
+	}
+	_, err := buf.WriteByte(os.PathSeparator)
+	if err != nil {
+		return "", nil
+	}
+	_, err := buf.WriteString("pack-")
+	if err != nil {
+		return "", nil
+	}
 	for i := 0; i < 40; i++ {
-		buf.WriteString("[0-9a-f]")
+		_, err := buf.WriteString("[0-9a-f]")
+		if err != nil {
+			return "", nil
+		}
 	}
 	if isPackfile {
-		buf.WriteString(".pack")
+		_, err := buf.WriteString(".pack")
+		if err != nil {
+			return "", nil
+		}
 	} else {
-		buf.WriteString(".idx")
+		_, err := buf.WriteString(".idx")
+		if err != nil {
+			return "", nil
+		}
 	}
 
 	return buf.String()
 }
 
+// Idxfile returns a reader of the idx file in the repository.
+// TODO: should it return a readcloser instead?
 func (d *Dir) Idxfile() (io.Reader, error) {
 	pattern := d.pattern(false)
 	list, err := filepath.Glob(pattern)

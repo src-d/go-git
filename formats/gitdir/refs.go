@@ -12,9 +12,17 @@ import (
 )
 
 var (
+	// ErrPackedRefsDuplicatedRef is returned when a duplicated
+	// reference is found in the packed-ref file. This is usually the
+	// case for corrupted git repositories.
 	ErrPackedRefsDuplicatedRef = errors.New("duplicated ref found in packed-ref file")
-	ErrPackedRefsBadFormat     = errors.New("malformed packed-ref")
-	ErrSymRefTargetNotFound    = errors.New("symbolic reference target not found")
+	// ErrPackedRefsBadFormat is returned when the packed-ref file
+	// corrupt.
+	ErrPackedRefsBadFormat = errors.New("malformed packed-ref")
+	// ErrSymRefTargetNotFound is returned when a symbolic reference is
+	// targeting a non-existing object. This usually means the
+	// repository is corrupt.
+	ErrSymRefTargetNotFound = errors.New("symbolic reference target not found")
 )
 
 const (
