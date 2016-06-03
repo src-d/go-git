@@ -225,10 +225,18 @@ func (s *SuiteGitDir) TestPackfile(c *C) {
 }
 
 func (s *SuiteGitDir) TestIdxfile(c *C) {
-	for _, fixture := range []string{
-		"spinnaker",
+	for _, test := range [...]struct {
+		fixture string
+		err     string // error regexp
+	}{
+		{
+			fixture: "spinnaker",
+		}, {
+			fixture: "no-packfile",
+			err:     "idx file not found",
+		},
 	} {
-		s.checkFile(c, false, fixture, "")
+		s.checkFile(c, false, test.fixture, test.err)
 	}
 }
 
