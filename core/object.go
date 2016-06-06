@@ -41,7 +41,6 @@ type Object interface {
 
 // ObjectStorage generic storage of objects
 type ObjectStorage interface {
-	New() (Object, error)
 	Set(Object) (Hash, error)
 	Get(Hash) (Object, error)
 	Iter(ObjectType) (ObjectIter, error)

@@ -7,7 +7,6 @@ import (
 
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
-	"gopkg.in/src-d/go-git.v3/storage/memory"
 	"gopkg.in/src-d/go-git.v3/storage/seekable/internal/index"
 )
 
@@ -22,8 +21,8 @@ import (
 // This means the memory footprint of this storage is much smaller
 // than a memory.ObjectStorage, but it will also be probably slower.
 type ObjectStorage struct {
-	packfile string // path
-	index    index.Index
+	path  string
+	index index.Index
 }
 
 // New returns a new ObjectStorage for the packfile at path.
@@ -61,8 +60,8 @@ func New(packfilePath, idxPath string) (s *ObjectStorage, err error) {
 	}
 
 	return &ObjectStorage{
-		packfile: packfilePath,
-		index:    index,
+		path:  packfilePath,
+		index: index,
 	}, nil
 }
 
@@ -74,16 +73,11 @@ func buildIndex(packfile io.Reader, idx io.Reader) (index.Index, error) {
 	return index.NewFromPackfile(packfile)
 }
 
-// New returns a new empty object. Unused method.
-func (s *ObjectStorage) New() (core.Object, error) {
-	return &memory.Object{}, nil
-}
-
 // Set adds a new object to the storage.
 // This method always returns an error as this particular
 // implementation is read only.
 func (s *ObjectStorage) Set(core.Object) (core.Hash, error) {
-	return core.ZeroHash, fmt.Errorf("set operation is not allowed")
+	return core.ZeroHash, fmt.Errorf("set operation not permitted")
 }
 
 // Get returns the object with the given hash, by searching the
@@ -94,7 +88,7 @@ func (s *ObjectStorage) Get(h core.Hash) (core.Object, error) {
 		return nil, err
 	}
 
-	file, err := os.Open(s.packfile)
+	file, err := os.Open(s.path)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +134,7 @@ func (s *ObjectStorage) ByHash(hash core.Hash) (core.Object, error) {
 // Given the nature of this storage, it also returns objects that
 // have not yet been seen.
 func (s *ObjectStorage) ByOffset(offset int64) (core.Object, error) {
-	file, err := os.Open(s.packfile)
+	file, err := os.Open(s.path)
 	if err != nil {
 		return nil, err
 	}

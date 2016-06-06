@@ -156,3 +156,15 @@ func (a byHash) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a byHash) Less(i, j int) bool {
 	return a[i].Hash().String() < a[j].Hash().String()
 }
+
+func (s *SeekableSuite) TestSet(c *C) {
+	packfilePath := "../../formats/packfile/fixtures/spinnaker-spinnaker.pack"
+	lastDot := strings.LastIndex(packfilePath, ".")
+	idxPath := packfilePath[:lastDot] + ".idx"
+
+	storage, err := seekable.New(packfilePath, idxPath)
+	c.Assert(err, IsNil)
+
+	_, err = storage.Set(&memory.Object{})
+	c.Assert(err, ErrorMatches, "set operation not permitted")
+}
