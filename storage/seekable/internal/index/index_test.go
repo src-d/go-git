@@ -1,10 +1,12 @@
 package index
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v3/formats/idxfile"
 
 	. "gopkg.in/check.v1"
 )
@@ -17,24 +19,32 @@ var _ = Suite(&SuiteIndex{})
 
 func (s *SuiteIndex) TestNewFromIdx(c *C) {
 	for i, test := range [...]struct {
-		idx string
-		len int
+		idxPath   string
+		errRegexp string
 	}{
 		{
-			idx: "../../../../formats/packfile/fixtures/spinnaker-spinnaker.idx",
+			idxPath: "../../../../formats/packfile/fixtures/spinnaker-spinnaker.idx",
+		}, {
+			idxPath:   "../../../../formats/packfile/fixtures/invalid.idx",
+			errRegexp: idxfile.ErrMalformedIdxFile.Error(),
 		},
 	} {
 		comment := Commentf("subtest %d", i)
 
-		idx, err := os.Open(test.idx)
+		idx, err := os.Open(test.idxPath)
 		c.Assert(err, IsNil, comment)
 
 		index, err := NewFromIdx(idx)
-		c.Assert(err, IsNil, comment)
-		c.Assert(index, DeepEquals, expectedIndexes[test.idx], comment)
+		if test.errRegexp != "" {
+			fmt.Println(err)
+			c.Assert(err, ErrorMatches, test.errRegexp, comment)
+		} else {
+			c.Assert(err, IsNil, comment)
+			c.Assert(index, DeepEquals, expectedIndexes[test.idxPath], comment)
 
-		err = idx.Close()
-		c.Assert(err, IsNil, comment)
+			err = idx.Close()
+			c.Assert(err, IsNil, comment)
+		}
 	}
 }
 

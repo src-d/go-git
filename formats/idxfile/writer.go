@@ -66,7 +66,7 @@ func (w *Writer) writeFanout(idx *Idx) (int, error) {
 
 func (w *Writer) writeObjectsNames(idx *Idx) (int, error) {
 	size := 0
-	for _, e := range idx.Objects {
+	for _, e := range idx.Entries {
 		i, err := w.w.Write(e.Hash[:])
 		size += i
 
@@ -80,7 +80,7 @@ func (w *Writer) writeObjectsNames(idx *Idx) (int, error) {
 
 func (w *Writer) writeCRC32(idx *Idx) (int, error) {
 	size := 0
-	for _, e := range idx.Objects {
+	for _, e := range idx.Entries {
 		i, err := w.w.Write(e.CRC32[:])
 		size += i
 
@@ -94,7 +94,7 @@ func (w *Writer) writeCRC32(idx *Idx) (int, error) {
 
 func (w *Writer) writeOffsets(idx *Idx) (int, error) {
 	size := 0
-	for _, e := range idx.Objects {
+	for _, e := range idx.Entries {
 		if err := w.writeInt32(uint32(e.Offset)); err != nil {
 			return size, err
 		}

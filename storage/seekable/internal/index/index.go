@@ -12,21 +12,20 @@ import (
 // the packfile.
 type Index map[core.Hash]int64
 
-// NewFromPackfile returns a new index from a packfile.
+// NewFromPackfile returns a new index from a packfile file reader.
 func NewFromPackfile(packfile io.Reader) (Index, error) {
 	return nil, fmt.Errorf("not implemented yet")
 }
 
+// NewFromIdx returns a new index from an idx file reader.
 func NewFromIdx(r io.Reader) (Index, error) {
-	idx := &idxfile.Idx{}
-	idxReader := idxfile.NewReader(r)
-	_, err := idxReader.Read(idx)
+	idx, err := idxfile.New(r)
 	if err != nil {
 		return nil, err
 	}
 
 	result := make(Index)
-	for _, entry := range idx.Objects {
+	for _, entry := range idx.Entries {
 		if _, ok := result[entry.Hash]; ok {
 			return nil, fmt.Errorf("duplicated hash: %s", entry.Hash)
 		}

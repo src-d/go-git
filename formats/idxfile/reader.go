@@ -16,24 +16,9 @@ const (
 
 var (
 	IdxHeader             = []byte{255, 't', 'O', 'c'}
-	UnsupportedVersionErr = errors.New("Unsuported version")
-	MalformedIdxFileErr   = errors.New("Malformed IDX file")
+	ErrUnsupportedVersion = errors.New("Unsuported version")
+	ErrMalformedIdxFile   = errors.New("Malformed IDX file")
 )
-
-type Idx struct {
-	Version          uint32
-	Fanout           [255]uint32
-	ObjectCount      uint32
-	Objects          []IdxEntry
-	PackfileChecksum [20]byte
-	IdxChecksum      [20]byte
-}
-
-type IdxEntry struct {
-	Hash   core.Hash
-	CRC32  [4]byte
-	Offset uint64
-}
 
 type Reader struct {
 	r io.Reader
@@ -64,7 +49,7 @@ func (r *Reader) Read(idx *Idx) (int64, error) {
 	}
 
 	if !r.isValid(idx) {
-		return -1, MalformedIdxFileErr
+		return -1, ErrMalformedIdxFile
 	}
 
 	return 0, nil
@@ -77,7 +62,7 @@ func (r *Reader) validateHeader() error {
 	}
 
 	if !bytes.Equal(header, IdxHeader) {
-		return MalformedIdxFileErr
+		return ErrMalformedIdxFile
 	}
 
 	return nil
@@ -90,7 +75,7 @@ func (r *Reader) readVersion(idx *Idx) error {
 	}
 
 	if version > IdxVersionSupported {
-		return UnsupportedVersionErr
+		return ErrUnsupportedVersion
 	}
 
 	idx.Version = version
@@ -124,7 +109,7 @@ func (r *Reader) readObjectNames(idx *Idx) error {
 			return err
 		}
 
-		idx.Objects = append(idx.Objects, IdxEntry{Hash: ref})
+		idx.Entries = append(idx.Entries, IdxEntry{Hash: ref})
 	}
 
 	return nil
@@ -133,7 +118,7 @@ func (r *Reader) readObjectNames(idx *Idx) error {
 func (r *Reader) readCRC32(idx *Idx) error {
 	count := int(idx.ObjectCount)
 	for i := 0; i < count; i++ {
-		if _, err := r.r.Read(idx.Objects[i].CRC32[:]); err != nil {
+		if _, err := r.r.Read(idx.Entries[i].CRC32[:]); err != nil {
 			return err
 		}
 	}
@@ -149,7 +134,7 @@ func (r *Reader) readOffsets(idx *Idx) error {
 			return err
 		}
 
-		idx.Objects[i].Offset = uint64(offset)
+		idx.Entries[i].Offset = uint64(offset)
 	}
 
 	return nil
@@ -164,7 +149,7 @@ func (r *Reader) read64bitsOffsets(idx *Idx) error {
 		}
 
 		if offset != 0 {
-			idx.Objects[i].Offset = offset
+			idx.Entries[i].Offset = offset
 		}
 
 		fmt.Println(uint64(offset))
@@ -217,7 +202,7 @@ func (r *Reader) readInt64() (uint64, error) {
 func calculateFanout(idx *Idx) [256]uint32 {
 	fanout := [256]uint32{}
 	var c uint32
-	for _, e := range idx.Objects {
+	for _, e := range idx.Entries {
 		c++
 		fanout[e.Hash[0]] = c
 	}
