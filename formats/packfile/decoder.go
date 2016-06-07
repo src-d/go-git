@@ -25,12 +25,11 @@ var (
 )
 
 const (
-	DefaultMaxObjectsLimit = 1 << 20
-
-	VersionSupported        = 2
-	UnknownFormat    Format = 0
-	OFSDeltaFormat   Format = 1
-	REFDeltaFormat   Format = 2
+	DefaultMaxObjectsLimit        = 1 << 20
+	VersionSupported              = 2
+	UnknownFormat          Format = 0
+	OFSDeltaFormat         Format = 1
+	REFDeltaFormat         Format = 2
 )
 
 // Decoder reads and decodes packfiles from an input stream.
@@ -38,11 +37,11 @@ type Decoder struct {
 	// MaxObjectsLimit is the limit of objects to be load in the packfile, if
 	// a packfile excess this number an error is throw, the default value
 	// is defined by DefaultMaxObjectsLimit, usually the default limit is more
-	// than enough to work with any repository, working extremly big repositories
-	// where the number of object is bigger the memory can be exhausted.
+	// than enough to work with any repository, with higher values and huge
+	// repositories you can run out of memory.
 	MaxObjectsLimit uint32
 
-	// Format specifies if we are using ref-delta's or ofs-delta's, choosing the
+	// Format specifies if we are using ref-delta's or ofs-delta's, by choosing the
 	// correct format the memory usage is optimized
 	// https://github.com/git/git/blob/8d530c4d64ffcc853889f7b385f554d53db375ed/Documentation/technical/protocol-capabilities.txt#L154
 	Format Format
