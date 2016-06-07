@@ -13,15 +13,15 @@ import (
 type Format int
 
 var (
-	EmptyRepositoryErr        = newError("empty repository")
-	UnsupportedVersionErr     = newError("unsupported packfile version")
-	MaxObjectsLimitReachedErr = newError("max. objects limit reached")
-	MalformedPackfileErr      = newError("malformed pack file, does not start with 'PACK'")
-	InvalidObjectErr          = newError("invalid git object")
-	PatchingErr               = newError("patching error")
-	PackEntryNotFoundErr      = newError("can't find a pack entry")
+	ErrEmptyRepository        = newError("empty repository")
+	ErrUnsupportedVersion     = newError("unsupported packfile version")
+	ErrMaxObjectsLimitReached = newError("max. objects limit reached")
+	ErrMalformedPackfile      = newError("malformed pack file, does not start with 'PACK'")
+	ErrInvalidObject          = newError("invalid git object")
+	ErrPatching               = newError("patching error")
+	ErrPackEntryNotFound      = newError("can't find a pack entry")
 	ErrObjectNotFound         = newError("can't find a object")
-	ZLibErr                   = newError("zlib reading error")
+	ErrZLib                   = newError("zlib reading error")
 )
 
 const (
@@ -67,7 +67,7 @@ func (d *Decoder) Decode(s core.ObjectStorage) (int64, error) {
 	d.s = s
 	if err := d.validateHeader(); err != nil {
 		if err == io.EOF {
-			return -1, EmptyRepositoryErr
+			return -1, ErrEmptyRepository
 		}
 
 		return -1, err
@@ -79,7 +79,7 @@ func (d *Decoder) Decode(s core.ObjectStorage) (int64, error) {
 	}
 
 	if version > VersionSupported {
-		return -1, UnsupportedVersionErr
+		return -1, ErrUnsupportedVersion
 	}
 
 	count, err := d.readInt32()
@@ -88,7 +88,7 @@ func (d *Decoder) Decode(s core.ObjectStorage) (int64, error) {
 	}
 
 	if count > d.MaxObjectsLimit {
-		return -1, MaxObjectsLimitReachedErr
+		return -1, ErrMaxObjectsLimitReached
 	}
 
 	return d.r.position, d.readObjects(count)
@@ -101,7 +101,7 @@ func (d *Decoder) validateHeader() error {
 	}
 
 	if !bytes.Equal(header, []byte{'P', 'A', 'C', 'K'}) {
-		return MalformedPackfileErr
+		return ErrMalformedPackfile
 	}
 
 	return nil
@@ -163,7 +163,7 @@ func (d *Decoder) newObject() (core.Object, error) {
 	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
 		content, err = readContent(d.r)
 	default:
-		err = InvalidObjectErr.n("tag %q", typ)
+		err = ErrInvalidObject.n("tag %q", typ)
 	}
 	if err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func (d *Decoder) ByHash(hash core.Hash) (core.Object, error) {
 func (d *Decoder) ByOffset(offset int64) (core.Object, error) {
 	hash, ok := d.offsets[offset]
 	if !ok {
-		return nil, PackEntryNotFoundErr.n("offset %d", offset)
+		return nil, ErrPackEntryNotFound.n("offset %d", offset)
 	}
 
 	return d.ByHash(hash)
