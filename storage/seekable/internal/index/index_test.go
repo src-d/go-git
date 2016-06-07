@@ -29,7 +29,7 @@ func (s *SuiteIndex) TestNewFromIdx(c *C) {
 			errRegexp: idxfile.ErrMalformedIdxFile.Error(),
 		},
 	} {
-		comment := Commentf("subtest %d", i)
+		comment := Commentf("subtest %d) idxPath = %s", i, test.idxPath)
 
 		idx, err := os.Open(test.idxPath)
 		c.Assert(err, IsNil, comment)
