@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v3/formats/packfile/internal/readcounter"
 	"gopkg.in/src-d/go-git.v3/storage/memory"
 )
 
@@ -59,9 +60,9 @@ type Decoder struct {
 	// https://github.com/git/git/blob/8d530c4d64ffcc853889f7b385f554d53db375ed/Documentation/technical/protocol-capabilities.txt#L154
 	Format Format
 
-	r       *trackingReader
-	s       core.ObjectStorage
-	offsets map[int64]core.Hash
+	readCounter *readcounter.ReadCounter
+	s           core.ObjectStorage
+	offsets     map[int64]core.Hash
 }
 
 // NewDecoder returns a new Decoder that reads from r.
@@ -69,8 +70,8 @@ func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{
 		MaxObjectsLimit: DefaultMaxObjectsLimit,
 
-		r:       NewTrackingReader(r),
-		offsets: make(map[int64]core.Hash, 0),
+		readCounter: readcounter.New(r),
+		offsets:     make(map[int64]core.Hash, 0),
 	}
 }
 
@@ -103,12 +104,12 @@ func (d *Decoder) Decode(s core.ObjectStorage) (int64, error) {
 		return -1, ErrMaxObjectsLimitReached
 	}
 
-	return d.r.position, d.readObjects(count)
+	return d.readCounter.Count(), d.readObjects(count)
 }
 
 func (d *Decoder) validateHeader() error {
 	var header = make([]byte, 4)
-	if _, err := io.ReadFull(d.r, header); err != nil {
+	if _, err := io.ReadFull(d.readCounter, header); err != nil {
 		return err
 	}
 
@@ -121,7 +122,7 @@ func (d *Decoder) validateHeader() error {
 
 func (d *Decoder) readInt32() (uint32, error) {
 	var value uint32
-	if err := binary.Read(d.r, binary.BigEndian, &value); err != nil {
+	if err := binary.Read(d.readCounter, binary.BigEndian, &value); err != nil {
 		return 0, err
 	}
 
@@ -134,7 +135,7 @@ func (d *Decoder) readObjects(count uint32) error {
 	// That's 1 sec for ~2450 objects, ~4.20 MB, or ~250 ms per MB,
 	// of which 12-20 % is _not_ zlib inflation (ie. is our code).
 	for i := 0; i < int(count); i++ {
-		start := d.r.position
+		start := d.readCounter.Count()
 		obj, err := d.newObject()
 		if err != nil && err != io.EOF {
 			return err
@@ -158,22 +159,22 @@ func (d *Decoder) newObject() (core.Object, error) {
 	var length int64
 	var content []byte
 
-	objectStart := d.r.position
+	objectStart := d.readCounter.Count()
 
-	typ, length, err := readTypeAndLength(d.r)
+	typ, length, err := readTypeAndLength(d.readCounter)
 	if err != nil {
 		return nil, err
 	}
 
 	switch typ {
 	case core.REFDeltaObject:
-		content, typ, err = readContentREFDelta(d.r, d)
+		content, typ, err = readContentREFDelta(d.readCounter, d)
 		length = int64(len(content))
 	case core.OFSDeltaObject:
-		content, typ, err = readContentOFSDelta(d.r, objectStart, d)
+		content, typ, err = readContentOFSDelta(d.readCounter, objectStart, d)
 		length = int64(len(content))
 	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
-		content, err = readContent(d.r)
+		content, err = readContent(d.readCounter)
 	default:
 		err = ErrInvalidObject.addDetails("tag %q", typ)
 	}
