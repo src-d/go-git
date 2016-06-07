@@ -10,18 +10,25 @@ import (
 	"gopkg.in/src-d/go-git.v3/storage/memory"
 )
 
+// Format specifies if the packfile uses ref-deltas or ofs-deltas.
+// Possible values: OFSDeltaFormat or REFDeltaFormat.
 type Format int
 
 var (
-	ErrEmptyRepository        = newError("empty repository")
-	ErrUnsupportedVersion     = newError("unsupported packfile version")
+	// ErrEmptyPackfile is returned by Decode when no data is found in the packfile
+	ErrEmptyPackfile = newError("empty packfile")
+	// ErrUnsupportedVersion is returned by Decode when packfile version is different than VersionSupported.
+	ErrUnsupportedVersion = newError("unsupported packfile version")
+	// ErrMaxObjectsLimitReached is returned by Decode when the number of objects in the packfile is higher than Decoder.MaxObjectsLimit.
 	ErrMaxObjectsLimitReached = newError("max. objects limit reached")
-	ErrMalformedPackfile      = newError("malformed pack file, does not start with 'PACK'")
-	ErrInvalidObject          = newError("invalid git object")
-	ErrPatching               = newError("patching error")
-	ErrPackEntryNotFound      = newError("can't find a pack entry")
-	ErrObjectNotFound         = newError("can't find a object")
-	ErrZLib                   = newError("zlib reading error")
+	// ErrMalformedPackfile is returned by Decode when the packfile is corrupt.
+	ErrMalformedPackfile = newError("malformed pack file, does not start with 'PACK'")
+	// ErrInvalidObject is returned by Decode when an invalid object is found in the packfile.
+	ErrInvalidObject = newError("invalid git object")
+	// ErrPackEntryNotFound is returned by Decode when a reference in the packfile references and unknown object.
+	ErrPackEntryNotFound = newError("can't find a pack entry")
+	// ErrZlib is returned by Decode when there was an error unzipping the packfile contents.
+	ErrZLib = newError("zlib reading error")
 )
 
 const (
@@ -66,7 +73,7 @@ func (d *Decoder) Decode(s core.ObjectStorage) (int64, error) {
 	d.s = s
 	if err := d.validateHeader(); err != nil {
 		if err == io.EOF {
-			return -1, ErrEmptyRepository
+			return -1, ErrEmptyPackfile
 		}
 
 		return -1, err
