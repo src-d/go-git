@@ -139,12 +139,12 @@ func (s *ReaderSuite) BenchmarkGit(c *C) {
 	}
 }
 
-func (s *ReaderSuite) _TestMemoryOFS(c *C) {
+func (s *ReaderSuite) _testMemory(c *C, format Format) {
 	var b, a runtime.MemStats
 
 	start := time.Now()
 	runtime.ReadMemStats(&b)
-	p := readFromFile(c, "/tmp/symfony.ofs-delta", OFSDeltaFormat)
+	p := readFromFile(c, "/tmp/symfony.ofs-delta", format)
 	runtime.ReadMemStats(&a)
 
 	fmt.Println("OFS--->")
@@ -157,22 +157,12 @@ func (s *ReaderSuite) _TestMemoryOFS(c *C) {
 	fmt.Println("time", time.Since(start))
 }
 
+func (s *ReaderSuite) _TestMemoryOFS(c *C) {
+	s._testMemory(c, OFSDeltaFormat)
+}
+
 func (s *ReaderSuite) _TestMemoryREF(c *C) {
-	var b, a runtime.MemStats
-
-	start := time.Now()
-	runtime.ReadMemStats(&b)
-	p := readFromFile(c, "/tmp/symonfy", REFDeltaFormat)
-	runtime.ReadMemStats(&a)
-
-	fmt.Println("REF--->")
-	fmt.Println("Alloc", a.Alloc-b.Alloc, humanize.Bytes(a.Alloc-b.Alloc))
-	fmt.Println("TotalAlloc", a.TotalAlloc-b.TotalAlloc, humanize.Bytes(a.TotalAlloc-b.TotalAlloc))
-	fmt.Println("HeapAlloc", a.HeapAlloc-b.HeapAlloc, humanize.Bytes(a.HeapAlloc-b.HeapAlloc))
-	fmt.Println("HeapSys", a.HeapSys, humanize.Bytes(a.HeapSys-b.HeapSys))
-
-	fmt.Println("objects", len(p.Objects))
-	fmt.Println("time", time.Since(start))
+	s._testMemory(c, REFDeltaFormat)
 }
 
 func readFromFile(c *C, file string, f Format) *memory.ObjectStorage {
