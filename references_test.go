@@ -27,10 +27,10 @@ func (s *ReferencesSuite) SetUpSuite(c *C) {
 		defer d.Close()
 		c.Assert(err, IsNil)
 
-		r := packfile.NewReader(d)
-		r.Format = packfile.OFSDeltaFormat // TODO: how to know the format of a pack file ahead of time?
+		decoder := packfile.NewDecoder(d)
+		decoder.Format = packfile.OFSDeltaFormat // TODO: how to know the format of a pack file ahead of time?
 
-		_, err = r.Read(s.repos[fixRepo.url].Storage)
+		_, err = decoder.Decode(s.repos[fixRepo.url].Storage)
 		c.Assert(err, IsNil)
 	}
 }

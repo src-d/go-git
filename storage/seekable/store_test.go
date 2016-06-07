@@ -36,9 +36,11 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 		memStorage := memory.NewObjectStorage()
 		packfileFile, err := os.Open(packfilePath)
 		c.Assert(err, IsNil, comment)
-		pr := packfile.NewReader(packfileFile)
-		_, err = pr.Read(memStorage)
+
+		decoder := packfile.NewDecoder(packfileFile)
+		_, err = decoder.Decode(memStorage)
 		c.Assert(err, IsNil, comment)
+
 		err = packfileFile.Close()
 		c.Assert(err, IsNil, comment)
 
@@ -92,8 +94,8 @@ func (s *SeekableSuite) TestIterCompareWithMemoryStorage(c *C) {
 		memStorage := memory.NewObjectStorage()
 		packfileFile, err := os.Open(packfilePath)
 		c.Assert(err, IsNil, comment)
-		pr := packfile.NewReader(packfileFile)
-		_, err = pr.Read(memStorage)
+		decoder := packfile.NewDecoder(packfileFile)
+		_, err = decoder.Decode(memStorage)
 		c.Assert(err, IsNil, comment)
 		err = packfileFile.Close()
 		c.Assert(err, IsNil, comment)

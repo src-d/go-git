@@ -56,10 +56,10 @@ func (s *SuiteRemote) TestFetchDefaultBranch(c *C) {
 	reader, err := r.FetchDefaultBranch()
 	c.Assert(err, IsNil)
 
-	pr := packfile.NewReader(reader)
+	decoder := packfile.NewDecoder(reader)
 
 	storage := memory.NewObjectStorage()
-	_, err = pr.Read(storage)
+	_, err = decoder.Decode(storage)
 	c.Assert(err, IsNil)
 	c.Assert(storage.Objects, HasLen, 28)
 }

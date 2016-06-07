@@ -28,10 +28,10 @@ func (s *ReaderSuite) TestReadPackfile(c *C) {
 	data, _ := base64.StdEncoding.DecodeString(packFileWithEmptyObjects)
 	d := bytes.NewReader(data)
 
-	r := NewReader(d)
+	decoder := NewDecoder(d)
 
 	storage := memory.NewObjectStorage()
-	_, err := r.Read(storage)
+	_, err := decoder.Decode(storage)
 	c.Assert(err, IsNil)
 
 	AssertObjects(c, storage, []string{
@@ -61,11 +61,11 @@ func (s *ReaderSuite) testReadPackfileGitFixture(c *C, file string, f Format) {
 	d, err := os.Open(file)
 	c.Assert(err, IsNil)
 
-	r := NewReader(d)
-	r.Format = f
+	decoder := NewDecoder(d)
+	decoder.Format = f
 
 	storage := memory.NewObjectStorage()
-	_, err = r.Read(storage)
+	_, err = decoder.Decode(storage)
 	c.Assert(err, IsNil)
 
 	AssertObjects(c, storage, []string{
@@ -179,11 +179,11 @@ func readFromFile(c *C, file string, f Format) *memory.ObjectStorage {
 	d, err := os.Open(file)
 	c.Assert(err, IsNil)
 
-	r := NewReader(d)
-	r.Format = f
+	decoder := NewDecoder(d)
+	decoder.Format = f
 
 	storage := memory.NewObjectStorage()
-	_, err = r.Read(storage)
+	_, err = decoder.Decode(storage)
 	c.Assert(err, IsNil)
 
 	return storage

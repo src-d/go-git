@@ -33,8 +33,8 @@ const (
 	REFDeltaFormat   Format = 2
 )
 
-// Reader reads a packfile from a binary string splitting it on objects
-type Reader struct {
+// Decoder reads and decodes packfiles from an input stream.
+type Decoder struct {
 	// MaxObjectsLimit is the limit of objects to be load in the packfile, if
 	// a packfile excess this number an error is throw, the default value
 	// is defined by DefaultMaxObjectsLimit, usually the default limit is more
@@ -52,9 +52,9 @@ type Reader struct {
 	offsets map[int64]core.Hash
 }
 
-// NewReader returns a new Reader that reads from a io.Reader
-func NewReader(r io.Reader) *Reader {
-	return &Reader{
+// NewDecoder returns a new Decoder that reads from r.
+func NewDecoder(r io.Reader) *Decoder {
+	return &Decoder{
 		MaxObjectsLimit: DefaultMaxObjectsLimit,
 
 		r:       NewTrackingReader(r),
@@ -62,10 +62,10 @@ func NewReader(r io.Reader) *Reader {
 	}
 }
 
-// Read reads the objects and stores it at the ObjectStorage
-func (r *Reader) Read(s core.ObjectStorage) (int64, error) {
-	r.s = s
-	if err := r.validateHeader(); err != nil {
+// Decode reads a packfile and stores it in the value pointed to by s.
+func (d *Decoder) Decode(s core.ObjectStorage) (int64, error) {
+	d.s = s
+	if err := d.validateHeader(); err != nil {
 		if err == io.EOF {
 			return -1, EmptyRepositoryErr
 		}
@@ -73,7 +73,7 @@ func (r *Reader) Read(s core.ObjectStorage) (int64, error) {
 		return -1, err
 	}
 
-	version, err := r.readInt32()
+	version, err := d.readInt32()
 	if err != nil {
 		return -1, err
 	}
@@ -82,21 +82,21 @@ func (r *Reader) Read(s core.ObjectStorage) (int64, error) {
 		return -1, UnsupportedVersionErr
 	}
 
-	count, err := r.readInt32()
+	count, err := d.readInt32()
 	if err != nil {
 		return -1, err
 	}
 
-	if count > r.MaxObjectsLimit {
+	if count > d.MaxObjectsLimit {
 		return -1, MaxObjectsLimitReachedErr
 	}
 
-	return r.r.position, r.readObjects(count)
+	return d.r.position, d.readObjects(count)
 }
 
-func (r *Reader) validateHeader() error {
+func (d *Decoder) validateHeader() error {
 	var header = make([]byte, 4)
-	if _, err := io.ReadFull(r.r, header); err != nil {
+	if _, err := io.ReadFull(d.r, header); err != nil {
 		return err
 	}
 
@@ -107,32 +107,32 @@ func (r *Reader) validateHeader() error {
 	return nil
 }
 
-func (r *Reader) readInt32() (uint32, error) {
+func (d *Decoder) readInt32() (uint32, error) {
 	var value uint32
-	if err := binary.Read(r.r, binary.BigEndian, &value); err != nil {
+	if err := binary.Read(d.r, binary.BigEndian, &value); err != nil {
 		return 0, err
 	}
 
 	return value, nil
 }
 
-func (r *Reader) readObjects(count uint32) error {
+func (d *Decoder) readObjects(count uint32) error {
 	// This code has 50-80 µs of overhead per object not counting zlib inflation.
 	// Together with zlib inflation, it's 400-410 µs for small objects.
 	// That's 1 sec for ~2450 objects, ~4.20 MB, or ~250 ms per MB,
 	// of which 12-20 % is _not_ zlib inflation (ie. is our code).
 	for i := 0; i < int(count); i++ {
-		start := r.r.position
-		obj, err := r.newObject()
+		start := d.r.position
+		obj, err := d.newObject()
 		if err != nil && err != io.EOF {
 			return err
 		}
 
-		if r.Format == UnknownFormat || r.Format == OFSDeltaFormat {
-			r.offsets[start] = obj.Hash()
+		if d.Format == UnknownFormat || d.Format == OFSDeltaFormat {
+			d.offsets[start] = obj.Hash()
 		}
 
-		_, err = r.s.Set(obj)
+		_, err = d.s.Set(obj)
 		if err == io.EOF {
 			break
 		}
@@ -141,27 +141,27 @@ func (r *Reader) readObjects(count uint32) error {
 	return nil
 }
 
-func (r *Reader) newObject() (core.Object, error) {
+func (d *Decoder) newObject() (core.Object, error) {
 	var typ core.ObjectType
 	var length int64
 	var content []byte
 
-	objectStart := r.r.position
+	objectStart := d.r.position
 
-	typ, length, err := readTypeAndLength(r.r)
+	typ, length, err := readTypeAndLength(d.r)
 	if err != nil {
 		return nil, err
 	}
 
 	switch typ {
 	case core.REFDeltaObject:
-		content, typ, err = readContentREFDelta(r.r, r)
+		content, typ, err = readContentREFDelta(d.r, d)
 		length = int64(len(content))
 	case core.OFSDeltaObject:
-		content, typ, err = readContentOFSDelta(r.r, objectStart, r)
+		content, typ, err = readContentOFSDelta(d.r, objectStart, d)
 		length = int64(len(content))
 	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
-		content, err = readContent(r.r)
+		content, err = readContent(d.r)
 	default:
 		err = InvalidObjectErr.n("tag %q", typ)
 	}
@@ -173,18 +173,18 @@ func (r *Reader) newObject() (core.Object, error) {
 }
 
 // Returns an already seen object by its hash, part of Rememberer interface.
-func (r *Reader) ByHash(hash core.Hash) (core.Object, error) {
-	return r.s.Get(hash)
+func (d *Decoder) ByHash(hash core.Hash) (core.Object, error) {
+	return d.s.Get(hash)
 }
 
 // Returns an already seen object by its offset in the packfile, part of Rememberer interface.
-func (r *Reader) ByOffset(offset int64) (core.Object, error) {
-	hash, ok := r.offsets[offset]
+func (d *Decoder) ByOffset(offset int64) (core.Object, error) {
+	hash, ok := d.offsets[offset]
 	if !ok {
 		return nil, PackEntryNotFoundErr.n("offset %d", offset)
 	}
 
-	return r.ByHash(hash)
+	return d.ByHash(hash)
 }
 
 type ReaderError struct {

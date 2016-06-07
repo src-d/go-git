@@ -70,10 +70,10 @@ func unpackFixtures(c *C, fixtures ...[]packedFixture) map[string]*Repository {
 			d, err := os.Open(fixture.packfile)
 			c.Assert(err, IsNil)
 
-			r := packfile.NewReader(d)
-			r.Format = packfile.OFSDeltaFormat // This is hardcoded because we don't have a good way to sniff the format
+			decoder := packfile.NewDecoder(d)
+			decoder.Format = packfile.OFSDeltaFormat // This is hardcoded because we don't have a good way to sniff the format
 
-			_, err = r.Read(repos[fixture.url].Storage)
+			_, err = decoder.Decode(repos[fixture.url].Storage)
 			c.Assert(err, IsNil)
 
 			c.Assert(d.Close(), IsNil)
