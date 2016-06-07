@@ -12,17 +12,17 @@ import (
 
 const fromTheBeginning = 0
 
-// Rememberer can be asked to return already seen objects, either by
-// hash or by offset in the packfile.  It is used to resolve deltified
-// objects in the packfile.
-type Rememberer interface {
+// AlreadySeener remembers already seen objects by hash or offset
+// and can be asked to retrieve them. It is used to resolve
+// REF-delta and OFS-delta references in the packfile.
+type AlreadySeener interface {
 	ByHash(hash core.Hash) (core.Object, error)
 	ByOffset(offset int64) (core.Object, error)
 }
 
 // ObjectAt returns the object at the given offset in a packfile.
 func ObjectAt(packfile io.ReadSeeker,
-	offset int64, remember Rememberer) (core.Object, error) {
+	offset int64, remember AlreadySeener) (core.Object, error) {
 
 	_, err := packfile.Seek(offset, fromTheBeginning)
 	if err != nil {
@@ -112,16 +112,16 @@ func readContent(packfile io.Reader) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-func readContentREFDelta(packfile io.Reader, remember Rememberer) (content []byte,
+func readContentREFDelta(packfile io.Reader, remember AlreadySeener) (content []byte,
 	typ core.ObjectType, err error) {
 
 	var ref core.Hash
-	if _, err := io.ReadFull(packfile, ref[:]); err != nil {
+	if _, err = io.ReadFull(packfile, ref[:]); err != nil {
 		return nil, core.ObjectType(0), err
 	}
 
 	diff := bytes.NewBuffer(nil)
-	if err := inflate(packfile, diff); err != nil {
+	if err = inflate(packfile, diff); err != nil {
 		return nil, core.ObjectType(0), err
 	}
 
@@ -158,7 +158,7 @@ func inflate(r io.Reader, w io.Writer) (err error) {
 }
 
 func readContentOFSDelta(packfile io.Reader,
-	objectStart int64, remember Rememberer) (content []byte,
+	objectStart int64, remember AlreadySeener) (content []byte,
 	typ core.ObjectType, err error) {
 
 	offset, err := readNegativeOffset(packfile)
@@ -167,7 +167,7 @@ func readContentOFSDelta(packfile io.Reader,
 	}
 
 	diff := bytes.NewBuffer(nil)
-	if err := inflate(packfile, diff); err != nil {
+	if err = inflate(packfile, diff); err != nil {
 		return nil, core.ObjectType(0), err
 	}
 

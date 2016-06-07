@@ -11,32 +11,38 @@ import (
 )
 
 // Format specifies if the packfile uses ref-deltas or ofs-deltas.
-// Possible values: OFSDeltaFormat or REFDeltaFormat.
 type Format int
+
+// Possible values of the Format type.
+const (
+	UnknownFormat  Format = 0
+	OFSDeltaFormat Format = 1
+	REFDeltaFormat Format = 2
+)
 
 var (
 	// ErrEmptyPackfile is returned by Decode when no data is found in the packfile
-	ErrEmptyPackfile = newError("empty packfile")
+	ErrEmptyPackfile = newDecoderError("empty packfile")
 	// ErrUnsupportedVersion is returned by Decode when packfile version is different than VersionSupported.
-	ErrUnsupportedVersion = newError("unsupported packfile version")
+	ErrUnsupportedVersion = newDecoderError("unsupported packfile version")
 	// ErrMaxObjectsLimitReached is returned by Decode when the number of objects in the packfile is higher than Decoder.MaxObjectsLimit.
-	ErrMaxObjectsLimitReached = newError("max. objects limit reached")
+	ErrMaxObjectsLimitReached = newDecoderError("max. objects limit reached")
 	// ErrMalformedPackfile is returned by Decode when the packfile is corrupt.
-	ErrMalformedPackfile = newError("malformed pack file, does not start with 'PACK'")
+	ErrMalformedPackfile = newDecoderError("malformed pack file, does not start with 'PACK'")
 	// ErrInvalidObject is returned by Decode when an invalid object is found in the packfile.
-	ErrInvalidObject = newError("invalid git object")
+	ErrInvalidObject = newDecoderError("invalid git object")
 	// ErrPackEntryNotFound is returned by Decode when a reference in the packfile references and unknown object.
-	ErrPackEntryNotFound = newError("can't find a pack entry")
-	// ErrZlib is returned by Decode when there was an error unzipping the packfile contents.
-	ErrZLib = newError("zlib reading error")
+	ErrPackEntryNotFound = newDecoderError("can't find a pack entry")
+	// ErrZLib is returned by Decode when there was an error unzipping the packfile contents.
+	ErrZLib = newDecoderError("zlib reading error")
 )
 
 const (
-	DefaultMaxObjectsLimit        = 1 << 20
-	VersionSupported              = 2
-	UnknownFormat          Format = 0
-	OFSDeltaFormat         Format = 1
-	REFDeltaFormat         Format = 2
+	// DefaultMaxObjectsLimit is the maximum amount of objects the decoder will decode before
+	// returning ErrMaxObjectsLimitReached.
+	DefaultMaxObjectsLimit = 1 << 20
+	// VersionSupported is the packfile version supported by this decoder.
+	VersionSupported = 2
 )
 
 // Decoder reads and decodes packfiles from an input stream.
@@ -169,7 +175,7 @@ func (d *Decoder) newObject() (core.Object, error) {
 	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
 		content, err = readContent(d.r)
 	default:
-		err = ErrInvalidObject.n("tag %q", typ)
+		err = ErrInvalidObject.addDetails("tag %q", typ)
 	}
 	if err != nil {
 		return nil, err
@@ -178,40 +184,41 @@ func (d *Decoder) newObject() (core.Object, error) {
 	return memory.NewObject(typ, length, content), err
 }
 
-// Returns an already seen object by its hash, part of Rememberer interface.
+// ByHash returns an already seen object by its hash.
 func (d *Decoder) ByHash(hash core.Hash) (core.Object, error) {
 	return d.s.Get(hash)
 }
 
-// Returns an already seen object by its offset in the packfile, part of Rememberer interface.
+// ByOffset returns an already seen object by its offset in the packfile.
 func (d *Decoder) ByOffset(offset int64) (core.Object, error) {
 	hash, ok := d.offsets[offset]
 	if !ok {
-		return nil, ErrPackEntryNotFound.n("offset %d", offset)
+		return nil, ErrPackEntryNotFound.addDetails("offset %d", offset)
 	}
 
 	return d.ByHash(hash)
 }
 
-type ReaderError struct {
-	reason, additional string
+// DecoderError specifies errors returned by Decode.
+type DecoderError struct {
+	reason, details string
 }
 
-func newError(reason string) *ReaderError {
-	return &ReaderError{reason: reason}
+func newDecoderError(reason string) *DecoderError {
+	return &DecoderError{reason: reason}
 }
 
-func (e *ReaderError) Error() string {
-	if e.additional == "" {
+func (e *DecoderError) Error() string {
+	if e.details == "" {
 		return e.reason
 	}
 
-	return fmt.Sprintf("%s: %s", e.reason, e.additional)
+	return fmt.Sprintf("%s: %s", e.reason, e.details)
 }
 
-func (e *ReaderError) n(format string, args ...interface{}) *ReaderError {
-	return &ReaderError{
-		reason:     e.reason,
-		additional: fmt.Sprintf(format, args...),
+func (e *DecoderError) addDetails(format string, args ...interface{}) *DecoderError {
+	return &DecoderError{
+		reason:  e.reason,
+		details: fmt.Sprintf(format, args...),
 	}
 }
