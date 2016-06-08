@@ -1,26 +1,15 @@
 package packfile
 
+// See https://github.com/git/git/blob/49fa3dc76179e04b0833542fa52d0f287a4955ac/delta.h
+// for details about the delta format.
 const deltaSizeMin = 4
-
-func deltaHeaderSize(b []byte) (uint, []byte) {
-	var size, j uint
-	var cmd byte
-	for {
-		cmd = b[j]
-		size |= (uint(cmd) & 0x7f) << (j * 7)
-		j++
-		if uint(cmd)&0xb80 == 0 || j == uint(len(b)) {
-			break
-		}
-	}
-	return size, b[j:]
-}
 
 // PatchDelta returns the result of applying the modification deltas in delta to src.
 func PatchDelta(src, delta []byte) []byte {
 	if len(delta) < deltaSizeMin {
 		return nil
 	}
+
 	size, delta := deltaHeaderSize(delta)
 	if size != uint(len(src)) {
 		return nil
@@ -91,4 +80,22 @@ func PatchDelta(src, delta []byte) []byte {
 		}
 	}
 	return dest
+}
+
+// This must be called twice on the delta data buffer, first to get the
+// expected source buffer size, and again to get the target buffer size.
+// Both are encoded using LEB128.
+func deltaHeaderSize(b []byte) (uint, []byte) {
+	var size, j uint
+	var cmd byte
+	for {
+		cmd = b[j]
+		size |= (uint(cmd) & 0x7f) << (j * 7)
+		j++
+		if uint(cmd)&0xb80 == 0 || j == uint(len(b)) {
+			break
+		}
+	}
+
+	return size, b[j:]
 }
