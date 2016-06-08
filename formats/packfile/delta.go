@@ -92,7 +92,7 @@ func deltaHeaderSize(b []byte) (uint, []byte) {
 		cmd = b[j]
 		size |= (uint(cmd) & 0x7f) << (j * 7)
 		j++
-		if uint(cmd)&0xb80 == 0 || j == uint(len(b)) {
+		if uint(cmd)&0x80 == 0 || j == uint(len(b)) {
 			break
 		}
 	}
