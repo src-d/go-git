@@ -16,9 +16,9 @@ type Format int
 
 // Possible values of the Format type.
 const (
-	UnknownFormat  Format = 0
-	OFSDeltaFormat Format = 1
-	REFDeltaFormat Format = 2
+	UnknownFormat Format = iota
+	OFSDeltaFormat
+	REFDeltaFormat
 )
 
 var (
