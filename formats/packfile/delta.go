@@ -12,11 +12,11 @@ func PatchDelta(src, delta []byte) []byte {
 		return nil
 	}
 
-	size, delta := deltaHeaderSize(delta)
+	size, delta := decodeLEB128(delta)
 	if size != uint(len(src)) {
 		return nil
 	}
-	size, delta = deltaHeaderSize(delta)
+	size, delta = decodeLEB128(delta)
 	origSize := size
 
 	var dest []byte
@@ -84,20 +84,29 @@ func PatchDelta(src, delta []byte) []byte {
 	return dest
 }
 
+const (
+	payload      = 0x7f // 0111 1111
+	continuation = 0x80 // 1000 0000
+)
+
+// Decodes a number encoded as an unsigned LEB128 at the start of some
+// binary data and returns the decoded number and the rest of the
+// stream.
+//
 // This must be called twice on the delta data buffer, first to get the
 // expected source buffer size, and again to get the target buffer size.
-// Both are encoded using LEB128.
-func deltaHeaderSize(b []byte) (uint, []byte) {
-	var size, j uint
-	var cmd byte
+func decodeLEB128(input []byte) (uint, []byte) {
+	var result, bytesDecoded uint
+	var b byte
 	for {
-		cmd = b[j]
-		size |= (uint(cmd) & 0x7f) << (j * 7)
-		j++
-		if uint(cmd)&0x80 == 0 || j == uint(len(b)) {
+		b = input[bytesDecoded]
+		result |= (uint(b) & payload) << (bytesDecoded * 7) // concats 7 bits chunks
+		bytesDecoded++
+
+		if uint(b)&continuation == 0 || bytesDecoded == uint(len(input)) {
 			break
 		}
 	}
 
-	return size, b[j:]
+	return result, input[bytesDecoded:]
 }
