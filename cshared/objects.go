@@ -1,6 +1,7 @@
 package cshared
 
 import (
+	"C"
 	"errors"
 	"math"
 	"sync"
@@ -78,7 +79,7 @@ func c_dispose(handle uint64) {
 	UnregisterObject(Handle(handle))
 }
 
-//export c_exists
+//export c_objects_size
 func c_objects_size() int {
 	return len(registryHandle2Obj)
 }
