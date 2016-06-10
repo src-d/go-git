@@ -80,7 +80,7 @@ func (r *Repository) setStorage(remote *Remote, branch string) error {
 	return r.fillStorageUsingFetch(remote, branch)
 }
 
-const dirScheme = "dir://"
+const dirScheme = "local://"
 
 func isLocalRemote(endpoint common.Endpoint) bool {
 	if strings.HasPrefix(string(endpoint), dirScheme) {

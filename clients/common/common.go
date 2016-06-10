@@ -37,7 +37,7 @@ type AuthMethod interface {
 type Endpoint string
 
 func NewEndpoint(url string) (Endpoint, error) {
-	if strings.HasPrefix(url, "dir://") {
+	if strings.HasPrefix(url, "local://") {
 		return Endpoint(url), nil
 	}
 
