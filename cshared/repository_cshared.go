@@ -20,7 +20,7 @@ func c_NewRepository(url string, auth uint64) (uint64, error) {
 	if !ok {
 		return IH, NotFoundError
 	}
-	repo, err := NewRepository(url, real_auth.(common.AuthMethod))
+	repo, err := NewRepository(CopyString(url), real_auth.(common.AuthMethod))
 	if err != nil {
 		return IH, err
 	}
@@ -104,7 +104,7 @@ func c_Repository_set_URL(r uint64, val string) {
 		return
 	}
 	repo := obj.(Repository)
-	repo.URL = val
+	repo.URL = CopyString(val)
 }
 
 //export c_Repository_Pull
@@ -114,7 +114,7 @@ func c_Repository_Pull(r uint64, remoteName, branch string) error {
 		return NotFoundError
 	}
 	repo := obj.(Repository)
-	return repo.Pull(remoteName, branch)
+	return repo.Pull(remoteName, CopyString(branch))
 }
 
 //export c_Repository_PullDefault

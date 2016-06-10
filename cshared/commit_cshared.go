@@ -6,19 +6,6 @@ import (
 	. "github.com/src-d/go-git"
 )
 
-/*
-type Commit struct {
-	Hash      core.Hash
-	Author    Signature
-	Committer Signature
-	Message   string
-
-	tree    core.Hash
-	parents []core.Hash
-	r       *Repository
-}
- */
-
 //export c_Commit
 func c_Commit() uint64 {
 	commit := Commit{}
@@ -111,7 +98,7 @@ func c_Commit_File(c uint64, path string) (uint64, error) {
 		return IH, NotFoundError
 	}
 	commit := obj.(Commit)
-	file, err := commit.File(path)
+	file, err := commit.File(CopyString(path))
 	if err != nil {
 		return IH, err
 	}
@@ -157,4 +144,36 @@ func c_Commit_String(c uint64) string {
 	}
 	commit := obj.(Commit)
 	return commit.String()
+}
+
+//export c_NewCommitIter
+func c_NewCommitIter(r uint64, iter uint64) uint64 {
+	obj, ok := GetObject(Handle(r))
+	if !ok {
+		return IH
+	}
+	repo := obj.(Repository)
+	obj, ok = GetObject(Handle(iter))
+	if !ok {
+		return IH
+	}
+	obj_iter := obj.(core.ObjectIter)
+	commit_iter := NewCommitIter(&repo, obj_iter)
+	handle := RegisterObject(*commit_iter)
+	return uint64(handle)
+}
+
+//export c_CommitIter_Next
+func c_CommitIter_Next(iter uint64) (uint64, error) {
+	obj, ok := GetObject(Handle(iter))
+	if !ok {
+		return IH, NotFoundError
+	}
+	commitIter := obj.(CommitIter)
+	commit, err := commitIter.Next()
+	if err != nil {
+		return IH, err
+	}
+	handle := RegisterObject(commit)
+	return uint64(handle), nil
 }

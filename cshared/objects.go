@@ -74,6 +74,12 @@ func GetHandle(obj interface{}) (Handle, bool) {
 	return a, b
 }
 
+func CopyString(str string) string {
+	buf := make([]byte, len(str))
+	copy(buf, []byte(str))
+	return string(buf)
+}
+
 //export c_dispose
 func c_dispose(handle uint64) {
 	UnregisterObject(Handle(handle))
