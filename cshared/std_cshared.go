@@ -22,7 +22,7 @@ func c_std_map_get_str_obj(m uint64, key string) uint64 {
 	if val.Type().Kind() == reflect.Ptr {
 		val = val.Elem()
 	}
-	if !val.CanInterface() {
+	if val.IsNil() {
 		return IH
 	}
 	val_handle := RegisterObject(val.Interface())
@@ -50,7 +50,7 @@ func c_std_map_get_obj_obj(m uint64, key uint64) uint64 {
 	if val.Type().Kind() == reflect.Ptr {
 		val = val.Elem()
 	}
-	if !val.CanInterface() {
+	if val.IsNil() {
 		return IH
 	}
 	val_handle := RegisterObject(val.Interface())
