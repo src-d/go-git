@@ -17,7 +17,7 @@ class Repository(GoObject):
         handle = cls._checked(cls.lib.c_NewRepository(
             go_url, auth.handle if auth is not None else cls.INVALID_HANDLE))
         repo = Repository(handle)
-        repo._strings[go_url] = c_url
+        repo._deps[go_url] = c_url
         return repo
 
     @classmethod

@@ -16,8 +16,8 @@ class HTTPAuthMethod(AuthMethod):
         go_password, c_password = cls._string(password)
         handle = cls.lib.c_NewBasicAuth(go_username, go_password)
         am = HTTPAuthMethod(handle)
-        am._strings[go_username] = c_username
-        am._strings[go_password] = c_password
+        am._deps[go_username] = c_username
+        am._deps[go_password] = c_password
         return am
 
 
@@ -30,8 +30,8 @@ class SSHPasswordMethod(AuthMethod):
         go_password, c_password = cls._string(password)
         handle = cls.lib.c_ssh_Password_New(go_username, go_password)
         am = SSHPasswordMethod(handle)
-        am._strings[go_username] = c_username
-        am._strings[go_password] = c_password
+        am._deps[go_username] = c_username
+        am._deps[go_password] = c_password
         return am
 
     @property
@@ -47,14 +47,24 @@ class SSHPasswordMethod(AuthMethod):
     def Pass(self):
         return self._string(self.lib.c_ssh_Password_get_Pass(self.handle))
 
-    @User.setter
+    @Pass.setter
     def Pass(self, value):
         self.lib.c_ssh_Password_set_Pass(
             self.handle, self._string(value, self))
 
 
 class Signer(GoObject):
-    pass
+    @classmethod
+    def Parse(cls, data, raw=True):
+        if hasattr(data, "read"):
+            data = data.read()
+        go_data, c_data = cls._bytes(data)
+        if raw:
+            s = Signer(cls._checked(cls.lib.c_ParseRawPrivateKey(go_data)))
+        else:
+            s = Signer(cls._checked(cls.lib.c_ParsePrivateKey(go_data)))
+        s._deps[go_data] = c_data
+        return s
 
 
 class SSHPublicKeysMethod(AuthMethod):
@@ -65,7 +75,7 @@ class SSHPublicKeysMethod(AuthMethod):
         go_user, c_user = cls._string(user)
         handle = cls.lib.c_ssh_Password_New(go_user, signer.handle)
         am = SSHPublicKeysMethod(handle)
-        am._strings[go_user] = c_user
+        am._deps[go_user] = c_user
         return am
 
     @property

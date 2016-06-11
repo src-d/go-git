@@ -1,4 +1,6 @@
 from .go_object import GoObject
+from .common import HTTPAuthMethod, SSHPasswordMethod, SSHPublicKeysMethod, \
+    Signer
 from .repository import Repository
 
 try:

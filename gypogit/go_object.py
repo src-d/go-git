@@ -40,7 +40,7 @@ class GoObject(object):
 
     def __init__(self, handle):
         self._handle = handle
-        self._strings = weakref.WeakKeyDictionary()
+        self._deps = weakref.WeakKeyDictionary()
         self.registry[handle] = self
 
     def __del__(self):
@@ -102,10 +102,29 @@ class GoObject(object):
             "n": len(contents)
         })[0]
         if owner is not None:
-            owner._strings[go_str] = char_ptr
+            owner._deps[go_str] = char_ptr
             return go_str
         else:
             return go_str, char_ptr
+
+    @classmethod
+    def _bytes(cls, data, owner=None):
+        if isinstance(data, cls.ffi.CData):
+            if data.len == 0:
+                return b""
+            return cls.ffi.string(data.data, data.len)
+        assert isinstance(data, (bytes, bytearray, memoryview))
+        char_data = cls.ffi.new("char[]", data)
+        go_data = cls.ffi.new("GoSlice*", {
+            "data": char_data,
+            "len": len(data),
+            "cap": len(data)
+        })[0]
+        if owner is not None:
+            owner._deps[go_data] = char_data
+            return go_data
+        else:
+            return go_data, char_data
 
     @classmethod
     def dump_go(cls):
