@@ -1,4 +1,5 @@
-package cshared
+// +build ignore
+package main
 
 import (
 	"C"

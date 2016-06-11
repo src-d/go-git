@@ -15,10 +15,10 @@ class GoObject(object):
 
     def __new__(cls, *args, **kwargs):
         assert cls.lib is not None
-        return super(GoObject, cls).__new__(cls, *args)
+        return object.__new__(cls)
 
     @classmethod
-    def initialize(cls, header_path, library_path):
+    def initialize_go(cls, header_path, library_path):
         with codecs.open(header_path, "r", "utf-8") as fin:
             src = fin.read()
             src = re.sub("#ifdef.*\n.*\n#endif|#.*|.*_Complex.*|"
@@ -35,17 +35,24 @@ class GoObject(object):
     def __del__(self):
         self.lib.c_dispose(self._handle)
 
+    def __repr__(self):
+        general_str = super(GoObject, self).__repr__()
+        return "%s | 0x%x>" % (general_str[:-1], self._handle)
+
+    def __hash__(self):
+        return self._handle
+
     @property
     def handle(self):
         return self._handle
 
     @classmethod
-    def checked(cls, result):
+    def _checked(cls, result):
         smth, err = result
         return smth
 
     @classmethod
-    def string(cls, contents, owner=None):
+    def _string(cls, contents, owner=None):
         """
         Converts Python string to Go string and vice versa.
         :param contents: str, unicode, bytes or FFi.CData struct of GoString
@@ -68,3 +75,7 @@ class GoObject(object):
             return go_str
         else:
             return go_str, char_ptr
+
+    @classmethod
+    def dump_go(cls):
+        cls.lib.c_dump_objects()
