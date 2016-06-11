@@ -3,7 +3,6 @@ package main
 
 import (
 	"C"
-	"errors"
 	"fmt"
 	"math"
 	"sync"
@@ -12,7 +11,13 @@ import (
 
 type Handle uint64
 
-var NotFoundError error = errors.New("object not found")
+const (
+	ErrorCodeSuccess = iota
+	ErrorCodeNotFound = iota
+	ErrorCodeInternal = iota
+)
+
+const MessageNotFound string = "object not found"
 const InvalidHandle Handle = 0
 const IH uint64 = uint64(InvalidHandle)
 var counter Handle = InvalidHandle
@@ -42,15 +47,15 @@ func RegisterObject(obj interface{}) Handle {
 	return handle
 }
 
-func UnregisterObject(handle Handle) error {
+func UnregisterObject(handle Handle) int {
 	if handle == InvalidHandle {
-		return NotFoundError
+		return ErrorCodeNotFound
 	}
 	opMutex.Lock()
 	defer opMutex.Unlock()
 	obj, ok := registryHandle2Obj[handle]
 	if !ok {
-		return errors.New("handle not found")
+		return ErrorCodeNotFound
 	}
 	delete(registryHandle2Obj, handle)
 	data_ptr := reflect.ValueOf(&obj).Elem().InterfaceData()[1]
@@ -59,7 +64,7 @@ func UnregisterObject(handle Handle) error {
 		panic("inconsistent internal object mapping state")
 	}
 	delete(registryObj2Handle, data_ptr)
-	return nil
+	return ErrorCodeSuccess
 }
 
 func GetObject(handle Handle) (interface{}, bool) {

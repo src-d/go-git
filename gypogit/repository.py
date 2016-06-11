@@ -10,11 +10,12 @@ class Repository(GoObject):
         return Repository(cls.lib.c_Repository())
 
     @classmethod
-    def New(cls, url, auth):
+    def New(cls, url, auth=None):
         assert isinstance(url, string_types)
-        assert isinstance(auth, AuthMethod)
+        assert auth is None or isinstance(auth, AuthMethod)
         go_url, c_url = cls._string(url)
-        handle = cls._checked(cls.lib.c_NewRepository(go_url, auth.handle))
+        handle = cls._checked(cls.lib.c_NewRepository(
+            go_url, auth.handle if auth is not None else cls.INVALID_HANDLE))
         repo = Repository(handle)
         repo._strings[go_url] = c_url
         return repo

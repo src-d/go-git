@@ -6,12 +6,16 @@ import weakref
 
 
 class GoGitError(Exception):
-    pass
+    def __init__(self, code, message):
+        super(GoGitError, self).__init__("[%d] %s" % (code, message))
+        self.code = code
+        self.message = message
 
 
 class GoObject(object):
     ffi = FFI()
     lib = None
+    INVALID_HANDLE = 0
 
     def __new__(cls, *args, **kwargs):
         assert cls.lib is not None
@@ -48,8 +52,26 @@ class GoObject(object):
 
     @classmethod
     def _checked(cls, result):
-        smth, err = result
-        return smth
+        unpacked = tuple(getattr(result, f[0])
+                         for f in cls.ffi.typeof(result).fields)
+        if cls.ffi.typeof(unpacked[-1]).cname == "GoString":
+            assert len(unpacked) >= 2
+            assert isinstance(unpacked[-2], int)
+            if unpacked[-2] == 0:
+                if len(unpacked) == 2:
+                    return
+                if len(unpacked) == 3:
+                    return unpacked[0]
+                return unpacked[:-2]
+            raise GoGitError(unpacked[-2], cls._string(unpacked[-1]))
+        assert isinstance(unpacked[-1], int)
+        if unpacked[-1] == 0:
+            if len(unpacked) == 1:
+                return
+            if len(unpacked) == 2:
+                return unpacked[-1]
+            return unpacked[:-1]
+        raise GoGitError(unpacked[-1], "<no message>")
 
     @classmethod
     def _string(cls, contents, owner=None):
@@ -62,6 +84,8 @@ class GoObject(object):
                  Go->Py: str, unicode
         """
         if isinstance(contents, cls.ffi.CData):
+            if contents.n == 0:
+                return ""
             return cls.ffi.string(contents.p, contents.n).decode("utf-8")
         if isinstance(contents, text_type):
             contents = contents.encode("utf-8")

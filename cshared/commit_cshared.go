@@ -93,18 +93,18 @@ func c_Commit_NumParents(c uint64) int {
 }
 
 //export c_Commit_File
-func c_Commit_File(c uint64, path string) (uint64, error) {
+func c_Commit_File(c uint64, path string) (uint64, int, string) {
 	obj, ok := GetObject(Handle(c))
 	if !ok {
-		return IH, NotFoundError
+		return IH, ErrorCodeNotFound, MessageNotFound
 	}
 	commit := obj.(Commit)
 	file, err := commit.File(CopyString(path))
 	if err != nil {
-		return IH, err
+		return IH, ErrorCodeInternal, err.Error()
 	}
 	file_handle := RegisterObject(file)
-	return uint64(file_handle), nil
+	return uint64(file_handle), ErrorCodeSuccess, ""
 }
 
 //export c_Commit_ID
@@ -123,18 +123,22 @@ func c_Commit_Type(c uint64) int8 {
 }
 
 //export c_Commit_Decode
-func c_Commit_Decode(c uint64, o uint64) (err error) {
+func c_Commit_Decode(c uint64, o uint64) (int, string) {
 	obj, ok := GetObject(Handle(c))
 	if !ok {
-		return NotFoundError
+		return ErrorCodeNotFound, MessageNotFound
 	}
 	commit := obj.(Commit)
 	obj, ok = GetObject(Handle(o))
 	if !ok {
-		return NotFoundError
+		return ErrorCodeNotFound, MessageNotFound
 	}
 	cobj := obj.(core.Object)
-	return commit.Decode(cobj)
+	err := commit.Decode(cobj)
+	if err == nil {
+		return ErrorCodeSuccess, ""
+	}
+	return ErrorCodeInternal, err.Error()
 }
 
 //export c_Commit_String
@@ -165,16 +169,16 @@ func c_NewCommitIter(r uint64, iter uint64) uint64 {
 }
 
 //export c_CommitIter_Next
-func c_CommitIter_Next(iter uint64) (uint64, error) {
+func c_CommitIter_Next(iter uint64) (uint64, int, string) {
 	obj, ok := GetObject(Handle(iter))
 	if !ok {
-		return IH, NotFoundError
+		return IH, ErrorCodeNotFound, MessageNotFound
 	}
 	commitIter := obj.(CommitIter)
 	commit, err := commitIter.Next()
 	if err != nil {
-		return IH, err
+		return IH, ErrorCodeInternal, err.Error()
 	}
 	handle := RegisterObject(commit)
-	return uint64(handle), nil
+	return uint64(handle), ErrorCodeSuccess, ""
 }
