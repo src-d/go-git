@@ -98,7 +98,7 @@ setup(
     url="https://github.com/src-d/go-git",
     download_url='https://github.com/src-d/go-git',
     packages=["gypogit"],
-    install_requires=[],
+    install_requires=["six>=1.0", "cffi>=1.0"],
     package_data={"gypogit": ["README.python.md"]},
     cmdclass={'build_py': GoBuildPy},
     classifiers=[
