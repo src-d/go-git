@@ -78,7 +78,7 @@ func c_Commit_Parents(c uint64) uint64 {
 	}
 	commit := obj.(Commit)
 	parents := commit.Parents()
-	parents_handle := RegisterObject(*parents)
+	parents_handle := RegisterObject(parents)
 	return uint64(parents_handle)
 }
 
@@ -164,7 +164,7 @@ func c_NewCommitIter(r uint64, iter uint64) uint64 {
 	}
 	obj_iter := obj.(core.ObjectIter)
 	commit_iter := NewCommitIter(&repo, obj_iter)
-	handle := RegisterObject(*commit_iter)
+	handle := RegisterObject(commit_iter)
 	return uint64(handle)
 }
 

@@ -32,13 +32,13 @@ func c_NewRepository(url string, auth uint64) (uint64, int, string) {
 	if err != nil {
 		return IH, ErrorCodeInternal, err.Error()
 	}
-	repo_handle := RegisterObject(*repo)
+	repo_handle := RegisterObject(repo)
 	return uint64(repo_handle), ErrorCodeSuccess, ""
 }
 
 //export c_NewPlainRepository
 func c_NewPlainRepository() uint64 {
-	return uint64(RegisterObject(*NewPlainRepository()))
+	return uint64(RegisterObject(NewPlainRepository()))
 }
 
 //export c_Repository_get_Remotes
@@ -156,7 +156,7 @@ func c_Repository_Commit(r uint64, h []byte) (uint64, int, string) {
 	if err != nil {
 		return IH, ErrorCodeInternal, err.Error()
 	}
-  commit_handle := RegisterObject(*commit)
+  commit_handle := RegisterObject(commit)
 	return uint64(commit_handle), ErrorCodeSuccess, ""
 }
 
@@ -168,7 +168,7 @@ func c_Repository_Commits(r uint64) uint64 {
 	}
 	repo := obj.(Repository)
 	iter := repo.Commits()
-	iter_handle := RegisterObject(*iter)
+	iter_handle := RegisterObject(iter)
 	return uint64(iter_handle)
 }
 
@@ -185,7 +185,7 @@ func c_Repository_Tree(r uint64, h []byte) (uint64, int, string) {
 	if err != nil {
 		return IH, ErrorCodeInternal, err.Error()
 	}
-	tree_handle := RegisterObject(*tree)
+	tree_handle := RegisterObject(tree)
 	return uint64(tree_handle), ErrorCodeSuccess, ""
 }
 
@@ -231,7 +231,7 @@ func c_Repository_Tags(r uint64) uint64 {
 	}
 	repo := obj.(Repository)
 	iter := repo.Tags()
-	iter_handle := RegisterObject(*iter)
+	iter_handle := RegisterObject(iter)
 	return uint64(iter_handle)
 }
 
