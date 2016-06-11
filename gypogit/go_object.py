@@ -22,7 +22,9 @@ class GoObject(object):
         return object.__new__(cls)
 
     @classmethod
-    def initialize_go(cls, header_path, library_path):
+    def initialize_go(cls, header_path, library_path, force=False):
+        if cls.lib is not None and not force:
+            return
         with codecs.open(header_path, "r", "utf-8") as fin:
             src = fin.read()
             src = re.sub("#ifdef.*\n.*\n#endif|#.*|.*_Complex.*|"
