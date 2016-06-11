@@ -16,9 +16,13 @@ class GoObject(object):
     ffi = FFI()
     lib = None
     INVALID_HANDLE = 0
+    registry = weakref.WeakValueDictionary()
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, handle):
         assert cls.lib is not None
+        instance = cls.registry.get(handle)
+        if instance is not None:
+            return instance
         return object.__new__(cls)
 
     @classmethod
@@ -37,6 +41,7 @@ class GoObject(object):
     def __init__(self, handle):
         self._handle = handle
         self._strings = weakref.WeakKeyDictionary()
+        self.registry[handle] = self
 
     def __del__(self):
         self.lib.c_dispose(self._handle)
