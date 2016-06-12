@@ -111,7 +111,11 @@ class GoObject(object):
             return go_str, char_ptr
 
     @classmethod
-    def _bytes(cls, data, owner=None):
+    def _bytes(cls, data, owner=None, size=None):
+        if isinstance(data, cls.ffi.CData):
+            s = cls.ffi.unpack(data, size)
+            cls.lib.free(data)
+            return s
         assert isinstance(data, (bytes, bytearray, memoryview))
         char_data = cls.ffi.new("char[]", data)
         go_data = cls.ffi.new("GoSlice*", {

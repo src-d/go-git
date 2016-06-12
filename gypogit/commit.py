@@ -15,7 +15,7 @@ class Commit(GoObject):
 
     @property
     def Hash(self):
-        return self._bytes(self.lib.c_Commit_get_Hash(self.handle))
+        return self._bytes(self.lib.c_Commit_get_Hash(self.handle), size=20)
 
     @property
     def Author(self):

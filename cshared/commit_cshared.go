@@ -11,13 +11,13 @@ import (
 
 
 //export c_Commit_get_Hash
-func c_Commit_get_Hash(c uint64) []byte {
+func c_Commit_get_Hash(c uint64) *C.char {
 	obj, ok := GetObject(Handle(c))
 	if !ok {
 		return nil
 	}
 	commit := obj.(*Commit)
-	return commit.Hash[:]
+	return C.CString(string(commit.Hash[:]))
 }
 
 //export c_Commit_get_Author
@@ -104,7 +104,7 @@ func c_Commit_File(c uint64, path string) (uint64, int, *C.char) {
 }
 
 //export c_Commit_ID
-func c_Commit_ID(c uint64) []byte {
+func c_Commit_ID(c uint64) *C.char {
 	return c_Commit_get_Hash(c)
 }
 
