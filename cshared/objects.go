@@ -13,8 +13,8 @@ type Handle uint64
 
 const (
 	ErrorCodeSuccess = iota
-	ErrorCodeNotFound = iota
-	ErrorCodeInternal = iota
+	ErrorCodeNotFound = -iota
+	ErrorCodeInternal = -iota
 )
 
 const MessageNotFound string = "object not found"

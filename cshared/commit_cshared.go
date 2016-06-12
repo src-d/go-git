@@ -9,7 +9,6 @@ import (
 	. "gopkg.in/src-d/go-git.v3"
 )
 
-
 //export c_Commit_get_Hash
 func c_Commit_get_Hash(c uint64) *C.char {
 	obj, ok := GetObject(Handle(c))

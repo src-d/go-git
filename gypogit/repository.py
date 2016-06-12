@@ -1,3 +1,4 @@
+import codecs
 from six import string_types
 
 from .go_object import GoObject
@@ -6,7 +7,7 @@ from .std import StringMap
 from .core import Object, ObjectStorage
 from .commit import Commit, CommitIter
 from .tree import Tree
-from .blob import Blob
+from .objects import Blob
 from .tag import Tag, TagIter
 
 
@@ -93,7 +94,7 @@ class Repository(GoObject):
 
     def _hash(self, h):
         if isinstance(h, string_types) and len(h) == 40:
-            h = h.decode("hex")
+            h = codecs.decode(h, "hex")
         assert isinstance(h, (bytes, bytearray, memoryview))
         assert len(h) == 20
         return self._bytes(h, self)

@@ -25,3 +25,8 @@ class ObjectType(int):
         if self >= len(self.MAP):
             return self.MAP[0]
         return self.MAP[self]
+
+
+for i, v in enumerate(ObjectType.MAP):
+    if v != ObjectType.INVALID:
+        setattr(ObjectType, v, ObjectType(i))

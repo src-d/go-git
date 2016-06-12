@@ -51,7 +51,11 @@ class GoObject(object):
 
     def __repr__(self):
         general_str = super(GoObject, self).__repr__()
-        return "%s | 0x%x>" % (general_str[:-1], self._handle)
+        ret = "%s | 0x%x>" % (general_str[:-1], self._handle)
+        h = getattr(self, "Hash", None)
+        if h is not None:
+            ret += " | %x" % h
+        return ret
 
     def __hash__(self):
         return self._handle
@@ -61,13 +65,15 @@ class GoObject(object):
         return self._handle
 
     @classmethod
-    def _checked(cls, result):
+    def _checked(cls, result, compressed=False):
         unpacked = tuple(getattr(result, f[0])
                          for f in cls.ffi.typeof(result).fields)
         if cls.ffi.typeof(unpacked[-1]).cname == "char *":
             assert len(unpacked) >= 2
             assert isinstance(unpacked[-2], int)
-            if unpacked[-2] == 0:
+            if unpacked[-2] >= 0:
+                if compressed:
+                    return unpacked
                 if len(unpacked) == 2:
                     return
                 if len(unpacked) == 3:
@@ -75,9 +81,13 @@ class GoObject(object):
                 return unpacked[:-2]
             raise GoGitError(unpacked[-2], cls._string(unpacked[-1]))
         assert isinstance(unpacked[-1], int)
-        if unpacked[-1] == 0:
+        if unpacked[-1] >= 0:
             if len(unpacked) == 1:
+                if compressed:
+                    return unpacked[0]
                 return
+            if compressed:
+                return unpacked
             if len(unpacked) == 2:
                 return unpacked[-1]
             return unpacked[:-1]

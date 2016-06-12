@@ -2,7 +2,7 @@ from six import PY2, PY3, python_2_unicode_compatible
 
 from .go_object import GoObject
 from .core import ObjectIter, ObjectType
-from .common import Signature
+from gypogit.objects import Signature
 from .tree import Tree
 from .file import File
 
