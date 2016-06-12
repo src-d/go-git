@@ -2,6 +2,19 @@ from six import string_types
 
 from .go_object import GoObject
 from .common import AuthMethod
+from .std import StringMap
+
+
+class Remote(GoObject):
+    pass
+
+
+class Storage(GoObject):
+    pass
+
+
+class CommitIter(GoObject):
+    pass
 
 
 class Repository(GoObject):
@@ -25,10 +38,28 @@ class Repository(GoObject):
         return Repository(cls.lib.c_NewPlainRepository())
 
     @property
-    def remotes(self):
-        map_handle = self.lib.c_Repository_get_Remotes(self.handle)
-        return None
+    def Remotes(self):
+        return StringMap(self.lib.c_Repository_get_Remotes(self.handle))
+
+    @Remotes.setter
+    def Remotes(self, value):
+        self.lib.c_Repository_set_Remotes(self.handle, value.handle)
 
     @property
-    def url(self):
+    def Url(self):
         return self._string(self.lib.c_Repository_get_URL(self.handle))
+
+    @Url.setter
+    def Url(self, value):
+        self.lib.c_Repository_set_URL(self.handle, self._string(value, self))
+
+    @property
+    def Storage(self):
+        return Storage(self.lib.c_Repository_get_Storage(self.handle))
+
+    @Storage.setter
+    def Storage(self, value):
+        self.lib.c_Repository_set_Storage(self.handle, value.handle)
+
+    def Commits(self):
+        return CommitIter(self.lib.c_Repository_Commits(self.handle))

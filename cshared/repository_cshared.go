@@ -10,7 +10,7 @@ import (
 
 //export c_Repository
 func c_Repository() uint64 {
-	repo := Repository{}
+	repo := &Repository{}
 	repo_handle := RegisterObject(repo)
 	return uint64(repo_handle)
 }
@@ -47,7 +47,7 @@ func c_Repository_get_Remotes(r uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	remotes := repo.Remotes
 	remotes_handle := RegisterObject(remotes)
 	return uint64(remotes_handle)
@@ -59,7 +59,7 @@ func c_Repository_set_Remotes(r uint64, val uint64) {
 	if !ok {
 		return
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	obj, ok = GetObject(Handle(val))
 	if !ok {
 		return
@@ -74,7 +74,7 @@ func c_Repository_get_Storage(r uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	storage := repo.Storage
 	storage_handle := RegisterObject(storage)
 	return uint64(storage_handle)
@@ -86,7 +86,7 @@ func c_Repository_set_Storage(r uint64, val uint64) {
 	if !ok {
 		return
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	obj, ok = GetObject(Handle(val))
 	if !ok {
 		return
@@ -101,7 +101,7 @@ func c_Repository_get_URL(r uint64) string {
 	if !ok {
 		return ""
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	return repo.URL
 }
 
@@ -111,7 +111,7 @@ func c_Repository_set_URL(r uint64, val string) {
 	if !ok {
 		return
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	repo.URL = CopyString(val)
 }
 
@@ -121,7 +121,7 @@ func c_Repository_Pull(r uint64, remoteName, branch string) (int, string) {
 	if !ok {
 		return ErrorCodeNotFound, MessageNotFound
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	err := repo.Pull(remoteName, CopyString(branch))
 	if err == nil {
 		return ErrorCodeSuccess, ""
@@ -135,7 +135,7 @@ func c_Repository_PullDefault(r uint64) (int, string) {
 	if !ok {
 		return ErrorCodeNotFound, MessageNotFound
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	err := repo.PullDefault()
 	if err == nil {
 		return ErrorCodeSuccess, ""
@@ -149,7 +149,7 @@ func c_Repository_Commit(r uint64, h []byte) (uint64, int, string) {
 	if !ok {
 		return IH, ErrorCodeNotFound, MessageNotFound
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	var hash core.Hash
 	copy(hash[:], h)
 	commit, err := repo.Commit(hash)
@@ -166,7 +166,7 @@ func c_Repository_Commits(r uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	iter := repo.Commits()
 	iter_handle := RegisterObject(iter)
 	return uint64(iter_handle)
@@ -178,7 +178,7 @@ func c_Repository_Tree(r uint64, h []byte) (uint64, int, string) {
 	if !ok {
 		return IH, ErrorCodeNotFound, MessageNotFound
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	var hash core.Hash
 	copy(hash[:], h)
 	tree, err := repo.Tree(hash)
@@ -195,7 +195,7 @@ func c_Repository_Blob(r uint64, h []byte) (uint64, int, string) {
 	if !ok {
 		return IH, ErrorCodeNotFound, MessageNotFound
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	var hash core.Hash
 	copy(hash[:], h)
 	blob, err := repo.Blob(hash)
@@ -212,7 +212,7 @@ func c_Repository_Tag(r uint64, h []byte) (uint64, int, string) {
 	if !ok {
 		return IH, ErrorCodeNotFound, MessageNotFound
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	var hash core.Hash
 	copy(hash[:], h)
 	tag, err := repo.Tag(hash)
@@ -229,7 +229,7 @@ func c_Repository_Tags(r uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	iter := repo.Tags()
 	iter_handle := RegisterObject(iter)
 	return uint64(iter_handle)
@@ -241,7 +241,7 @@ func c_Repository_Object(r uint64, h []byte) (uint64, int, string) {
 	if !ok {
 		return IH, ErrorCodeNotFound, MessageNotFound
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	var hash core.Hash
 	copy(hash[:], h)
 	robj, err := repo.Object(hash)

@@ -88,7 +88,7 @@ func c_ParseAuthorizedKey(in []byte) (uint64, string, string, []byte, int, strin
 		return IH, "", "", []byte{}, ErrorCodeInternal, err.Error()
 	}
 	pkey_handle := RegisterObject(pkey)
-	mopt := strings.Join(options, "|")
+	mopt := strings.Join(options, "\x00")
 	return uint64(pkey_handle), comment, mopt, rest, ErrorCodeSuccess, ""
 }
 

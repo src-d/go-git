@@ -91,6 +91,11 @@ func CopyString(str string) string {
 	return string(buf)
 }
 
+func SafeIsNil(v reflect.Value) bool {
+  defer func() { recover() }()
+  return v.IsNil()
+}
+
 //export c_dispose
 func c_dispose(handle uint64) {
 	UnregisterObject(Handle(handle))

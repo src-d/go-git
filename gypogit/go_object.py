@@ -20,14 +20,14 @@ class GoObject(object):
 
     def __new__(cls, handle):
         assert cls.lib is not None
-        instance = cls.registry.get(handle)
+        instance = GoObject.registry.get(handle)
         if instance is not None:
             return instance
         return object.__new__(cls)
 
-    @classmethod
-    def initialize_go(cls, header_path, library_path, force=False):
-        if cls.lib is not None and not force:
+    @staticmethod
+    def initialize_go(header_path, library_path, force=False):
+        if GoObject.lib is not None and not force:
             return
         with codecs.open(header_path, "r", "utf-8") as fin:
             src = fin.read()
@@ -35,13 +35,15 @@ class GoObject(object):
                          ".*_check_for_64_bit_pointer_matching_GoInt.*",
                          "", src)
             src = src.replace("__SIZE_TYPE__", "uintptr_t")
-            cls.ffi.cdef(src)
-        cls.lib = cls.ffi.dlopen(library_path)
+            GoObject.ffi.cdef(src)
+        GoObject.lib = GoObject.ffi.dlopen(library_path)
 
     def __init__(self, handle):
+        if handle <= self.INVALID_HANDLE:
+            raise ValueError("Invalid handle")
         self._handle = handle
         self._deps = weakref.WeakKeyDictionary()
-        self.registry[handle] = self
+        GoObject.registry[handle] = self
 
     def __del__(self):
         self.lib.c_dispose(self._handle)
@@ -125,6 +127,13 @@ class GoObject(object):
             return go_data
         else:
             return go_data, char_data
+
+    @classmethod
+    def _string_slice(cls, slice, owner=None):
+        if isinstance(slice, cls.ffi.CData):
+            sarr = cls.ffi.string(slice.p, slice.n)
+            return [s.decode("utf-8") for s in sarr.split(b"\x00")]
+        raise NotImplementedError()
 
     @classmethod
     def dump_go(cls):
