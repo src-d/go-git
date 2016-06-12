@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"gopkg.in/src-d/go-git.v3/core"
-	. "github.com/src-d/go-git"
+	. "gopkg.in/src-d/go-git.v3"
 )
 
 
@@ -27,7 +27,7 @@ func c_Commit_get_Author(c uint64) uint64 {
 		return IH
 	}
 	commit := obj.(*Commit)
-	author := commit.Author
+	author := &commit.Author
 	author_handle := RegisterObject(author)
 	return uint64(author_handle)
 }
@@ -39,7 +39,7 @@ func c_Commit_get_Committer(c uint64) uint64 {
 		return IH
 	}
 	commit := obj.(*Commit)
-	committer := commit.Committer
+	committer := &commit.Committer
 	committer_handle := RegisterObject(committer)
 	return uint64(committer_handle)
 }

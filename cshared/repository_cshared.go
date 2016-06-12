@@ -5,7 +5,7 @@ import (
 	"C"
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/clients/common"
-	. "github.com/src-d/go-git"
+	. "gopkg.in/src-d/go-git.v3"
 )
 
 //export c_Repository
