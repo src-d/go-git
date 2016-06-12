@@ -60,21 +60,21 @@ func c_std_map_get_obj_obj(m uint64, key uint64) uint64 {
 }
 
 //export c_std_map_keys_str
-func c_std_map_keys_str(m uint64) string {
+func c_std_map_keys_str(m uint64) *C.char {
 	obj, ok := GetObject(Handle(m))
 	if !ok {
-		return ""
+		return C.CString("")
 	}
 	mapval := reflect.ValueOf(obj)
 	if mapval.Type().Kind() != reflect.Map {
-		return ""
+		return C.CString("")
 	}
 	keys := mapval.MapKeys()
 	keys_str := make([]string, 0, len(keys))
 	for _, k := range keys {
 		keys_str = append(keys_str, k.String())
 	}
-	return strings.Join(keys_str, "\x00")
+	return C.CString(strings.Join(keys_str, "\xff"))
 }
 
 //export c_std_map_len

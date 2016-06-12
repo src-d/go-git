@@ -7,3 +7,18 @@ class Object(GoObject):
 
 class ObjectStorage(GoObject):
     pass
+
+
+class ObjectIter(GoObject):
+    pass
+
+
+class ObjectType(int):
+    INVALID = "<invalid>"
+    MAP = (INVALID, "Commit", "Tree", "Blob", "Tag", INVALID, "OFSDelta",
+           "REFDelta")
+
+    def __str__(self):
+        if self >= len(self.MAP):
+            return self.MAP[0]
+        return self.MAP[self]

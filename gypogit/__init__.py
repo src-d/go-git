@@ -4,6 +4,8 @@ from .common import HTTPAuthMethod, SSHPasswordMethod, SSHPublicKeysMethod, \
 from .repository import Repository
 from .remote import Remote
 
+DefaultRemoteName = "origin"
+
 try:
     from .go_paths import HEADER, LIBRARY
     import os

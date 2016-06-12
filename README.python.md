@@ -16,7 +16,8 @@ Usage
 from gypogit import Repository
 r = Repository.New("https://github.com/src-d/go-git")
 r.PullDefault()
-print(list(r.Commits()))
+for c in r.Commits():
+    print(c)
 ```
 The naming and classes are left intact to match go-git API.
 

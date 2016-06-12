@@ -3,16 +3,12 @@ package main
 
 import (
 	"C"
+	"io"
+
 	"gopkg.in/src-d/go-git.v3/core"
 	. "github.com/src-d/go-git"
 )
 
-//export c_Commit
-func c_Commit() uint64 {
-	commit := Commit{}
-	handle := RegisterObject(commit)
-	return uint64(handle)
-}
 
 //export c_Commit_get_Hash
 func c_Commit_get_Hash(c uint64) []byte {
@@ -20,7 +16,7 @@ func c_Commit_get_Hash(c uint64) []byte {
 	if !ok {
 		return nil
 	}
-	commit := obj.(Commit)
+	commit := obj.(*Commit)
 	return commit.Hash[:]
 }
 
@@ -30,7 +26,7 @@ func c_Commit_get_Author(c uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	commit := obj.(Commit)
+	commit := obj.(*Commit)
 	author := commit.Author
 	author_handle := RegisterObject(author)
 	return uint64(author_handle)
@@ -42,20 +38,20 @@ func c_Commit_get_Committer(c uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	commit := obj.(Commit)
+	commit := obj.(*Commit)
 	committer := commit.Committer
 	committer_handle := RegisterObject(committer)
 	return uint64(committer_handle)
 }
 
 //export c_Commit_get_Message
-func c_Commit_get_Message(c uint64) string {
+func c_Commit_get_Message(c uint64) *C.char {
 	obj, ok := GetObject(Handle(c))
 	if !ok {
-		return ""
+		return C.CString("")
 	}
-	commit := obj.(Commit)
-	return commit.Message
+	commit := obj.(*Commit)
+	return C.CString(commit.Message)
 }
 
 //export c_Commit_Tree
@@ -64,7 +60,7 @@ func c_Commit_Tree(c uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	commit := obj.(Commit)
+	commit := obj.(*Commit)
 	tree := commit.Tree()
 	tree_handle := RegisterObject(tree)
 	return uint64(tree_handle)
@@ -76,7 +72,7 @@ func c_Commit_Parents(c uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	commit := obj.(Commit)
+	commit := obj.(*Commit)
 	parents := commit.Parents()
 	parents_handle := RegisterObject(parents)
 	return uint64(parents_handle)
@@ -88,23 +84,23 @@ func c_Commit_NumParents(c uint64) int {
 	if !ok {
 		return -1
 	}
-	commit := obj.(Commit)
+	commit := obj.(*Commit)
 	return commit.NumParents()
 }
 
 //export c_Commit_File
-func c_Commit_File(c uint64, path string) (uint64, int, string) {
+func c_Commit_File(c uint64, path string) (uint64, int, *C.char) {
 	obj, ok := GetObject(Handle(c))
 	if !ok {
-		return IH, ErrorCodeNotFound, MessageNotFound
+		return IH, ErrorCodeNotFound, C.CString(MessageNotFound)
 	}
-	commit := obj.(Commit)
+	commit := obj.(*Commit)
 	file, err := commit.File(CopyString(path))
 	if err != nil {
-		return IH, ErrorCodeInternal, err.Error()
+		return IH, ErrorCodeInternal, C.CString(err.Error())
 	}
 	file_handle := RegisterObject(file)
-	return uint64(file_handle), ErrorCodeSuccess, ""
+	return uint64(file_handle), ErrorCodeSuccess, C.CString("")
 }
 
 //export c_Commit_ID
@@ -118,37 +114,33 @@ func c_Commit_Type(c uint64) int8 {
 	if !ok {
 		return -1
 	}
-	commit := obj.(Commit)
+	commit := obj.(*Commit)
 	return int8(commit.Type())
 }
 
 //export c_Commit_Decode
-func c_Commit_Decode(c uint64, o uint64) (int, string) {
-	obj, ok := GetObject(Handle(c))
+func c_Commit_Decode(o uint64) (uint64, int, *C.char) {
+	commit := Commit{}
+	obj, ok := GetObject(Handle(o))
 	if !ok {
-		return ErrorCodeNotFound, MessageNotFound
+		return IH, ErrorCodeNotFound, C.CString(MessageNotFound)
 	}
-	commit := obj.(Commit)
-	obj, ok = GetObject(Handle(o))
-	if !ok {
-		return ErrorCodeNotFound, MessageNotFound
+	cobj := obj.(*core.Object)
+	err := commit.Decode(*cobj)
+	if err != nil {
+		return IH, ErrorCodeInternal, C.CString(err.Error())
 	}
-	cobj := obj.(core.Object)
-	err := commit.Decode(cobj)
-	if err == nil {
-		return ErrorCodeSuccess, ""
-	}
-	return ErrorCodeInternal, err.Error()
+	return uint64(RegisterObject(&commit)), ErrorCodeSuccess, C.CString("")
 }
 
 //export c_Commit_String
-func c_Commit_String(c uint64) string {
+func c_Commit_String(c uint64) *C.char {
 	obj, ok := GetObject(Handle(c))
 	if !ok {
-		return ""
+		return C.CString("")
 	}
-	commit := obj.(Commit)
-	return commit.String()
+	commit := obj.(*Commit)
+	return C.CString(commit.String())
 }
 
 //export c_NewCommitIter
@@ -157,28 +149,31 @@ func c_NewCommitIter(r uint64, iter uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	repo := obj.(Repository)
+	repo := obj.(*Repository)
 	obj, ok = GetObject(Handle(iter))
 	if !ok {
 		return IH
 	}
-	obj_iter := obj.(core.ObjectIter)
-	commit_iter := NewCommitIter(&repo, obj_iter)
+	obj_iter := obj.(*core.ObjectIter)
+	commit_iter := NewCommitIter(repo, *obj_iter)
 	handle := RegisterObject(commit_iter)
 	return uint64(handle)
 }
 
 //export c_CommitIter_Next
-func c_CommitIter_Next(iter uint64) (uint64, int, string) {
+func c_CommitIter_Next(iter uint64) (uint64, int, *C.char) {
 	obj, ok := GetObject(Handle(iter))
 	if !ok {
-		return IH, ErrorCodeNotFound, MessageNotFound
+		return IH, ErrorCodeNotFound, C.CString(MessageNotFound)
 	}
-	commitIter := obj.(CommitIter)
+	commitIter := obj.(*CommitIter)
 	commit, err := commitIter.Next()
 	if err != nil {
-		return IH, ErrorCodeInternal, err.Error()
+		if err == io.EOF {
+			return IH, ErrorCodeSuccess, C.CString("")
+		}
+		return IH, ErrorCodeInternal, C.CString(err.Error())
 	}
 	handle := RegisterObject(commit)
-	return uint64(handle), ErrorCodeSuccess, ""
+	return uint64(handle), ErrorCodeSuccess, C.CString("")
 }

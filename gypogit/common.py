@@ -95,3 +95,7 @@ class SSHPublicKeysMethod(AuthMethod):
     def Signer(self, value):
         assert isinstance(value, Signer)
         self.lib.c_ssh_PublicKeys_set_Signer(self.handle, value.handle)
+
+
+class Signature(GoObject):
+    pass

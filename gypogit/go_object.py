@@ -34,7 +34,8 @@ class GoObject(object):
             src = re.sub("#ifdef.*\n.*\n#endif|#.*|.*_Complex.*|"
                          ".*_check_for_64_bit_pointer_matching_GoInt.*",
                          "", src)
-            src = src.replace("__SIZE_TYPE__", "uintptr_t")
+            src = "extern free(void *ptr);\n" + src.replace(
+                "__SIZE_TYPE__", "uintptr_t")
             GoObject.ffi.cdef(src)
         GoObject.lib = GoObject.ffi.dlopen(library_path)
 
@@ -63,7 +64,7 @@ class GoObject(object):
     def _checked(cls, result):
         unpacked = tuple(getattr(result, f[0])
                          for f in cls.ffi.typeof(result).fields)
-        if cls.ffi.typeof(unpacked[-1]).cname == "GoString":
+        if cls.ffi.typeof(unpacked[-1]).cname == "char *":
             assert len(unpacked) >= 2
             assert isinstance(unpacked[-2], int)
             if unpacked[-2] == 0:
@@ -85,17 +86,17 @@ class GoObject(object):
     @classmethod
     def _string(cls, contents, owner=None):
         """
-        Converts Python string to Go string and vice versa.
-        :param contents: str, unicode, bytes or FFi.CData struct of GoString
-        :param owner: If contents is a Python string, owner of the underlying
-        buffer. That buffer must be saved separately if owner is None.
+        Converts Python string to GoString and <char *> to Python string.
+        :param contents: str, unicode, bytes or or FFI.CData with <char *>
+        :param owner: (Py->Go) instance which owns of the underlying C buffer.
+        That buffer must be saved separately if owner is None.
         :return: Py->Go: either GoString or GoString, char* (owner is None)
-                 Go->Py: str, unicode
+                 Go->Py: str or unicode
         """
         if isinstance(contents, cls.ffi.CData):
-            if contents.n == 0:
-                return ""
-            return cls.ffi.string(contents.p, contents.n).decode("utf-8")
+            s = cls.ffi.string(contents).decode("utf-8")
+            cls.lib.free(contents)
+            return s
         if isinstance(contents, text_type):
             contents = contents.encode("utf-8")
         char_ptr = cls.ffi.new("char[]", contents)
@@ -111,10 +112,6 @@ class GoObject(object):
 
     @classmethod
     def _bytes(cls, data, owner=None):
-        if isinstance(data, cls.ffi.CData):
-            if data.len == 0:
-                return b""
-            return cls.ffi.string(data.data, data.len)
         assert isinstance(data, (bytes, bytearray, memoryview))
         char_data = cls.ffi.new("char[]", data)
         go_data = cls.ffi.new("GoSlice*", {
@@ -131,8 +128,9 @@ class GoObject(object):
     @classmethod
     def _string_slice(cls, slice, owner=None):
         if isinstance(slice, cls.ffi.CData):
-            sarr = cls.ffi.string(slice.p, slice.n)
-            return [s.decode("utf-8") for s in sarr.split(b"\x00")]
+            sarr = cls.ffi.string(slice)
+            cls.lib.free(slice)
+            return [s.decode("utf-8") for s in sarr.split(b"\xff")]
         raise NotImplementedError()
 
     @classmethod
