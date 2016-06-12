@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="GOPATH &lt;go-git&gt;">
+    <CLASSES>
+      <root url="file://$USER_HOME$/Projects/go-git/src/gopkg.in" />
+      <root url="file://$USER_HOME$/Projects/go-git/src/github.com" />
+      <root url="file://$USER_HOME$/Projects/go-git/src/golang.org" />
+    </CLASSES>
+    <SOURCES />
+    <excluded>
+      <root url="file://$PROJECT_DIR$" />
+    </excluded>
+  </library>
+</component>
