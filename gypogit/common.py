@@ -1,5 +1,5 @@
 from dateutil import parser as iso8601parser
-from six import string_types
+from six import string_types, python_2_unicode_compatible
 
 from .go_object import GoObject
 
@@ -98,6 +98,7 @@ class SSHPublicKeysMethod(AuthMethod):
         self.lib.c_ssh_PublicKeys_set_Signer(self.handle, value.handle)
 
 
+@python_2_unicode_compatible
 class Signature(GoObject):
     @classmethod
     def Decode(cls, data):
@@ -118,3 +119,6 @@ class Signature(GoObject):
     def When(self):
         dts = self._string(self.lib.c_Signature_When(self.handle))
         return iso8601parser.parse(dts)
+
+    def __str__(self):
+        return "%s <%s> %s" % (self.Name, self.Email, self.When)

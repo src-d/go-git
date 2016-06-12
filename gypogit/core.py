@@ -1,3 +1,5 @@
+from six import python_2_unicode_compatible
+
 from .go_object import GoObject
 
 
@@ -13,6 +15,7 @@ class ObjectIter(GoObject):
     pass
 
 
+@python_2_unicode_compatible
 class ObjectType(int):
     INVALID = "<invalid>"
     MAP = (INVALID, "Commit", "Tree", "Blob", "Tag", INVALID, "OFSDelta",

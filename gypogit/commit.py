@@ -1,4 +1,4 @@
-from six import PY2, PY3
+from six import PY2, PY3, python_2_unicode_compatible
 
 from .go_object import GoObject
 from .core import ObjectIter, ObjectType
@@ -7,6 +7,7 @@ from .tree import Tree
 from .file import File
 
 
+@python_2_unicode_compatible
 class Commit(GoObject):
     @classmethod
     def Decode(cls, obj):
