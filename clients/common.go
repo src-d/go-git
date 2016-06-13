@@ -16,6 +16,7 @@ import (
 	"net/url"
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
+	"gopkg.in/src-d/go-git.v3/clients/file"
 	"gopkg.in/src-d/go-git.v3/clients/http"
 	"gopkg.in/src-d/go-git.v3/clients/ssh"
 )
@@ -25,6 +26,7 @@ var DefaultProtocols = map[string]common.GitUploadPackService{
 	"http":  http.NewGitUploadPackService(),
 	"https": http.NewGitUploadPackService(),
 	"ssh":   ssh.NewGitUploadPackService(),
+	"file":  file.NewGitUploadPackService(),
 }
 
 // KnownProtocols holds the current set of known protocols. Initially
@@ -55,10 +57,10 @@ func NewGitUploadPackService(repoURL string) (common.GitUploadPackService, error
 	if err != nil {
 		return nil, fmt.Errorf("invalid url %q", repoURL)
 	}
-	service, ok := KnownProtocols[u.Scheme]
+	s, ok := KnownProtocols[u.Scheme]
 	if !ok {
 		return nil, fmt.Errorf("unsupported scheme %q", u.Scheme)
 	}
 
-	return service, nil
+	return s, nil
 }

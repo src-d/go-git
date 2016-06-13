@@ -25,7 +25,7 @@ var treeWalkerFixtures = []packedFixture{
 var treeWalkerTests = []struct {
 	repo   string                    // the repo name as in localRepos
 	commit string                    // the commit to search for the file
-	objs   []expectedTreeWalkerEntry // the expected objects in the commit
+	objs   []expectedTreeWalkerEntry // the exp objects in the commit
 }{
 	// https://api.github.com/repos/alcortesm/binary-relations/git/trees/b373f85fa2594d7dcd9989f4a5858a81647fb8ea
 	{"https://github.com/alcortesm/binary-relations.git", "b373f85fa2594d7dcd9989f4a5858a81647fb8ea", []expectedTreeWalkerEntry{

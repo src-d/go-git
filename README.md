@@ -87,6 +87,29 @@ Date:   2015-12-11 17:57:10 +0100 +0100
 ...
 ```
 
+Bare and non-bare local repositories are also supported using the `file://`
+scheme and the path of the desired `.git` directory. To be able to use a git
+repository as a `file://` remote, you must first prepare it by running `git gc`
+on it.
+
+When using this kind of remote, git objects are not cached in memory and all
+operations require a read from the packfile on disk, this is much slower than
+having all the repository contents in memory, but uses very little memory.
+
+```go
+// pushd /tmp ; git clone https://github.com/src-d/go-git ; popd
+r, err := git.NewRepository("file:///tmp/go-git/.git", nil)
+if err != nil {
+	panic(err)
+}
+
+if err := r.PullDefault(); err != nil {
+	panic(err)
+}
+
+// ...
+```
+
 Retrieving the latest commit for a given repository:
 
 ```go
@@ -111,7 +134,6 @@ if err != nil {
 
 fmt.Println(commit)
 ```
-
 
 Acknowledgements
 ----------------

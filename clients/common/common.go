@@ -17,6 +17,7 @@ import (
 var (
 	NotFoundErr           = errors.New("repository not found")
 	EmptyGitUploadPackErr = errors.New("empty git-upload-pack given")
+	ErrAuthNotSupported   = errors.New("authentication not supported by client")
 )
 
 const GitUploadPackServiceName = "git-upload-pack"
@@ -36,6 +37,10 @@ type AuthMethod interface {
 type Endpoint string
 
 func NewEndpoint(url string) (Endpoint, error) {
+	if strings.HasPrefix(url, "file://") {
+		return Endpoint(url), nil
+	}
+
 	vcs, err := vcsurl.Parse(url)
 	if err != nil {
 		return "", core.NewPermanentError(err)

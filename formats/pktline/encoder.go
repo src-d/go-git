@@ -8,7 +8,7 @@ import (
 
 var (
 	//ErrOverflow is triggered when the line length exceed the MaxLength
-	ErrOverflow = errors.New("unexpected string length (overflow)")
+	ErrOverflow = errors.New("unexp string length (overflow)")
 )
 
 // Encoder implements a pkt-line format encoder

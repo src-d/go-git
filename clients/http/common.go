@@ -65,7 +65,7 @@ func (e *HTTPError) StatusCode() int {
 }
 
 func (e *HTTPError) Error() string {
-	return fmt.Sprintf("unexpected requesting %q status code: %d",
+	return fmt.Sprintf("unexp requesting %q status code: %d",
 		e.Response.Request.URL, e.Response.StatusCode,
 	)
 }

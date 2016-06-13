@@ -3,11 +3,14 @@ package git
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
 	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v3/formats/file"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
 	"gopkg.in/src-d/go-git.v3/storage/memory"
+	"gopkg.in/src-d/go-git.v3/storage/seekable"
 )
 
 var (
@@ -29,24 +32,24 @@ type Repository struct {
 
 // NewRepository creates a new repository setting remote as default remote
 func NewRepository(url string, auth common.AuthMethod) (*Repository, error) {
-	var remote *Remote
+	var r *Remote
 	var err error
 
 	if auth == nil {
-		remote, err = NewRemote(url)
+		r, err = NewRemote(url)
 	} else {
-		remote, err = NewAuthenticatedRemote(url, auth)
+		r, err = NewAuthenticatedRemote(url, auth)
 	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	r := NewPlainRepository()
-	r.Remotes[DefaultRemoteName] = remote
-	r.URL = url
+	repo := NewPlainRepository()
+	repo.Remotes[DefaultRemoteName] = r
+	repo.URL = url
 
-	return r, nil
+	return repo, nil
 }
 
 // NewPlainRepository creates a new repository without remotes
@@ -66,6 +69,54 @@ func (r *Repository) Pull(remoteName, branch string) (err error) {
 		return fmt.Errorf("unable to find remote %q", remoteName)
 	}
 
+	return r.setStorage(remote, branch)
+}
+
+func (r *Repository) setStorage(remote *Remote, branch string) error {
+	if isLocalRemote(remote.Endpoint) {
+		return r.useLocalStorage(remote.Endpoint)
+	}
+
+	return r.fillStorageUsingFetch(remote, branch)
+}
+
+const fileScheme = "file://"
+
+func isLocalRemote(endpoint common.Endpoint) bool {
+	if strings.HasPrefix(string(endpoint), fileScheme) {
+		return true
+	}
+
+	return false
+}
+
+func (r *Repository) useLocalStorage(endpoint common.Endpoint) error {
+	path := strings.TrimPrefix(string(endpoint), fileScheme)
+	dir, err := file.NewDir(path)
+	if err != nil {
+		return err
+	}
+
+	packfile, err := dir.Packfile()
+	if err != nil {
+		return err
+	}
+
+	idxfile, err := dir.Idxfile()
+	if err != nil {
+		// if there is no idx file, just keep on, we will manage to create one
+		// on the fly.
+		if err != file.ErrIdxNotFound {
+			return err
+		}
+	}
+
+	r.Storage, err = seekable.New(packfile, idxfile)
+
+	return err
+}
+
+func (r *Repository) fillStorageUsingFetch(remote *Remote, branch string) (err error) {
 	if err := remote.Connect(); err != nil {
 		return err
 	}
@@ -90,8 +141,8 @@ func (r *Repository) Pull(remoteName, branch string) (err error) {
 	}
 	defer checkClose(reader, &err)
 
-	pr := packfile.NewReader(reader)
-	if _, err = pr.Read(r.Storage); err != nil {
+	d := packfile.NewDecoder(reader)
+	if _, err = d.Decode(r.Storage); err != nil {
 		return err
 	}
 
@@ -118,8 +169,13 @@ func (r *Repository) Commit(h core.Hash) (*Commit, error) {
 }
 
 // Commits decode the objects into commits
-func (r *Repository) Commits() *CommitIter {
-	return NewCommitIter(r, r.Storage.Iter(core.CommitObject))
+func (r *Repository) Commits() (*CommitIter, error) {
+	iter, err := r.Storage.Iter(core.CommitObject)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewCommitIter(r, iter), nil
 }
 
 // Tree return the tree with the given hash
@@ -160,14 +216,19 @@ func (r *Repository) Tag(h core.Hash) (*Tag, error) {
 		return nil, err
 	}
 
-	tag := &Tag{r: r}
-	return tag, tag.Decode(obj)
+	t := &Tag{r: r}
+	return t, t.Decode(obj)
 }
 
 // Tags returns a TagIter that can step through all of the annotated tags
 // in the repository.
-func (r *Repository) Tags() *TagIter {
-	return NewTagIter(r, r.Storage.Iter(core.TagObject))
+func (r *Repository) Tags() (*TagIter, error) {
+	iter, err := r.Storage.Iter(core.TagObject)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTagIter(r, iter), nil
 }
 
 // Object returns an object with the given hash.

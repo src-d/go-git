@@ -15,6 +15,16 @@ type Object struct {
 	size    int64
 }
 
+// NewObject creates a new object with the given type and content
+func NewObject(typ core.ObjectType, size int64, content []byte) *Object {
+	return &Object{
+		t:       typ,
+		h:       core.ComputeHash(typ, content),
+		content: content,
+		size:    int64(len(content)),
+	}
+}
+
 // Hash return the object Hash, the hash is calculated on-the-fly the first
 // time is called, the subsequent calls the same Hash is returned even in the
 // type or the content has changed. The Hash is only generated if the size of
@@ -38,6 +48,9 @@ func (o *Object) Size() int64 { return o.size }
 
 // SetSize set the object size, the given size should be written afterwards
 func (o *Object) SetSize(s int64) { o.size = s }
+
+// Content returns the contents of the object
+func (o *Object) Content() []byte { return o.content }
 
 // Reader returns a core.ObjectReader used to read the object's content.
 func (o *Object) Reader() (core.ObjectReader, error) {
