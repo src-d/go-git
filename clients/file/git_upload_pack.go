@@ -26,7 +26,7 @@ func (s *GitUploadPackService) Connect(url common.Endpoint) error {
 	var err error
 
 	p := strings.TrimPrefix(string(url), "file://")
-	s.dir, err = file.New(p)
+	s.dir, err = file.NewDir(p)
 	if err != nil {
 		return err
 	}

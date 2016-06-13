@@ -92,7 +92,7 @@ func isLocalRemote(endpoint common.Endpoint) bool {
 
 func (r *Repository) useLocalStorage(endpoint common.Endpoint) error {
 	path := strings.TrimPrefix(string(endpoint), fileScheme)
-	dir, err := file.New(path)
+	dir, err := file.NewDir(path)
 	if err != nil {
 		return err
 	}

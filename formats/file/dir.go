@@ -34,7 +34,7 @@ type Dir struct {
 
 // New returns a Dir value ready to be used. The path argument must be
 // an existing git repository directory (e.g. "/foo/bar/.git").
-func New(path string) (*Dir, error) {
+func NewDir(path string) (*Dir, error) {
 	d := &Dir{}
 	var err error
 
