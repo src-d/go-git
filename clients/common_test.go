@@ -44,7 +44,7 @@ func (s *SuiteCommon) TestNewGitUploadPackService(c *C) {
 		{"http://github.com/src-d/go-git", false, "*http.GitUploadPackService"},
 		{"https://github.com/src-d/go-git", false, "*http.GitUploadPackService"},
 		{"ssh://github.com/src-d/go-git", false, "*ssh.GitUploadPackService"},
-		{"local://" + s.dirFixturePath, false, "*file.GitUploadPackService"},
+		{"file://" + s.dirFixturePath, false, "*file.GitUploadPackService"},
 	}
 
 	for i, t := range tests {

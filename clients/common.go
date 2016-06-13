@@ -26,7 +26,7 @@ var DefaultProtocols = map[string]common.GitUploadPackService{
 	"http":  http.NewGitUploadPackService(),
 	"https": http.NewGitUploadPackService(),
 	"ssh":   ssh.NewGitUploadPackService(),
-	"local": file.NewGitUploadPackService(),
+	"file":  file.NewGitUploadPackService(),
 }
 
 // KnownProtocols holds the current set of known protocols. Initially

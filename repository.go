@@ -80,10 +80,10 @@ func (r *Repository) setStorage(remote *Remote, branch string) error {
 	return r.fillStorageUsingFetch(remote, branch)
 }
 
-const dirScheme = "local://"
+const fileScheme = "file://"
 
 func isLocalRemote(endpoint common.Endpoint) bool {
-	if strings.HasPrefix(string(endpoint), dirScheme) {
+	if strings.HasPrefix(string(endpoint), fileScheme) {
 		return true
 	}
 
@@ -91,7 +91,7 @@ func isLocalRemote(endpoint common.Endpoint) bool {
 }
 
 func (r *Repository) useLocalStorage(endpoint common.Endpoint) error {
-	path := strings.TrimPrefix(string(endpoint), dirScheme)
+	path := strings.TrimPrefix(string(endpoint), fileScheme)
 	dir, err := gitdir.New(path)
 	if err != nil {
 		return err
