@@ -26,15 +26,15 @@ var packFileWithEmptyObjects = "UEFDSwAAAAIAAAALnw54nKXMQWoDMQxA0b1PoX2hSLIm44FS
 
 func (s *ReaderSuite) TestReadPackfile(c *C) {
 	data, _ := base64.StdEncoding.DecodeString(packFileWithEmptyObjects)
-	d := bytes.NewReader(data)
+	f := bytes.NewReader(data)
 
-	decoder := NewDecoder(d)
+	d := NewDecoder(f)
 
-	storage := memory.NewObjectStorage()
-	_, err := decoder.Decode(storage)
+	sto := memory.NewObjectStorage()
+	_, err := d.Decode(sto)
 	c.Assert(err, IsNil)
 
-	AssertObjects(c, storage, []string{
+	AssertObjects(c, sto, []string{
 		"778c85ff95b5514fea0ba4c7b6a029d32e2c3b96",
 		"db4002e880a08bf6cc7217512ad937f1ac8824a2",
 		"551fe11a9ef992763b7e0be4500cf7169f2f8575",
@@ -57,18 +57,18 @@ func (s *ReaderSuite) TestReadPackfileREFDelta(c *C) {
 	s.testReadPackfileGitFixture(c, "fixtures/git-fixture.ref-delta", REFDeltaFormat)
 }
 
-func (s *ReaderSuite) testReadPackfileGitFixture(c *C, file string, f Format) {
-	d, err := os.Open(file)
+func (s *ReaderSuite) testReadPackfileGitFixture(c *C, file string, format Format) {
+	f, err := os.Open(file)
 	c.Assert(err, IsNil)
 
-	decoder := NewDecoder(d)
-	decoder.Format = f
+	d := NewDecoder(f)
+	d.Format = format
 
-	storage := memory.NewObjectStorage()
-	_, err = decoder.Decode(storage)
+	sto := memory.NewObjectStorage()
+	_, err = d.Decode(sto)
 	c.Assert(err, IsNil)
 
-	AssertObjects(c, storage, []string{
+	AssertObjects(c, sto, []string{
 		"918c48b83bd081e863dbe1b80f8998f058cd8294",
 		"af2d6a6954d532f8ffb47615169c8fdf9d383a1a",
 		"1669dce138d9b841a518c64b10914d88f5e488ea",
@@ -102,10 +102,10 @@ func (s *ReaderSuite) testReadPackfileGitFixture(c *C, file string, f Format) {
 
 func AssertObjects(c *C, s *memory.ObjectStorage, expects []string) {
 	c.Assert(len(expects), Equals, len(s.Objects))
-	for _, expected := range expects {
-		obtained, err := s.Get(core.NewHash(expected))
+	for _, exp := range expects {
+		obt, err := s.Get(core.NewHash(exp))
 		c.Assert(err, IsNil)
-		c.Assert(obtained.Hash().String(), Equals, expected)
+		c.Assert(obt.Hash().String(), Equals, exp)
 	}
 }
 
@@ -165,16 +165,16 @@ func (s *ReaderSuite) _TestMemoryREF(c *C) {
 	s._testMemory(c, REFDeltaFormat)
 }
 
-func readFromFile(c *C, file string, f Format) *memory.ObjectStorage {
-	d, err := os.Open(file)
+func readFromFile(c *C, file string, format Format) *memory.ObjectStorage {
+	f, err := os.Open(file)
 	c.Assert(err, IsNil)
 
-	decoder := NewDecoder(d)
-	decoder.Format = f
+	d := NewDecoder(f)
+	d.Format = format
 
-	storage := memory.NewObjectStorage()
-	_, err = decoder.Decode(storage)
+	sto := memory.NewObjectStorage()
+	_, err = d.Decode(sto)
 	c.Assert(err, IsNil)
 
-	return storage
+	return sto
 }

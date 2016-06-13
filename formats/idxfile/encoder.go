@@ -15,9 +15,9 @@ type Encoder struct {
 
 // NewEncoder returns a new encoder that writes to w.
 func NewEncoder(w io.Writer) *Encoder {
-	hash := sha1.New()
-	writer := io.MultiWriter(w, hash)
-	return &Encoder{writer, hash}
+	h := sha1.New()
+	mw := io.MultiWriter(w, h)
+	return &Encoder{mw, h}
 }
 
 // Encode writes the idx in an idx file format to the stream of the encoder.
@@ -31,26 +31,26 @@ func (e *Encoder) Encode(idx *Idxfile) (int, error) {
 		e.encodeChecksums,
 	}
 
-	size := 0
+	sz := 0
 	for _, f := range flow {
 		i, err := f(idx)
-		size += i
+		sz += i
 
 		if err != nil {
-			return size, err
+			return sz, err
 		}
 	}
 
-	return size, nil
+	return sz, nil
 }
 
 func (e *Encoder) encodeHeader(idx *Idxfile) (int, error) {
-	count, err := e.Write(idxHeader)
+	c, err := e.Write(idxHeader)
 	if err != nil {
-		return count, err
+		return c, err
 	}
 
-	return count + 4, e.writeInt32(idx.Version)
+	return c + 4, e.writeInt32(idx.Version)
 }
 
 func (e *Encoder) encodeFanout(idx *Idxfile) (int, error) {
@@ -73,37 +73,37 @@ func (e *Encoder) encodeCRC32(idx *Idxfile) (int, error) {
 }
 
 func (e *Encoder) encodeEntryField(idx *Idxfile, isHash bool) (int, error) {
-	size := 0
-	for _, entry := range idx.Entries {
+	sz := 0
+	for _, ent := range idx.Entries {
 		var data []byte
 		if isHash {
-			data = entry.Hash[:]
+			data = ent.Hash[:]
 		} else {
-			data = entry.CRC32[:]
+			data = ent.CRC32[:]
 		}
 		i, err := e.Write(data)
-		size += i
+		sz += i
 
 		if err != nil {
-			return size, err
+			return sz, err
 		}
 	}
 
-	return size, nil
+	return sz, nil
 }
 
 func (e *Encoder) encodeOffsets(idx *Idxfile) (int, error) {
-	size := 0
-	for _, entry := range idx.Entries {
-		if err := e.writeInt32(uint32(entry.Offset)); err != nil {
-			return size, err
+	sz := 0
+	for _, ent := range idx.Entries {
+		if err := e.writeInt32(uint32(ent.Offset)); err != nil {
+			return sz, err
 		}
 
-		size += 4
+		sz += 4
 
 	}
 
-	return size, nil
+	return sz, nil
 }
 
 func (e *Encoder) encodeChecksums(idx *Idxfile) (int, error) {
@@ -117,7 +117,6 @@ func (e *Encoder) encodeChecksums(idx *Idxfile) (int, error) {
 	}
 
 	return 40, nil
-
 }
 
 func (e *Encoder) writeInt32(value uint32) error {

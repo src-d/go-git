@@ -13,35 +13,35 @@ func (s *IdxfileSuite) TestEncode(c *C) {
 		"fixtures/git-fixture.idx",
 		"../packfile/fixtures/spinnaker-spinnaker.idx",
 	} {
-		comment := Commentf("subtest %d: path = %s", i, path)
+		com := Commentf("subtest %d: path = %s", i, path)
 
-		expected, idx, err := decode(path)
-		c.Assert(err, IsNil, comment)
+		exp, idx, err := decode(path)
+		c.Assert(err, IsNil, com)
 
-		obtained := new(bytes.Buffer)
-		encoder := NewEncoder(obtained)
-		size, err := encoder.Encode(idx)
-		c.Assert(err, IsNil, comment)
+		obt := new(bytes.Buffer)
+		e := NewEncoder(obt)
+		size, err := e.Encode(idx)
+		c.Assert(err, IsNil, com)
 
-		c.Assert(size, Equals, expected.Len(), comment)
-		c.Assert(obtained, DeepEquals, expected, comment)
+		c.Assert(size, Equals, exp.Len(), com)
+		c.Assert(obt, DeepEquals, exp, com)
 	}
 }
 
 func decode(path string) (*bytes.Buffer, *Idxfile, error) {
-	file, err := os.Open(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	contents := new(bytes.Buffer)
-	tee := io.TeeReader(file, contents)
+	cont := new(bytes.Buffer)
+	tee := io.TeeReader(f, cont)
 
-	decoder := NewDecoder(tee)
+	d := NewDecoder(tee)
 	idx := &Idxfile{}
-	if err = decoder.Decode(idx); err != nil {
+	if err = d.Decode(idx); err != nil {
 		return nil, nil, err
 	}
 
-	return contents, idx, file.Close()
+	return cont, idx, f.Close()
 }

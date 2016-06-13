@@ -25,8 +25,8 @@ func NewGitUploadPackService() *GitUploadPackService {
 func (s *GitUploadPackService) Connect(url common.Endpoint) error {
 	var err error
 
-	path := strings.TrimPrefix(string(url), "file://")
-	s.dir, err = gitdir.New(path)
+	p := strings.TrimPrefix(string(url), "file://")
+	s.dir, err = gitdir.New(p)
 	if err != nil {
 		return err
 	}
@@ -35,9 +35,9 @@ func (s *GitUploadPackService) Connect(url common.Endpoint) error {
 }
 
 func (s *GitUploadPackService) ConnectWithAuth(url common.Endpoint,
-	auth common.AuthMethod) error {
+	a common.AuthMethod) error {
 
-	if auth == nil {
+	if a == nil {
 		return s.Connect(url)
 	}
 
@@ -45,24 +45,24 @@ func (s *GitUploadPackService) ConnectWithAuth(url common.Endpoint,
 }
 
 func (s *GitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
-	info := common.NewGitUploadPackInfo()
+	i := common.NewGitUploadPackInfo()
 	var err error
 
-	if info.Refs, err = s.dir.Refs(); err != nil {
-		return info, err
+	if i.Refs, err = s.dir.Refs(); err != nil {
+		return i, err
 	}
 
-	if info.Capabilities, err = s.dir.Capabilities(); err != nil {
-		return info, err
+	if i.Capabilities, err = s.dir.Capabilities(); err != nil {
+		return i, err
 	}
 
-	headSymRef := info.Capabilities.SymbolicReference("HEAD")
+	h := i.Capabilities.SymbolicReference("HEAD")
 	var ok bool
-	if info.Head, ok = info.Refs[headSymRef]; !ok {
-		return info, ErrHeadSymRefNotFound
+	if i.Head, ok = i.Refs[h]; !ok {
+		return i, ErrHeadSymRefNotFound
 	}
 
-	return info, nil
+	return i, nil
 }
 
 func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadCloser, error) {

@@ -8,7 +8,7 @@ import (
 
 var (
 	// ErrUnderflow is triggered when a line is shorter than the described length
-	ErrUnderflow = errors.New("unexpected string length (underflow)")
+	ErrUnderflow = errors.New("unexp string length (underflow)")
 	// ErrInvalidHeader invalid pktline header
 	ErrInvalidHeader = errors.New("invalid header")
 	// ErrInvalidLen ivanlid line length found, < 0

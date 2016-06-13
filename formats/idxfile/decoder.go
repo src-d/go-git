@@ -57,12 +57,12 @@ func (d *Decoder) Decode(idx *Idxfile) error {
 }
 
 func validateHeader(r io.Reader) error {
-	var header = make([]byte, 4)
-	if _, err := r.Read(header); err != nil {
+	var h = make([]byte, 4)
+	if _, err := r.Read(h); err != nil {
 		return err
 	}
 
-	if !bytes.Equal(header, idxHeader) {
+	if !bytes.Equal(h, idxHeader) {
 		return ErrMalformedIdxFile
 	}
 
@@ -70,16 +70,16 @@ func validateHeader(r io.Reader) error {
 }
 
 func readVersion(idx *Idxfile, r io.Reader) error {
-	version, err := readInt32(r)
+	v, err := readInt32(r)
 	if err != nil {
 		return err
 	}
 
-	if version > VersionSupported {
+	if v > VersionSupported {
 		return ErrUnsupportedVersion
 	}
 
-	idx.Version = version
+	idx.Version = v
 
 	return nil
 }
@@ -100,8 +100,8 @@ func readFanout(idx *Idxfile, r io.Reader) error {
 }
 
 func readObjectNames(idx *Idxfile, r io.Reader) error {
-	count := int(idx.ObjectCount)
-	for i := 0; i < count; i++ {
+	c := int(idx.ObjectCount)
+	for i := 0; i < c; i++ {
 		var ref core.Hash
 		if _, err := r.Read(ref[:]); err != nil {
 			return err
@@ -114,8 +114,8 @@ func readObjectNames(idx *Idxfile, r io.Reader) error {
 }
 
 func readCRC32(idx *Idxfile, r io.Reader) error {
-	count := int(idx.ObjectCount)
-	for i := 0; i < count; i++ {
+	c := int(idx.ObjectCount)
+	for i := 0; i < c; i++ {
 		if _, err := r.Read(idx.Entries[i].CRC32[:]); err != nil {
 			return err
 		}
@@ -125,14 +125,14 @@ func readCRC32(idx *Idxfile, r io.Reader) error {
 }
 
 func readOffsets(idx *Idxfile, r io.Reader) error {
-	count := int(idx.ObjectCount)
-	for i := 0; i < count; i++ {
-		offset, err := readInt32(r)
+	c := int(idx.ObjectCount)
+	for i := 0; i < c; i++ {
+		o, err := readInt32(r)
 		if err != nil {
 			return err
 		}
 
-		idx.Entries[i].Offset = uint64(offset)
+		idx.Entries[i].Offset = uint64(o)
 	}
 
 	return nil
@@ -151,10 +151,10 @@ func readChecksums(idx *Idxfile, r io.Reader) error {
 }
 
 func readInt32(r io.Reader) (uint32, error) {
-	var value uint32
-	if err := binary.Read(r, binary.BigEndian, &value); err != nil {
+	var v uint32
+	if err := binary.Read(r, binary.BigEndian, &v); err != nil {
 		return 0, err
 	}
 
-	return value, nil
+	return v, nil
 }

@@ -86,12 +86,12 @@ func (d *Decoder) Decode(s core.ObjectStorage) (int64, error) {
 		return -1, err
 	}
 
-	version, err := d.readInt32()
+	ver, err := d.readInt32()
 	if err != nil {
 		return -1, err
 	}
 
-	if version > VersionSupported {
+	if ver > VersionSupported {
 		return -1, ErrUnsupportedVersion
 	}
 
@@ -108,12 +108,12 @@ func (d *Decoder) Decode(s core.ObjectStorage) (int64, error) {
 }
 
 func (d *Decoder) validateHeader() error {
-	var header = make([]byte, 4)
-	if _, err := io.ReadFull(d.readCounter, header); err != nil {
+	var h = make([]byte, 4)
+	if _, err := io.ReadFull(d.readCounter, h); err != nil {
 		return err
 	}
 
-	if !bytes.Equal(header, []byte{'P', 'A', 'C', 'K'}) {
+	if !bytes.Equal(h, []byte{'P', 'A', 'C', 'K'}) {
 		return ErrMalformedPackfile
 	}
 
@@ -121,12 +121,12 @@ func (d *Decoder) validateHeader() error {
 }
 
 func (d *Decoder) readInt32() (uint32, error) {
-	var value uint32
-	if err := binary.Read(d.readCounter, binary.BigEndian, &value); err != nil {
+	var v uint32
+	if err := binary.Read(d.readCounter, binary.BigEndian, &v); err != nil {
 		return 0, err
 	}
 
-	return value, nil
+	return v, nil
 }
 
 func (d *Decoder) readObjects(count uint32) error {
@@ -156,25 +156,25 @@ func (d *Decoder) readObjects(count uint32) error {
 
 func (d *Decoder) newObject() (core.Object, error) {
 	var typ core.ObjectType
-	var length int64
-	var content []byte
+	var sz int64
+	var cont []byte
 
 	objectStart := d.readCounter.Count()
 
-	typ, length, err := readTypeAndLength(d.readCounter)
+	typ, sz, err := readTypeAndLength(d.readCounter)
 	if err != nil {
 		return nil, err
 	}
 
 	switch typ {
 	case core.REFDeltaObject:
-		content, typ, err = readContentREFDelta(d.readCounter, d)
-		length = int64(len(content))
+		cont, typ, err = readContentREFDelta(d.readCounter, d)
+		sz = int64(len(cont))
 	case core.OFSDeltaObject:
-		content, typ, err = readContentOFSDelta(d.readCounter, objectStart, d)
-		length = int64(len(content))
+		cont, typ, err = readContentOFSDelta(d.readCounter, objectStart, d)
+		sz = int64(len(cont))
 	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
-		content, err = readContent(d.readCounter)
+		cont, err = readContent(d.readCounter)
 	default:
 		err = ErrInvalidObject.addDetails("tag %q", typ)
 	}
@@ -182,7 +182,7 @@ func (d *Decoder) newObject() (core.Object, error) {
 		return nil, err
 	}
 
-	return memory.NewObject(typ, length, content), err
+	return memory.NewObject(typ, sz, cont), err
 }
 
 // ByHash returns an already seen object by its hash.

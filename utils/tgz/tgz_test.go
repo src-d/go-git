@@ -28,11 +28,11 @@ func (s *SuiteTGZ) TestExtract(c *C) {
 		} else {
 			c.Assert(err, IsNil, comment)
 
-			obtained, err := relativeTree(path)
+			obt, err := relativeTree(path)
 			c.Assert(err, IsNil, comment)
 
 			sort.Strings(test.tree)
-			c.Assert(obtained, DeepEquals, test.tree, comment)
+			c.Assert(obt, DeepEquals, test.tree, comment)
 
 			err = os.RemoveAll(path)
 			c.Assert(err, IsNil, comment)

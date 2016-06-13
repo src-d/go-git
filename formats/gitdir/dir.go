@@ -35,19 +35,19 @@ type Dir struct {
 // New returns a Dir value ready to be used. The path argument must be
 // an existing git repository directory (e.g. "/foo/bar/.git").
 func New(path string) (*Dir, error) {
-	dir := &Dir{}
+	d := &Dir{}
 	var err error
 
-	dir.path, err = cleanPath(path)
+	d.path, err = cleanPath(path)
 	if err != nil {
 		return nil, err
 	}
 
-	if dir.isInvalidPath() {
+	if d.isInvalidPath() {
 		return nil, ErrBadGitDirName
 	}
 
-	return dir, nil
+	return d, nil
 }
 
 func cleanPath(path string) (string, error) {
@@ -81,35 +81,35 @@ func (d *Dir) Refs() (map[string]core.Hash, error) {
 
 // Capabilities scans the git directory collection capabilities, which it returns.
 func (d *Dir) Capabilities() (*common.Capabilities, error) {
-	caps := common.NewCapabilities()
+	c := common.NewCapabilities()
 
-	err := d.addSymRefCapability(caps)
+	err := d.addSymRefCapability(c)
 
-	return caps, err
+	return c, err
 }
 
 func (d *Dir) addSymRefCapability(cap *common.Capabilities) (err error) {
-	file, err := os.Open(filepath.Join(d.path, "HEAD"))
+	f, err := os.Open(filepath.Join(d.path, "HEAD"))
 	if err != nil {
 		return err
 	}
 
 	defer func() {
-		errClose := file.Close()
+		errClose := f.Close()
 		if err == nil {
 			err = errClose
 		}
 	}()
 
-	bytes, err := ioutil.ReadAll(file)
+	b, err := ioutil.ReadAll(f)
 	if err != nil {
 		return err
 	}
-	contents := strings.TrimSpace(string(bytes))
+	contents := strings.TrimSpace(string(b))
 
-	capablity := "symref"
+	c := "symref"
 	ref := strings.TrimPrefix(contents, symRefPrefix)
-	cap.Set(capablity, "HEAD:"+ref)
+	cap.Set(c, "HEAD:"+ref)
 
 	return nil
 }
@@ -122,22 +122,22 @@ type ReadSeekCloser interface {
 
 // Packfile returns the path of the packfile in the repository.
 func (d *Dir) Packfile() (string, error) {
-	pattern := d.pattern(true)
+	p := d.pattern(true)
 
-	list, err := filepath.Glob(pattern)
+	l, err := filepath.Glob(p)
 	if err != nil {
 		return "", err
 	}
 
-	if len(list) == 0 {
+	if len(l) == 0 {
 		return "", fmt.Errorf("packfile not found")
 	}
 
-	if len(list) > 1 {
+	if len(l) > 1 {
 		return "", fmt.Errorf("found more than one packfile")
 	}
 
-	return list[0], nil
+	return l[0], nil
 }
 
 func (d *Dir) pattern(isPackfile bool) string {
@@ -162,20 +162,20 @@ const filePattern = "pack-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-
 
 // Idxfile returns the path of the idx file in the repository.
 func (d *Dir) Idxfile() (string, error) {
-	pattern := d.pattern(false)
+	p := d.pattern(false)
 
-	list, err := filepath.Glob(pattern)
+	l, err := filepath.Glob(p)
 	if err != nil {
 		return "", err
 	}
 
-	if len(list) == 0 {
+	if len(l) == 0 {
 		return "", ErrIdxNotFound
 	}
 
-	if len(list) > 1 {
+	if len(l) > 1 {
 		return "", fmt.Errorf("found more than one idxfile")
 	}
 
-	return list[0], nil
+	return l[0], nil
 }

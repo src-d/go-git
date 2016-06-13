@@ -83,12 +83,12 @@ func (s *SuiteIndex) TestGet(c *C) {
 		index, err := NewFromIdx(idx)
 		c.Assert(err, IsNil, comment)
 
-		obtained, err := index.Get(test.hash)
+		obt, err := index.Get(test.hash)
 		if test.err != nil {
 			c.Assert(err, Equals, test.err, comment)
 		} else {
 			c.Assert(err, IsNil)
-			c.Assert(obtained, Equals, expectedIndexes[test.idx][test.hash], comment)
+			c.Assert(obt, Equals, expectedIndexes[test.idx][test.hash], comment)
 		}
 
 		err = idx.Close()

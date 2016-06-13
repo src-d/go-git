@@ -31,24 +31,24 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 		"../../formats/packfile/fixtures/alcortesm-binary-relations.pack",
 		"../../formats/packfile/fixtures/git-fixture.ref-delta",
 	} {
-		comment := Commentf("at subtest %d", i)
+		com := Commentf("at subtest %d", i)
 
 		memStorage := memory.NewObjectStorage()
-		packfileFile, err := os.Open(packfilePath)
-		c.Assert(err, IsNil, comment)
+		f, err := os.Open(packfilePath)
+		c.Assert(err, IsNil, com)
 
-		decoder := packfile.NewDecoder(packfileFile)
-		_, err = decoder.Decode(memStorage)
-		c.Assert(err, IsNil, comment)
+		d := packfile.NewDecoder(f)
+		_, err = d.Decode(memStorage)
+		c.Assert(err, IsNil, com)
 
-		err = packfileFile.Close()
-		c.Assert(err, IsNil, comment)
+		err = f.Close()
+		c.Assert(err, IsNil, com)
 
 		lastDot := strings.LastIndex(packfilePath, ".")
 		idxPath := packfilePath[:lastDot] + ".idx"
 
 		storage, err := seekable.New(packfilePath, idxPath)
-		c.Assert(err, IsNil, comment)
+		c.Assert(err, IsNil, com)
 
 		for _, typ := range [...]core.ObjectType{
 			core.CommitObject,
@@ -57,7 +57,7 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 			core.TagObject,
 		} {
 			iter, err := memStorage.Iter(typ)
-			c.Assert(err, IsNil, comment)
+			c.Assert(err, IsNil, com)
 
 			for {
 				memObject, err := iter.Next()
@@ -66,16 +66,16 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 					break
 				}
 
-				obtained, err := storage.Get(memObject.Hash())
-				c.Assert(err, IsNil, comment)
+				obt, err := storage.Get(memObject.Hash())
+				c.Assert(err, IsNil, com)
 
-				c.Assert(obtained.Type(), Equals, memObject.Type(), comment)
-				c.Assert(obtained.Size(), Equals, memObject.Size(), comment)
+				c.Assert(obt.Type(), Equals, memObject.Type(), com)
+				c.Assert(obt.Size(), Equals, memObject.Size(), com)
 				if memObject.Content() != nil {
-					c.Assert(obtained.Content(), DeepEquals, memObject.Content(),
-						comment)
+					c.Assert(obt.Content(), DeepEquals, memObject.Content(),
+						com)
 				}
-				c.Assert(obtained.Hash(), Equals, memObject.Hash(), comment)
+				c.Assert(obt.Hash(), Equals, memObject.Hash(), com)
 			}
 
 			iter.Close()
@@ -89,22 +89,22 @@ func (s *SeekableSuite) TestIterCompareWithMemoryStorage(c *C) {
 		"../../formats/packfile/fixtures/alcortesm-binary-relations.pack",
 		"../../formats/packfile/fixtures/git-fixture.ref-delta",
 	} {
-		comment := Commentf("at subtest %d", i)
+		com := Commentf("at subtest %d", i)
 
 		memStorage := memory.NewObjectStorage()
-		packfileFile, err := os.Open(packfilePath)
-		c.Assert(err, IsNil, comment)
-		decoder := packfile.NewDecoder(packfileFile)
-		_, err = decoder.Decode(memStorage)
-		c.Assert(err, IsNil, comment)
-		err = packfileFile.Close()
-		c.Assert(err, IsNil, comment)
+		f, err := os.Open(packfilePath)
+		c.Assert(err, IsNil, com)
+		d := packfile.NewDecoder(f)
+		_, err = d.Decode(memStorage)
+		c.Assert(err, IsNil, com)
+		err = f.Close()
+		c.Assert(err, IsNil, com)
 
 		lastDot := strings.LastIndex(packfilePath, ".")
 		idxPath := packfilePath[:lastDot] + ".idx"
 
-		storage, err := seekable.New(packfilePath, idxPath)
-		c.Assert(err, IsNil, comment)
+		sto, err := seekable.New(packfilePath, idxPath)
+		c.Assert(err, IsNil, com)
 
 		for _, typ := range [...]core.ObjectType{
 			core.CommitObject,
@@ -114,13 +114,13 @@ func (s *SeekableSuite) TestIterCompareWithMemoryStorage(c *C) {
 		} {
 
 			memObjects, err := iterToSortedSlice(memStorage, typ)
-			c.Assert(err, IsNil, comment)
+			c.Assert(err, IsNil, com)
 
-			seekableObjects, err := iterToSortedSlice(storage, typ)
-			c.Assert(err, IsNil, comment)
+			seekableObjects, err := iterToSortedSlice(sto, typ)
+			c.Assert(err, IsNil, com)
 
-			for i, expected := range memObjects {
-				c.Assert(seekableObjects[i].Hash(), Equals, expected.Hash(), comment)
+			for i, exp := range memObjects {
+				c.Assert(seekableObjects[i].Hash(), Equals, exp.Hash(), com)
 			}
 		}
 	}
@@ -134,21 +134,21 @@ func iterToSortedSlice(storage core.ObjectStorage, typ core.ObjectType) ([]core.
 		return nil, err
 	}
 
-	result := make([]core.Object, 0)
+	r := make([]core.Object, 0)
 	for {
 		object, err := iter.Next()
 		if err != nil {
 			iter.Close()
 			break
 		}
-		result = append(result, object)
+		r = append(r, object)
 	}
 
 	iter.Close()
 
-	sort.Sort(byHash(result))
+	sort.Sort(byHash(r))
 
-	return result, nil
+	return r, nil
 }
 
 type byHash []core.Object
@@ -160,13 +160,13 @@ func (a byHash) Less(i, j int) bool {
 }
 
 func (s *SeekableSuite) TestSet(c *C) {
-	packfilePath := "../../formats/packfile/fixtures/spinnaker-spinnaker.pack"
-	lastDot := strings.LastIndex(packfilePath, ".")
-	idxPath := packfilePath[:lastDot] + ".idx"
+	path := "../../formats/packfile/fixtures/spinnaker-spinnaker.pack"
+	lastDot := strings.LastIndex(path, ".")
+	idxPath := path[:lastDot] + ".idx"
 
-	storage, err := seekable.New(packfilePath, idxPath)
+	sto, err := seekable.New(path, idxPath)
 	c.Assert(err, IsNil)
 
-	_, err = storage.Set(&memory.Object{})
+	_, err = sto.Set(&memory.Object{})
 	c.Assert(err, ErrorMatches, "set operation not permitted")
 }

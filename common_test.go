@@ -29,21 +29,22 @@ func (s *MockGitUploadPackService) ConnectWithAuth(url common.Endpoint, auth com
 }
 
 func (s *MockGitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
-	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+	h := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
 
-	cap := common.NewCapabilities()
-	cap.Decode("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEADmulti_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master agent=git/2:2.4.8~dbussink-fix-enterprise-tokens-compilation-1167-gc7006cf")
+	c := common.NewCapabilities()
+	c.Decode("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEADmulti_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master agent=git/2:2.4.8~dbussink-fix-enterprise-tokens-compilation-1167-gc7006cf")
 
 	return &common.GitUploadPackInfo{
-		Capabilities: cap,
-		Head:         hash,
-		Refs:         map[string]core.Hash{"refs/heads/master": hash},
+		Capabilities: c,
+		Head:         h,
+		Refs:         map[string]core.Hash{"refs/heads/master": h},
 	}, nil
 }
 
 func (s *MockGitUploadPackService) Fetch(*common.GitUploadPackRequest) (io.ReadCloser, error) {
 	var err error
 	s.RC, err = os.Open("formats/packfile/fixtures/git-fixture.ref-delta")
+
 	return s.RC, err
 }
 
@@ -67,18 +68,19 @@ func unpackFixtures(c *C, fixtures ...[]packedFixture) map[string]*Repository {
 			}
 			repos[fixture.url] = NewPlainRepository()
 
-			d, err := os.Open(fixture.packfile)
+			f, err := os.Open(fixture.packfile)
 			c.Assert(err, IsNil)
 
-			decoder := packfile.NewDecoder(d)
-			decoder.Format = packfile.OFSDeltaFormat // This is hardcoded because we don't have a good way to sniff the format
+			d := packfile.NewDecoder(f)
+			d.Format = packfile.OFSDeltaFormat // This is hardcoded because we don't have a good way to sniff the format
 
-			_, err = decoder.Decode(repos[fixture.url].Storage)
+			_, err = d.Decode(repos[fixture.url].Storage)
 			c.Assert(err, IsNil)
 
-			c.Assert(d.Close(), IsNil)
+			c.Assert(f.Close(), IsNil)
 		}
 	}
+
 	return repos
 }
 
@@ -88,7 +90,7 @@ var _ = Suite(&SuiteCommon{})
 
 var countLinesTests = [...]struct {
 	i string // the string we want to count lines from
-	e int    // the expected number of lines in i
+	e int    // the exp number of lines in i
 }{
 	{"", 0},
 	{"a", 1},

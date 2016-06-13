@@ -51,8 +51,8 @@ func (s *SuiteFileClient) TestConnectWithAuth(c *C) {
 	c.Assert(err, IsNil)
 
 	r = NewGitUploadPackService()
-	auth := dummyAuth{}
-	err = r.ConnectWithAuth(s.fixtureURL, auth)
+	a := dummyAuth{}
+	err = r.ConnectWithAuth(s.fixtureURL, a)
 	c.Assert(err, Equals, common.ErrAuthNotSupported)
 }
 
@@ -66,9 +66,9 @@ func (s *SuiteFileClient) TestDefaultBranch(c *C) {
 	err := r.Connect(s.fixtureURL)
 	c.Assert(err, IsNil)
 
-	info, err := r.Info()
+	i, err := r.Info()
 	c.Assert(err, IsNil)
-	c.Assert(info.Capabilities.SymbolicReference("HEAD"), Equals, "refs/heads/master")
+	c.Assert(i.Capabilities.SymbolicReference("HEAD"), Equals, "refs/heads/master")
 }
 
 func (s *SuiteFileClient) NoTestFetch(c *C) {

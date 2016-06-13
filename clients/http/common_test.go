@@ -29,7 +29,7 @@ func (s *SuiteCommon) TestNewHTTPError404(c *C) {
 }
 
 func (s *SuiteCommon) TestNewHTTPError40x(c *C) {
-	s.testNewHTTPError(c, 402, "unexpected client error.*")
+	s.testNewHTTPError(c, 402, "unexp client error.*")
 }
 
 func (s *SuiteCommon) testNewHTTPError(c *C, code int, msg string) {

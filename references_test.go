@@ -40,7 +40,7 @@ var referencesTests = [...]struct {
 	repo   string
 	commit string
 	path   string
-	// expected output data form the revlist
+	// exp output data form the revlist
 	revs []string
 }{
 	// Tyba git-fixture
@@ -339,10 +339,10 @@ func compareSideBySide(a []string, b []*Commit) string {
 	var buf bytes.Buffer
 	buf.WriteString("\t              EXPECTED                                          OBTAINED        ")
 	var sep string
-	var obtained string
+	var obt string
 	for i := range a {
-		obtained = b[i].Hash.String()
-		if a[i] != obtained {
+		obt = b[i].Hash.String()
+		if a[i] != obt {
 			sep = "------"
 		} else {
 			sep = "      "
@@ -351,7 +351,7 @@ func compareSideBySide(a []string, b []*Commit) string {
 		buf.WriteString(sep)
 		buf.WriteString(a[i])
 		buf.WriteString(sep)
-		buf.WriteString(obtained)
+		buf.WriteString(obt)
 	}
 	return buf.String()
 }

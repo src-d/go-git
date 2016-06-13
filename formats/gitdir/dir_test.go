@@ -37,7 +37,7 @@ var initFixtures = [...]struct {
 
 type fixture struct {
 	path         string               // repo names to paths of the extracted tgz
-	capabilities *common.Capabilities // expected capabilities
+	capabilities *common.Capabilities // exp capabilities
 	packfile     string               // path of the packfile
 	idxfile      string               // path of the idxfile
 }
@@ -57,28 +57,28 @@ func (s *SuiteGitDir) SetUpSuite(c *C) {
 		path, err := tgz.Extract(init.tgz)
 		c.Assert(err, IsNil, comment)
 
-		fixt := fixture{}
+		f := fixture{}
 
-		fixt.path = filepath.Join(path, ".git")
+		f.path = filepath.Join(path, ".git")
 
-		fixt.capabilities = common.NewCapabilities()
+		f.capabilities = common.NewCapabilities()
 		for _, pair := range init.capabilities {
-			fixt.capabilities.Add(pair[0], pair[1])
+			f.capabilities.Add(pair[0], pair[1])
 		}
 
-		fixt.packfile = init.packfile
-		fixt.idxfile = init.idxfile
+		f.packfile = init.packfile
+		f.idxfile = init.idxfile
 
-		s.fixtures[init.name] = fixt
+		s.fixtures[init.name] = f
 	}
 }
 
 func (s *SuiteGitDir) TearDownSuite(c *C) {
-	for name, fixture := range s.fixtures {
-		dir := filepath.Dir(fixture.path)
-		err := os.RemoveAll(dir)
+	for n, f := range s.fixtures {
+		d := filepath.Dir(f.path)
+		err := os.RemoveAll(d)
 		c.Assert(err, IsNil, Commentf("cannot delete tmp dir for fixture %s: %s\n",
-			name, dir))
+			n, d))
 	}
 }
 
@@ -107,10 +107,10 @@ func (s *SuiteGitDir) TestNewDir(c *C) {
 	} {
 		comment := Commentf("subtest %d", i)
 
-		dir, err := New(test.input)
+		d, err := New(test.input)
 		c.Assert(err, Equals, test.err, comment)
 		if test.err == nil {
-			c.Assert(dir.path, Equals, test.path, comment)
+			c.Assert(d.path, Equals, test.path, comment)
 		}
 	}
 }
@@ -172,22 +172,22 @@ func (s *SuiteGitDir) TestRefs(c *C) {
 		},
 	} {
 		comment := Commentf("subtest %d", i)
-		_, dir := s.newFixtureDir(c, test.fixture)
+		_, d := s.newFixtureDir(c, test.fixture)
 
-		refs, err := dir.Refs()
+		refs, err := d.Refs()
 		c.Assert(err, IsNil, comment)
 		c.Assert(refs, DeepEquals, test.refs, comment)
 	}
 }
 
 func (s *SuiteGitDir) newFixtureDir(c *C, fixName string) (*fixture, *Dir) {
-	fixture, ok := s.fixtures[fixName]
+	f, ok := s.fixtures[fixName]
 	c.Assert(ok, Equals, true)
 
-	dir, err := New(fixture.path)
+	d, err := New(f.path)
 	c.Assert(err, IsNil)
 
-	return &fixture, dir
+	return &f, d
 }
 
 func (s *SuiteGitDir) TestCapabilities(c *C) {
@@ -200,11 +200,11 @@ func (s *SuiteGitDir) TestCapabilities(c *C) {
 		},
 	} {
 		comment := Commentf("subtest %d", i)
-		fixture, dir := s.newFixtureDir(c, test.fixture)
+		f, d := s.newFixtureDir(c, test.fixture)
 
-		capabilities, err := dir.Capabilities()
+		caps, err := d.Capabilities()
 		c.Assert(err, IsNil, comment)
-		c.Assert(capabilities, DeepEquals, fixture.capabilities, comment)
+		c.Assert(caps, DeepEquals, f.capabilities, comment)
 	}
 }
 
@@ -243,17 +243,17 @@ func (s *SuiteGitDir) TestIdxfile(c *C) {
 func (s *SuiteGitDir) checkFile(c *C, isPackfile bool,
 	fixtureName string, expectedErr string) {
 
-	fixt, dir := s.newFixtureDir(c, fixtureName)
+	fix, dir := s.newFixtureDir(c, fixtureName)
 
-	var path string
-	var fixturePath string
+	var pakPath string
+	var fixPath string
 	var err error
 	if isPackfile {
-		path, err = dir.Packfile()
-		fixturePath = fixt.packfile
+		pakPath, err = dir.Packfile()
+		fixPath = fix.packfile
 	} else {
-		path, err = dir.Idxfile()
-		fixturePath = fixt.idxfile
+		pakPath, err = dir.Idxfile()
+		fixPath = fix.idxfile
 	}
 
 	if expectedErr != "" {
@@ -261,9 +261,9 @@ func (s *SuiteGitDir) checkFile(c *C, isPackfile bool,
 	} else {
 		c.Assert(err, IsNil)
 
-		relative, err := filepath.Rel(dir.path, path)
+		rel, err := filepath.Rel(dir.path, pakPath)
 		c.Assert(err, IsNil)
 
-		c.Assert(relative, Equals, fixturePath)
+		c.Assert(rel, Equals, fixPath)
 	}
 }

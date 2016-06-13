@@ -157,11 +157,11 @@ func (s *SuiteRepository) TestTag(c *C) {
 		r, ok := s.repos[t.repo]
 		c.Assert(ok, Equals, true)
 		k := 0
-		for hashString, expected := range t.tags {
+		for hashString, exp := range t.tags {
 			hash := core.NewHash(hashString)
 			tag, err := r.Tag(hash)
 			c.Assert(err, IsNil)
-			testTagExpected(c, tag, hash, expected, fmt.Sprintf("subtest %d, tag %d: ", i, k))
+			testTagExpected(c, tag, hash, exp, fmt.Sprintf("subtest %d, tag %d: ", i, k))
 			k++
 		}
 	}

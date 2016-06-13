@@ -33,7 +33,7 @@ func (d *Dir) initRefsFromPackedRefs() (err error) {
 	d.refs = make(map[string]core.Hash)
 
 	path := filepath.Join(d.path, packedRefsPath)
-	file, err := os.Open(path)
+	f, err := os.Open(path)
 	if err != nil {
 		if err == os.ErrNotExist {
 			return nil
@@ -41,21 +41,21 @@ func (d *Dir) initRefsFromPackedRefs() (err error) {
 		return err
 	}
 	defer func() {
-		errClose := file.Close()
+		errClose := f.Close()
 		if err == nil {
 			err = errClose
 		}
 	}()
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		line := s.Text()
 		if err = d.processLine(line); err != nil {
 			return err
 		}
 	}
 
-	return scanner.Err()
+	return s.Err()
 }
 
 // process lines from a packed-refs file
@@ -66,16 +66,16 @@ func (d *Dir) processLine(line string) error {
 	case '^': // annotated tag commit of the previous line - ignore
 		return nil
 	default:
-		words := strings.Split(line, " ") // hash then ref
-		if len(words) != 2 {
+		ws := strings.Split(line, " ") // hash then ref
+		if len(ws) != 2 {
 			return ErrPackedRefsBadFormat
 		}
-		hash, ref := words[0], words[1]
+		h, r := ws[0], ws[1]
 
-		if _, ok := d.refs[ref]; ok {
+		if _, ok := d.refs[r]; ok {
 			return ErrPackedRefsDuplicatedRef
 		}
-		d.refs[ref] = core.NewHash(hash)
+		d.refs[r] = core.NewHash(h)
 	}
 
 	return nil
@@ -86,25 +86,25 @@ func (d *Dir) addRefsFromRefDir() error {
 }
 
 func (d *Dir) walkTree(relPath string) error {
-	files, err := ioutil.ReadDir(filepath.Join(d.path, relPath))
+	fs, err := ioutil.ReadDir(filepath.Join(d.path, relPath))
 	if err != nil {
 		return err
 	}
 
-	for _, file := range files {
-		newRelPath := filepath.Join(relPath, file.Name())
+	for _, f := range fs {
+		newRelPath := filepath.Join(relPath, f.Name())
 
-		if file.IsDir() {
+		if f.IsDir() {
 			if err = d.walkTree(newRelPath); err != nil {
 				return err
 			}
 		} else {
 			filePath := filepath.Join(d.path, newRelPath)
-			hash, err := d.readHashFile(filePath)
+			h, err := d.readHashFile(filePath)
 			if err != nil {
 				return err
 			}
-			d.refs[newRelPath] = hash
+			d.refs[newRelPath] = h
 		}
 	}
 
@@ -115,17 +115,17 @@ func (d *Dir) walkTree(relPath string) error {
 // reference is found instead of a hash, the reference is resolved and
 // the proper hash is returned.
 func (d *Dir) readHashFile(path string) (core.Hash, error) {
-	bytes, err := ioutil.ReadFile(path)
+	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return core.ZeroHash, err
 	}
-	content := strings.TrimSpace(string(bytes))
+	line := strings.TrimSpace(string(b))
 
-	if isSymRef(content) {
-		return d.resolveSymRef(content)
+	if isSymRef(line) {
+		return d.resolveSymRef(line)
 	}
 
-	return core.NewHash(content), nil
+	return core.NewHash(line), nil
 }
 
 func isSymRef(contents string) bool {

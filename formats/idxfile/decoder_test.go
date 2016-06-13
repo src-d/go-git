@@ -15,15 +15,15 @@ type IdxfileSuite struct{}
 var _ = Suite(&IdxfileSuite{})
 
 func (s *IdxfileSuite) TestDecode(c *C) {
-	file, err := os.Open("fixtures/git-fixture.idx")
+	f, err := os.Open("fixtures/git-fixture.idx")
 	c.Assert(err, IsNil)
 
-	decoder := NewDecoder(file)
+	d := NewDecoder(f)
 	idx := &Idxfile{}
-	err = decoder.Decode(idx)
+	err = d.Decode(idx)
 	c.Assert(err, IsNil)
 
-	err = file.Close()
+	err = f.Close()
 	c.Assert(err, IsNil)
 
 	c.Assert(int(idx.ObjectCount), Equals, 31)

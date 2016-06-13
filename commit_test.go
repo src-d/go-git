@@ -95,8 +95,8 @@ var fileTests = []struct {
 	repo     string // the repo name as in localRepos
 	commit   string // the commit to search for the file
 	path     string // the path of the file to find
-	blobHash string // expected hash of the returned file
-	found    bool   // expected found value
+	blobHash string // exp hash of the returned file
+	found    bool   // exp found value
 }{
 	// use git ls-tree commit to get the hash of the blobs
 	{"https://github.com/tyba/git-fixture.git", "b029517f6300c2da0f4b651b8642506cd6aaf45d", "not-found",
