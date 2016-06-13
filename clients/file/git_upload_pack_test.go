@@ -22,7 +22,7 @@ type SuiteFileClient struct {
 
 var _ = Suite(&SuiteFileClient{})
 
-const fixtureTGZ = "../../formats/gitdir/fixtures/spinnaker-gc.tgz"
+const fixtureTGZ = "../../formats/file/fixtures/spinnaker-gc.tgz"
 
 func (s *SuiteFileClient) SetUpSuite(c *C) {
 	var err error

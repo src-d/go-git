@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
-	"gopkg.in/src-d/go-git.v3/formats/gitdir"
+	"gopkg.in/src-d/go-git.v3/formats/file"
 )
 
 var (
@@ -15,7 +15,7 @@ var (
 )
 
 type GitUploadPackService struct {
-	dir *gitdir.Dir
+	dir *file.Dir
 }
 
 func NewGitUploadPackService() *GitUploadPackService {
@@ -26,7 +26,7 @@ func (s *GitUploadPackService) Connect(url common.Endpoint) error {
 	var err error
 
 	p := strings.TrimPrefix(string(url), "file://")
-	s.dir, err = gitdir.New(p)
+	s.dir, err = file.New(p)
 	if err != nil {
 		return err
 	}

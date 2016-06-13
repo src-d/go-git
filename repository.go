@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
 	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/formats/gitdir"
+	"gopkg.in/src-d/go-git.v3/formats/file"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
 	"gopkg.in/src-d/go-git.v3/storage/memory"
 	"gopkg.in/src-d/go-git.v3/storage/seekable"
@@ -92,7 +92,7 @@ func isLocalRemote(endpoint common.Endpoint) bool {
 
 func (r *Repository) useLocalStorage(endpoint common.Endpoint) error {
 	path := strings.TrimPrefix(string(endpoint), fileScheme)
-	dir, err := gitdir.New(path)
+	dir, err := file.New(path)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (r *Repository) useLocalStorage(endpoint common.Endpoint) error {
 	if err != nil {
 		// if there is no idx file, just keep on, we will manage to create one
 		// on the fly.
-		if err != gitdir.ErrIdxNotFound {
+		if err != file.ErrIdxNotFound {
 			return err
 		}
 	}

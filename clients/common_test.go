@@ -20,7 +20,7 @@ type SuiteCommon struct {
 
 var _ = Suite(&SuiteCommon{})
 
-const fixtureTGZ = "../formats/gitdir/fixtures/spinnaker-gc.tgz"
+const fixtureTGZ = "../formats/file/fixtures/spinnaker-gc.tgz"
 
 func (s *SuiteCommon) SetUpSuite(c *C) {
 	var err error
