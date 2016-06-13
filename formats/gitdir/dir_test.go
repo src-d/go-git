@@ -52,10 +52,10 @@ func (s *SuiteGitDir) SetUpSuite(c *C) {
 	s.fixtures = make(map[string]fixture, len(initFixtures))
 
 	for _, init := range initFixtures {
-		comment := Commentf("fixture name = %s\n", init.name)
+		com := Commentf("fixture name = %s\n", init.name)
 
 		path, err := tgz.Extract(init.tgz)
-		c.Assert(err, IsNil, comment)
+		c.Assert(err, IsNil, com)
 
 		f := fixture{}
 
@@ -105,12 +105,12 @@ func (s *SuiteGitDir) TestNewDir(c *C) {
 			path:  "/tmp/foo/.git",
 		},
 	} {
-		comment := Commentf("subtest %d", i)
+		com := Commentf("subtest %d", i)
 
 		d, err := New(test.input)
-		c.Assert(err, Equals, test.err, comment)
+		c.Assert(err, Equals, test.err, com)
 		if test.err == nil {
-			c.Assert(d.path, Equals, test.path, comment)
+			c.Assert(d.path, Equals, test.path, com)
 		}
 	}
 }
@@ -171,12 +171,12 @@ func (s *SuiteGitDir) TestRefs(c *C) {
 			},
 		},
 	} {
-		comment := Commentf("subtest %d", i)
+		com := Commentf("subtest %d", i)
 		_, d := s.newFixtureDir(c, test.fixture)
 
 		refs, err := d.Refs()
-		c.Assert(err, IsNil, comment)
-		c.Assert(refs, DeepEquals, test.refs, comment)
+		c.Assert(err, IsNil, com)
+		c.Assert(refs, DeepEquals, test.refs, com)
 	}
 }
 
@@ -199,12 +199,12 @@ func (s *SuiteGitDir) TestCapabilities(c *C) {
 			fixture: "spinnaker",
 		},
 	} {
-		comment := Commentf("subtest %d", i)
+		com := Commentf("subtest %d", i)
 		f, d := s.newFixtureDir(c, test.fixture)
 
 		caps, err := d.Capabilities()
-		c.Assert(err, IsNil, comment)
-		c.Assert(caps, DeepEquals, f.capabilities, comment)
+		c.Assert(err, IsNil, com)
+		c.Assert(caps, DeepEquals, f.capabilities, com)
 	}
 }
 

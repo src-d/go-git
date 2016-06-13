@@ -19,9 +19,9 @@ func NewFromPackfile(packfile io.Reader) (Index, error) {
 
 // NewFromIdx returns a new index from an idx file reader.
 func NewFromIdx(r io.Reader) (Index, error) {
-	decoder := idxfile.NewDecoder(r)
+	d := idxfile.NewDecoder(r)
 	idx := &idxfile.Idxfile{}
-	err := decoder.Decode(idx)
+	err := d.Decode(idx)
 	if err != nil {
 		return nil, err
 	}

@@ -17,25 +17,25 @@ var _ = Suite(&SuiteTGZ{})
 
 func (s *SuiteTGZ) TestExtract(c *C) {
 	for i, test := range tests {
-		comment := Commentf("%d) tgz path = %s", i, test.tgz)
+		com := Commentf("%d) tgz path = %s", i, test.tgz)
 
 		path, err := Extract(test.tgz)
 		if test.err != "" {
-			c.Assert(err, ErrorMatches, test.err, comment)
+			c.Assert(err, ErrorMatches, test.err, com)
 
 			_, err = os.Stat(path)
-			c.Assert(os.IsNotExist(err), Equals, true, comment)
+			c.Assert(os.IsNotExist(err), Equals, true, com)
 		} else {
-			c.Assert(err, IsNil, comment)
+			c.Assert(err, IsNil, com)
 
 			obt, err := relativeTree(path)
-			c.Assert(err, IsNil, comment)
+			c.Assert(err, IsNil, com)
 
 			sort.Strings(test.tree)
-			c.Assert(obt, DeepEquals, test.tree, comment)
+			c.Assert(obt, DeepEquals, test.tree, com)
 
 			err = os.RemoveAll(path)
-			c.Assert(err, IsNil, comment)
+			c.Assert(err, IsNil, com)
 		}
 	}
 }
@@ -86,26 +86,26 @@ var tests = [...]struct {
 func relativeTree(path string) ([]string, error) {
 	path = filepath.Clean(path)
 
-	absolutes := []string{}
+	absPaths := []string{}
 	walkFn := func(path string, info os.FileInfo, err error) error {
-		absolutes = append(absolutes, path)
+		absPaths = append(absPaths, path)
 		return nil
 	}
 
 	_ = filepath.Walk(path, walkFn)
 
-	return toRelative(absolutes[1:], path) // strip the base dir
+	return toRelative(absPaths[1:], path) // strip the base dir
 }
 
 func toRelative(paths []string, base string) ([]string, error) {
-	result := []string{}
-	for _, path := range paths {
-		relative, err := filepath.Rel(base, path)
+	r := []string{}
+	for _, p := range paths {
+		rel, err := filepath.Rel(base, p)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, relative)
+		r = append(r, rel)
 	}
 
-	return result, nil
+	return r, nil
 }

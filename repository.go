@@ -32,24 +32,24 @@ type Repository struct {
 
 // NewRepository creates a new repository setting remote as default remote
 func NewRepository(url string, auth common.AuthMethod) (*Repository, error) {
-	var remote *Remote
+	var r *Remote
 	var err error
 
 	if auth == nil {
-		remote, err = NewRemote(url)
+		r, err = NewRemote(url)
 	} else {
-		remote, err = NewAuthenticatedRemote(url, auth)
+		r, err = NewAuthenticatedRemote(url, auth)
 	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	r := NewPlainRepository()
-	r.Remotes[DefaultRemoteName] = remote
-	r.URL = url
+	repo := NewPlainRepository()
+	repo.Remotes[DefaultRemoteName] = r
+	repo.URL = url
 
-	return r, nil
+	return repo, nil
 }
 
 // NewPlainRepository creates a new repository without remotes
@@ -141,8 +141,8 @@ func (r *Repository) fillStorageUsingFetch(remote *Remote, branch string) (err e
 	}
 	defer checkClose(reader, &err)
 
-	decoder := packfile.NewDecoder(reader)
-	if _, err = decoder.Decode(r.Storage); err != nil {
+	d := packfile.NewDecoder(reader)
+	if _, err = d.Decode(r.Storage); err != nil {
 		return err
 	}
 
@@ -216,8 +216,8 @@ func (r *Repository) Tag(h core.Hash) (*Tag, error) {
 		return nil, err
 	}
 
-	tag := &Tag{r: r}
-	return tag, tag.Decode(obj)
+	t := &Tag{r: r}
+	return t, t.Decode(obj)
 }
 
 // Tags returns a TagIter that can step through all of the annotated tags

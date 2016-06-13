@@ -29,21 +29,21 @@ func (s *SuiteIndex) TestNewFromIdx(c *C) {
 			errRegexp: idxfile.ErrMalformedIdxFile.Error(),
 		},
 	} {
-		comment := Commentf("subtest %d) idxPath = %s", i, test.idxPath)
+		com := Commentf("subtest %d) idxPath = %s", i, test.idxPath)
 
 		idx, err := os.Open(test.idxPath)
-		c.Assert(err, IsNil, comment)
+		c.Assert(err, IsNil, com)
 
 		index, err := NewFromIdx(idx)
 		if test.errRegexp != "" {
 			fmt.Println(err)
-			c.Assert(err, ErrorMatches, test.errRegexp, comment)
+			c.Assert(err, ErrorMatches, test.errRegexp, com)
 		} else {
-			c.Assert(err, IsNil, comment)
-			c.Assert(index, DeepEquals, expectedIndexes[test.idxPath], comment)
+			c.Assert(err, IsNil, com)
+			c.Assert(index, DeepEquals, expectedIndexes[test.idxPath], com)
 
 			err = idx.Close()
-			c.Assert(err, IsNil, comment)
+			c.Assert(err, IsNil, com)
 		}
 	}
 }
@@ -75,24 +75,24 @@ func (s *SuiteIndex) TestGet(c *C) {
 			err:  core.ErrObjectNotFound,
 		},
 	} {
-		comment := Commentf("subtest %d", i)
+		com := Commentf("subtest %d", i)
 
 		idx, err := os.Open(test.idx)
-		c.Assert(err, IsNil, comment)
+		c.Assert(err, IsNil, com)
 
 		index, err := NewFromIdx(idx)
-		c.Assert(err, IsNil, comment)
+		c.Assert(err, IsNil, com)
 
 		obt, err := index.Get(test.hash)
 		if test.err != nil {
-			c.Assert(err, Equals, test.err, comment)
+			c.Assert(err, Equals, test.err, com)
 		} else {
 			c.Assert(err, IsNil)
-			c.Assert(obt, Equals, expectedIndexes[test.idx][test.hash], comment)
+			c.Assert(obt, Equals, expectedIndexes[test.idx][test.hash], com)
 		}
 
 		err = idx.Close()
-		c.Assert(err, IsNil, comment)
+		c.Assert(err, IsNil, com)
 	}
 }
 

@@ -20,17 +20,17 @@ var _ = Suite(&ReferencesSuite{})
 // create the repositories of the fixtures
 func (s *ReferencesSuite) SetUpSuite(c *C) {
 	s.repos = make(map[string]*Repository, 0)
-	for _, fixRepo := range fixtureRepos {
-		s.repos[fixRepo.url] = NewPlainRepository()
+	for _, fix := range fixtureRepos {
+		s.repos[fix.url] = NewPlainRepository()
 
-		d, err := os.Open(fixRepo.packfile)
-		defer d.Close()
+		f, err := os.Open(fix.packfile)
+		defer f.Close()
 		c.Assert(err, IsNil)
 
-		decoder := packfile.NewDecoder(d)
-		decoder.Format = packfile.OFSDeltaFormat // TODO: how to know the format of a pack file ahead of time?
+		d := packfile.NewDecoder(f)
+		d.Format = packfile.OFSDeltaFormat // TODO: how to know the format of a pack file ahead of time?
 
-		_, err = decoder.Decode(s.repos[fixRepo.url].Storage)
+		_, err = d.Decode(s.repos[fix.url].Storage)
 		c.Assert(err, IsNil)
 	}
 }

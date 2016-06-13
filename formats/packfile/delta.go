@@ -13,13 +13,13 @@ func PatchDelta(src, delta []byte) []byte {
 		return nil
 	}
 
-	srcSize, delta := decodeLEB128(delta)
-	if srcSize != uint(len(src)) {
+	srcSz, delta := decodeLEB128(delta)
+	if srcSz != uint(len(src)) {
 		return nil
 	}
 
-	targetSize, delta := decodeLEB128(delta)
-	remainingTargetSize := targetSize
+	targetSz, delta := decodeLEB128(delta)
+	remainingTargetSize := targetSz
 
 	var dest []byte
 	var cmd byte
@@ -27,23 +27,23 @@ func PatchDelta(src, delta []byte) []byte {
 		cmd = delta[0]
 		delta = delta[1:]
 		if isCopyFromSrc(cmd) {
-			var offset, size uint
+			var offset, sz uint
 			offset, delta = decodeOffset(cmd, delta)
-			size, delta = decodeSize(cmd, delta)
-			if invalidSize(size, targetSize) ||
-				invalidOffsetSize(offset, size, srcSize) {
+			sz, delta = decodeSize(cmd, delta)
+			if invalidSize(sz, targetSz) ||
+				invalidOffsetSize(offset, sz, srcSz) {
 				break
 			}
-			dest = append(dest, src[offset:offset+size]...)
-			remainingTargetSize -= size
+			dest = append(dest, src[offset:offset+sz]...)
+			remainingTargetSize -= sz
 		} else if isCopyFromDelta(cmd) {
-			size := uint(cmd) // cmd is the size itself
-			if invalidSize(size, targetSize) {
+			sz := uint(cmd) // cmd is the size itself
+			if invalidSize(sz, targetSz) {
 				break
 			}
-			dest = append(dest, delta[0:size]...)
-			remainingTargetSize -= size
-			delta = delta[size:]
+			dest = append(dest, delta[0:sz]...)
+			remainingTargetSize -= sz
+			delta = delta[sz:]
 		} else {
 			return nil
 		}
@@ -63,19 +63,19 @@ func PatchDelta(src, delta []byte) []byte {
 // This must be called twice on the delta data buffer, first to get the
 // exp source buffer size, and again to get the target buffer size.
 func decodeLEB128(input []byte) (uint, []byte) {
-	var result, bytesDecoded uint
+	var num, sz uint
 	var b byte
 	for {
-		b = input[bytesDecoded]
-		result |= (uint(b) & payload) << (bytesDecoded * 7) // concats 7 bits chunks
-		bytesDecoded++
+		b = input[sz]
+		num |= (uint(b) & payload) << (sz * 7) // concats 7 bits chunks
+		sz++
 
-		if uint(b)&continuation == 0 || bytesDecoded == uint(len(input)) {
+		if uint(b)&continuation == 0 || sz == uint(len(input)) {
 			break
 		}
 	}
 
-	return result, input[bytesDecoded:]
+	return num, input[sz:]
 }
 
 const (
@@ -114,33 +114,33 @@ func decodeOffset(cmd byte, delta []byte) (uint, []byte) {
 }
 
 func decodeSize(cmd byte, delta []byte) (uint, []byte) {
-	var size uint
+	var sz uint
 	if (cmd & 0x10) != 0 {
-		size = uint(delta[0])
+		sz = uint(delta[0])
 		delta = delta[1:]
 	}
 	if (cmd & 0x20) != 0 {
-		size |= uint(delta[0]) << 8
+		sz |= uint(delta[0]) << 8
 		delta = delta[1:]
 	}
 	if (cmd & 0x40) != 0 {
-		size |= uint(delta[0]) << 16
+		sz |= uint(delta[0]) << 16
 		delta = delta[1:]
 	}
-	if size == 0 {
-		size = 0x10000
+	if sz == 0 {
+		sz = 0x10000
 	}
 
-	return size, delta
+	return sz, delta
 }
 
-func invalidSize(size, targetSize uint) bool {
-	return size > targetSize
+func invalidSize(sz, targetSz uint) bool {
+	return sz > targetSz
 }
 
-func invalidOffsetSize(offset, size, srcSize uint) bool {
-	return sumOverflows(offset, size) ||
-		offset+size > srcSize
+func invalidOffsetSize(offset, sz, srcSz uint) bool {
+	return sumOverflows(offset, sz) ||
+		offset+sz > srcSz
 }
 
 func sumOverflows(a, b uint) bool {

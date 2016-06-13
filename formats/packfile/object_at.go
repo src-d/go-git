@@ -5,12 +5,11 @@ import (
 	"compress/zlib"
 	"fmt"
 	"io"
+	"os"
 
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/storage/memory"
 )
-
-const fromTheBeginning = 0
 
 // AlreadySeener remembers already seen objects by hash or offset
 // and can be asked to retrieve them. It is used to resolve
@@ -24,7 +23,7 @@ type AlreadySeener interface {
 func ObjectAt(packfile io.ReadSeeker,
 	offset int64, remember AlreadySeener) (core.Object, error) {
 
-	_, err := packfile.Seek(offset, fromTheBeginning)
+	_, err := packfile.Seek(offset, os.SEEK_SET)
 	if err != nil {
 		return nil, err
 	}
@@ -34,16 +33,16 @@ func ObjectAt(packfile io.ReadSeeker,
 		return nil, err
 	}
 
-	var content []byte
+	var cont []byte
 	switch typ {
 	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
-		content, err = readContent(packfile)
+		cont, err = readContent(packfile)
 	case core.REFDeltaObject:
-		content, typ, err = readContentREFDelta(packfile, remember)
-		length = int64(len(content))
+		cont, typ, err = readContentREFDelta(packfile, remember)
+		length = int64(len(cont))
 	case core.OFSDeltaObject:
-		content, typ, err = readContentOFSDelta(packfile, offset, remember)
-		length = int64(len(content))
+		cont, typ, err = readContentOFSDelta(packfile, offset, remember)
+		length = int64(len(cont))
 	default:
 		err = fmt.Errorf("invalid object type: tag %q", typ)
 	}
@@ -51,7 +50,7 @@ func ObjectAt(packfile io.ReadSeeker,
 		return nil, err
 	}
 
-	return memory.NewObject(typ, length, content), err
+	return memory.NewObject(typ, length, cont), err
 }
 
 func readTypeAndLength(packfile io.Reader) (core.ObjectType, int64, error) {

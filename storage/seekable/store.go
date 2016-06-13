@@ -88,19 +88,19 @@ func (s *ObjectStorage) Get(h core.Hash) (core.Object, error) {
 		return nil, err
 	}
 
-	file, err := os.Open(s.path)
+	f, err := os.Open(s.path)
 	if err != nil {
 		return nil, err
 	}
 
 	defer func() {
-		errClose := file.Close()
+		errClose := f.Close()
 		if err == nil {
 			err = errClose
 		}
 	}()
 
-	return packfile.ObjectAt(file, offset, s)
+	return packfile.ObjectAt(f, offset, s)
 }
 
 // Iter returns an iterator for all the objects in the packfile with the
@@ -134,17 +134,17 @@ func (s *ObjectStorage) ByHash(hash core.Hash) (core.Object, error) {
 // Given the nature of this storage, it also returns objects that
 // have not yet been seen.
 func (s *ObjectStorage) ByOffset(offset int64) (core.Object, error) {
-	file, err := os.Open(s.path)
+	f, err := os.Open(s.path)
 	if err != nil {
 		return nil, err
 	}
 
 	defer func() {
-		errClose := file.Close()
+		errClose := f.Close()
 		if err == nil {
 			err = errClose
 		}
 	}()
 
-	return packfile.ObjectAt(file, offset, s)
+	return packfile.ObjectAt(f, offset, s)
 }

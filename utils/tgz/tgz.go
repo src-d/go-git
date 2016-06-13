@@ -22,34 +22,34 @@ const (
 // On error, a non-nil error and an empty string are returned if the
 // newly created directory was correctly deleted. If not, its path is
 // returned instead of the empty string.
-func Extract(tgz string) (dir string, err error) {
-	file, err := os.Open(tgz)
+func Extract(tgz string) (d string, err error) {
+	f, err := os.Open(tgz)
 	if err != nil {
 		return "", err
 	}
 
 	defer func() {
-		errClose := file.Close()
+		errClose := f.Close()
 		if err == nil {
 			err = errClose
 		}
 	}()
 
-	dir, err = ioutil.TempDir(useDefaultTempDir, tmpPrefix)
+	d, err = ioutil.TempDir(useDefaultTempDir, tmpPrefix)
 	if err != nil {
 		return "", nil
 	}
 
-	tarReader, err := zipTarReader(file)
+	tar, err := zipTarReader(f)
 	if err != nil {
-		return deleteDir(dir, err)
+		return deleteDir(d, err)
 	}
 
-	if err = unTar(tarReader, dir); err != nil {
-		return deleteDir(dir, err)
+	if err = unTar(tar, d); err != nil {
+		return deleteDir(d, err)
 	}
 
-	return dir, nil
+	return d, nil
 }
 
 func deleteDir(dir string, prevErr error) (string, error) {
@@ -68,12 +68,12 @@ func deleteDir(dir string, prevErr error) (string, error) {
 }
 
 func zipTarReader(r io.Reader) (*tar.Reader, error) {
-	zipReader, err := gzip.NewReader(r)
+	zip, err := gzip.NewReader(r)
 	if err != nil {
 		return nil, err
 	}
 
-	return tar.NewReader(zipReader), nil
+	return tar.NewReader(zip), nil
 }
 
 func unTar(src *tar.Reader, dstPath string) error {
@@ -109,18 +109,18 @@ func unTar(src *tar.Reader, dstPath string) error {
 }
 
 func makeFile(path string, mode os.FileMode, contents io.Reader) (err error) {
-	writer, err := os.Create(path)
+	w, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		errClose := writer.Close()
+		errClose := w.Close()
 		if err == nil {
 			err = errClose
 		}
 	}()
 
-	_, err = io.Copy(writer, contents)
+	_, err = io.Copy(w, contents)
 	if err != nil {
 		return err
 	}

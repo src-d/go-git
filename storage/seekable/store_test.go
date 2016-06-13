@@ -33,12 +33,12 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 	} {
 		com := Commentf("at subtest %d", i)
 
-		memStorage := memory.NewObjectStorage()
+		memSto := memory.NewObjectStorage()
 		f, err := os.Open(packfilePath)
 		c.Assert(err, IsNil, com)
 
 		d := packfile.NewDecoder(f)
-		_, err = d.Decode(memStorage)
+		_, err = d.Decode(memSto)
 		c.Assert(err, IsNil, com)
 
 		err = f.Close()
@@ -47,7 +47,7 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 		lastDot := strings.LastIndex(packfilePath, ".")
 		idxPath := packfilePath[:lastDot] + ".idx"
 
-		storage, err := seekable.New(packfilePath, idxPath)
+		sto, err := seekable.New(packfilePath, idxPath)
 		c.Assert(err, IsNil, com)
 
 		for _, typ := range [...]core.ObjectType{
@@ -56,7 +56,7 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 			core.BlobObject,
 			core.TagObject,
 		} {
-			iter, err := memStorage.Iter(typ)
+			iter, err := memSto.Iter(typ)
 			c.Assert(err, IsNil, com)
 
 			for {
@@ -66,7 +66,7 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 					break
 				}
 
-				obt, err := storage.Get(memObject.Hash())
+				obt, err := sto.Get(memObject.Hash())
 				c.Assert(err, IsNil, com)
 
 				c.Assert(obt.Type(), Equals, memObject.Type(), com)
@@ -91,11 +91,11 @@ func (s *SeekableSuite) TestIterCompareWithMemoryStorage(c *C) {
 	} {
 		com := Commentf("at subtest %d", i)
 
-		memStorage := memory.NewObjectStorage()
+		memSto := memory.NewObjectStorage()
 		f, err := os.Open(packfilePath)
 		c.Assert(err, IsNil, com)
 		d := packfile.NewDecoder(f)
-		_, err = d.Decode(memStorage)
+		_, err = d.Decode(memSto)
 		c.Assert(err, IsNil, com)
 		err = f.Close()
 		c.Assert(err, IsNil, com)
@@ -113,14 +113,14 @@ func (s *SeekableSuite) TestIterCompareWithMemoryStorage(c *C) {
 			core.TagObject,
 		} {
 
-			memObjects, err := iterToSortedSlice(memStorage, typ)
+			memObjs, err := iterToSortedSlice(memSto, typ)
 			c.Assert(err, IsNil, com)
 
-			seekableObjects, err := iterToSortedSlice(sto, typ)
+			seekableObjs, err := iterToSortedSlice(sto, typ)
 			c.Assert(err, IsNil, com)
 
-			for i, exp := range memObjects {
-				c.Assert(seekableObjects[i].Hash(), Equals, exp.Hash(), com)
+			for i, exp := range memObjs {
+				c.Assert(seekableObjs[i].Hash(), Equals, exp.Hash(), com)
 			}
 		}
 	}
@@ -136,12 +136,12 @@ func iterToSortedSlice(storage core.ObjectStorage, typ core.ObjectType) ([]core.
 
 	r := make([]core.Object, 0)
 	for {
-		object, err := iter.Next()
+		obj, err := iter.Next()
 		if err != nil {
 			iter.Close()
 			break
 		}
-		r = append(r, object)
+		r = append(r, obj)
 	}
 
 	iter.Close()

@@ -139,7 +139,7 @@ func (s *SuiteTag) TestObject(c *C) {
 	}
 }
 
-func testTagExpected(c *C, tag *Tag, hash core.Hash, exp expectedTag, comment string) {
+func testTagExpected(c *C, tag *Tag, hash core.Hash, exp expectedTag, com string) {
 	when, err := time.Parse(time.RFC3339, exp.When)
 	c.Assert(err, IsNil)
 	c.Assert(tag, NotNil)
@@ -147,18 +147,18 @@ func testTagExpected(c *C, tag *Tag, hash core.Hash, exp expectedTag, comment st
 	c.Assert(tag.Hash, Equals, tag.ID())
 	c.Assert(tag.Hash, Equals, hash)
 	c.Assert(tag.Type(), Equals, core.TagObject)
-	c.Assert(tag.TargetType, Equals, exp.Type, Commentf("%stype=%v, expected=%v", comment, tag.TargetType, exp.Type))
-	c.Assert(tag.Target.String(), Equals, exp.Object, Commentf("%sobject=%v, expected=%s", comment, tag.Target, exp.Object))
-	c.Assert(tag.Name, Equals, exp.Tag, Commentf("subtest %d, iter %d, tag=%s, expected=%s", comment, tag.Name, exp.Tag))
-	c.Assert(tag.Tagger.Name, Equals, exp.TaggerName, Commentf("subtest %d, iter %d, tagger.name=%s, expected=%s", comment, tag.Tagger.Name, exp.TaggerName))
-	c.Assert(tag.Tagger.Email, Equals, exp.TaggerEmail, Commentf("subtest %d, iter %d, tagger.email=%s, expected=%s", comment, tag.Tagger.Email, exp.TaggerEmail))
-	c.Assert(tag.Tagger.When.Equal(when), Equals, true, Commentf("subtest %d, iter %d, tagger.when=%s, expected=%s", comment, tag.Tagger.When, when))
-	c.Assert(tag.Message, Equals, exp.Message, Commentf("subtest %d, iter %d, message=\"%s\", expected=\"%s\"", comment, tag.Message, exp.Message))
+	c.Assert(tag.TargetType, Equals, exp.Type, Commentf("%stype=%v, expected=%v", com, tag.TargetType, exp.Type))
+	c.Assert(tag.Target.String(), Equals, exp.Object, Commentf("%sobject=%v, expected=%s", com, tag.Target, exp.Object))
+	c.Assert(tag.Name, Equals, exp.Tag, Commentf("subtest %d, iter %d, tag=%s, expected=%s", com, tag.Name, exp.Tag))
+	c.Assert(tag.Tagger.Name, Equals, exp.TaggerName, Commentf("subtest %d, iter %d, tagger.name=%s, expected=%s", com, tag.Tagger.Name, exp.TaggerName))
+	c.Assert(tag.Tagger.Email, Equals, exp.TaggerEmail, Commentf("subtest %d, iter %d, tagger.email=%s, expected=%s", com, tag.Tagger.Email, exp.TaggerEmail))
+	c.Assert(tag.Tagger.When.Equal(when), Equals, true, Commentf("subtest %d, iter %d, tagger.when=%s, expected=%s", com, tag.Tagger.When, when))
+	c.Assert(tag.Message, Equals, exp.Message, Commentf("subtest %d, iter %d, message=\"%s\", expected=\"%s\"", com, tag.Message, exp.Message))
 }
 
-func testTagIter(c *C, iter *TagIter, tags map[string]expectedTag, comment string) {
+func testTagIter(c *C, iter *TagIter, tags map[string]expectedTag, com string) {
 	for k := 0; k < len(tags); k++ {
-		comment = fmt.Sprintf("%siter %d: ", comment, k)
+		com = fmt.Sprintf("%siter %d: ", com, k)
 		tag, err := iter.Next()
 		c.Assert(err, IsNil)
 		c.Assert(tag, NotNil)
@@ -166,9 +166,9 @@ func testTagIter(c *C, iter *TagIter, tags map[string]expectedTag, comment strin
 		c.Assert(tag.Hash.IsZero(), Equals, false)
 
 		exp, ok := tags[tag.Hash.String()]
-		c.Assert(ok, Equals, true, Commentf("%sunexp tag hash=%v", comment, tag.Hash))
+		c.Assert(ok, Equals, true, Commentf("%sunexp tag hash=%v", com, tag.Hash))
 
-		testTagExpected(c, tag, tag.Hash, exp, comment)
+		testTagExpected(c, tag, tag.Hash, exp, com)
 	}
 	_, err := iter.Next()
 	c.Assert(err, Equals, io.EOF)

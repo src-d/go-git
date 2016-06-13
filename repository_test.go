@@ -34,13 +34,13 @@ func (s *SuiteRepository) SetUpSuite(c *C) {
 	s.repos = unpackFixtures(c, tagFixtures, treeWalkerFixtures)
 
 	s.dirFixturePaths = make(map[string]string, len(dirFixtures))
-	for _, fixture := range dirFixtures {
-		comment := Commentf("fixture name = %s\n", fixture.name)
+	for _, fix := range dirFixtures {
+		com := Commentf("fixture name = %s\n", fix.name)
 
-		path, err := tgz.Extract(fixture.tgz)
-		c.Assert(err, IsNil, comment)
+		path, err := tgz.Extract(fix.tgz)
+		c.Assert(err, IsNil, com)
 
-		s.dirFixturePaths[fixture.name] = filepath.Join(path, ".git")
+		s.dirFixturePaths[fix.name] = filepath.Join(path, ".git")
 	}
 }
 
@@ -68,15 +68,15 @@ func (s *SuiteRepository) TestNewRepositoryWithAuth(c *C) {
 
 func (s *SuiteRepository) TestNewSeekableRepository(c *C) {
 	for name, path := range s.dirFixturePaths {
-		comment := Commentf("dir fixture %q → %q\n", name, path)
+		com := Commentf("dir fixture %q → %q\n", name, path)
 		repo, err := NewRepository("file://"+path, nil)
-		c.Assert(err, IsNil, comment)
+		c.Assert(err, IsNil, com)
 
 		err = repo.PullDefault()
-		c.Assert(err, IsNil, comment)
+		c.Assert(err, IsNil, com)
 
-		c.Assert(repo.Storage, NotNil, comment)
-		c.Assert(repo.Storage, FitsTypeOf, &seekable.ObjectStorage{}, comment)
+		c.Assert(repo.Storage, NotNil, com)
+		c.Assert(repo.Storage, FitsTypeOf, &seekable.ObjectStorage{}, com)
 	}
 }
 
@@ -182,13 +182,13 @@ func (s *SuiteRepository) TestObject(c *C) {
 		r, ok := s.repos[t.repo]
 		c.Assert(ok, Equals, true)
 		for k := 0; k < len(t.objs); k++ {
-			comment := fmt.Sprintf("subtest %d, tag %d", i, k)
+			com := fmt.Sprintf("subtest %d, tag %d", i, k)
 			info := t.objs[k]
 			hash := core.NewHash(info.Hash)
 			obj, err := r.Object(hash)
-			c.Assert(err, IsNil, Commentf(comment))
-			c.Assert(obj.Type(), Equals, info.Kind, Commentf(comment))
-			c.Assert(obj.ID(), Equals, hash, Commentf(comment))
+			c.Assert(err, IsNil, Commentf(com))
+			c.Assert(obj.Type(), Equals, info.Kind, Commentf(com))
+			c.Assert(obj.ID(), Equals, hash, Commentf(com))
 		}
 	}
 }
