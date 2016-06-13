@@ -19,7 +19,7 @@ func PatchDelta(src, delta []byte) []byte {
 	}
 
 	targetSz, delta := decodeLEB128(delta)
-	remainingTargetSize := targetSz
+	remainingTargetSz := targetSz
 
 	var dest []byte
 	var cmd byte
@@ -35,20 +35,20 @@ func PatchDelta(src, delta []byte) []byte {
 				break
 			}
 			dest = append(dest, src[offset:offset+sz]...)
-			remainingTargetSize -= sz
+			remainingTargetSz -= sz
 		} else if isCopyFromDelta(cmd) {
 			sz := uint(cmd) // cmd is the size itself
 			if invalidSize(sz, targetSz) {
 				break
 			}
 			dest = append(dest, delta[0:sz]...)
-			remainingTargetSize -= sz
+			remainingTargetSz -= sz
 			delta = delta[sz:]
 		} else {
 			return nil
 		}
 
-		if remainingTargetSize <= 0 {
+		if remainingTargetSz <= 0 {
 			break
 		}
 	}
