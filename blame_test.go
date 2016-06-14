@@ -20,7 +20,6 @@ func (s *BlameCommon) SetUpSuite(c *C) {
 	s.repos = make(map[string]*Repository, 0)
 	for _, fixRepo := range fixtureRepos {
 		r := NewPlainRepository()
-		r.URL = fixRepo.url
 
 		f, err := os.Open(fixRepo.packfile)
 		c.Assert(err, IsNil)
