@@ -90,19 +90,18 @@ Date:   2015-12-11 17:57:10 +0100 +0100
 ...
 ```
 
-Bare and non-bare local repositories are also supported using the `file://`
-scheme and the path of the desired `.git` directory. To be able to use a git
-repository as a `file://` remote, you must first prepare it by running `git gc`
-on it.
+Bare and non-bare local repositories are also supported using the
+`NewRepositoryFromFS` constructor. To be able to use this functionality the
+local repository has to be prepared beforehand by running `git gc` on it.
 
-When using the `file://` scheme, no remote is created and there is no need to
-pull as all operations are resolved by directly accessing the directory and its
-packfile; this is much slower than having all the repository contents in memory,
-but uses very little memory.
+When accessing local repositories this way, no remote is created and there is no
+need to pull as all operations are resolved by directly accessing the directory
+and its packfile; this is much slower than having all the repository contents in
+memory, but uses very little memory.
 
 ```go
 // git clone https://github.com/src-d/go-git /tmp/go-git
-r, err := git.NewRepository("file:///tmp/go-git/.git", nil)
+r, err := git.NewRepositoryForFS("/tmp/go-git/.git")
 if err != nil {
 	panic(err)
 }
