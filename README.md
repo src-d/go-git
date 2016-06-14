@@ -49,7 +49,10 @@ if err := r.PullDefault(); err != nil {
 	panic(err)
 }
 
-iter := r.Commits()
+iter, err := r.Commits()
+if err != nil {
+	panic(err)
+}
 defer iter.Close()
 
 for {
@@ -92,22 +95,37 @@ scheme and the path of the desired `.git` directory. To be able to use a git
 repository as a `file://` remote, you must first prepare it by running `git gc`
 on it.
 
-When using this kind of remote, git objects are not cached in memory and all
-operations require a read from the packfile on disk, this is much slower than
-having all the repository contents in memory, but uses very little memory.
+When using the `file://` scheme, no remote is created and there is no need to
+pull as all operations are resolved by directly accessing the directory and its
+packfile; this is much slower than having all the repository contents in memory,
+but uses very little memory.
 
 ```go
-// pushd /tmp ; git clone https://github.com/src-d/go-git ; popd
+// git clone https://github.com/src-d/go-git /tmp/go-git
 r, err := git.NewRepository("file:///tmp/go-git/.git", nil)
 if err != nil {
 	panic(err)
 }
 
-if err := r.PullDefault(); err != nil {
+iter, err := r.Commits()
+if err != nil {
 	panic(err)
 }
+defer iter.Close()
 
-// ...
+for {
+	//the commits are not shorted in any special order
+	commit, err := iter.Next()
+	if err != nil {
+		if err == io.EOF {
+			break
+		}
+
+		panic(err)
+	}
+
+	fmt.Println(commit)
+}
 ```
 
 Retrieving the latest commit for a given repository:
