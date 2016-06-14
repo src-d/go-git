@@ -56,7 +56,6 @@ func (s *SuiteRepository) TestNewRepository(c *C) {
 	r, err := NewRepository(RepositoryFixture, nil)
 	c.Assert(err, IsNil)
 	c.Assert(r.Remotes["origin"].Auth, IsNil)
-	c.Assert(r.URL, Equals, RepositoryFixture)
 }
 
 func (s *SuiteRepository) TestNewRepositoryWithAuth(c *C) {
@@ -66,10 +65,10 @@ func (s *SuiteRepository) TestNewRepositoryWithAuth(c *C) {
 	c.Assert(r.Remotes["origin"].Auth, Equals, auth)
 }
 
-func (s *SuiteRepository) TestNewSeekableRepository(c *C) {
+func (s *SuiteRepository) TestNewRepositoryFromFS(c *C) {
 	for name, path := range s.dirFixturePaths {
 		com := Commentf("dir fixture %q → %q\n", name, path)
-		repo, err := NewRepository("file://"+path, nil)
+		repo, err := NewRepositoryFromFS("file://" + path)
 		c.Assert(err, IsNil, com)
 
 		err = repo.PullDefault()

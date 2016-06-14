@@ -35,15 +35,39 @@ func NewRepository(url string, auth common.AuthMethod) (*Repository, error) {
 	repo := NewPlainRepository()
 	repo.URL = url
 
-	if isRemote(url) {
-		r, err := NewAuthenticatedRemote(url, auth)
-		repo.Remotes[DefaultRemoteName] = r
-		if err != nil {
+	r, err := NewAuthenticatedRemote(url, auth)
+	repo.Remotes[DefaultRemoteName] = r
+	if err != nil {
+		return nil, err
+	}
+
+	return repo, nil
+}
+
+func NewRepositoryFromFS(url string) (*Repository, error) {
+	repo := NewPlainRepository()
+
+	path := strings.TrimPrefix(url, fileScheme)
+	dir, err := file.NewDir(path)
+	if err != nil {
+		return nil, err
+	}
+
+	packfile, err := dir.Packfile()
+	if err != nil {
+		return nil, err
+	}
+
+	idxfile, err := dir.Idxfile()
+	if err != nil {
+		// if there is no idx file, just keep on, we will manage to create one
+		// on the fly.
+		if err != file.ErrIdxNotFound {
 			return nil, err
 		}
-	} else {
-		repo.useLocalStorage(url)
 	}
+
+	repo.Storage, err = seekable.New(packfile, idxfile)
 
 	return repo, nil
 }
@@ -52,32 +76,6 @@ const fileScheme = "file://"
 
 func isRemote(url string) bool {
 	return !strings.HasPrefix(url, fileScheme)
-}
-
-func (r *Repository) useLocalStorage(url string) error {
-	path := strings.TrimPrefix(url, fileScheme)
-	dir, err := file.NewDir(path)
-	if err != nil {
-		return err
-	}
-
-	packfile, err := dir.Packfile()
-	if err != nil {
-		return err
-	}
-
-	idxfile, err := dir.Idxfile()
-	if err != nil {
-		// if there is no idx file, just keep on, we will manage to create one
-		// on the fly.
-		if err != file.ErrIdxNotFound {
-			return err
-		}
-	}
-
-	r.Storage, err = seekable.New(packfile, idxfile)
-
-	return err
 }
 
 // NewPlainRepository creates a new repository without remotes
