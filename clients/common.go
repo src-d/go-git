@@ -16,7 +16,6 @@ import (
 	"net/url"
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
-	"gopkg.in/src-d/go-git.v3/clients/file"
 	"gopkg.in/src-d/go-git.v3/clients/http"
 	"gopkg.in/src-d/go-git.v3/clients/ssh"
 )
@@ -26,7 +25,6 @@ var DefaultProtocols = map[string]common.GitUploadPackService{
 	"http":  http.NewGitUploadPackService(),
 	"https": http.NewGitUploadPackService(),
 	"ssh":   ssh.NewGitUploadPackService(),
-	"file":  file.NewGitUploadPackService(),
 }
 
 // KnownProtocols holds the current set of known protocols. Initially
