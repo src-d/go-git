@@ -68,7 +68,7 @@ func (s *SuiteRepository) TestNewRepositoryWithAuth(c *C) {
 func (s *SuiteRepository) TestNewRepositoryFromFS(c *C) {
 	for name, path := range s.dirFixturePaths {
 		com := Commentf("dir fixture %q → %q\n", name, path)
-		repo, err := NewRepositoryFromFS("file://" + path)
+		repo, err := NewRepositoryFromFS(path)
 		c.Assert(err, IsNil, com)
 
 		err = repo.PullDefault()

@@ -3,11 +3,9 @@ package git
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
 	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/formats/file"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
 	"gopkg.in/src-d/go-git.v3/storage/memory"
 	"gopkg.in/src-d/go-git.v3/storage/seekable"
@@ -42,38 +40,12 @@ func NewRepository(url string, auth common.AuthMethod) (*Repository, error) {
 	return repo, nil
 }
 
-func NewRepositoryFromFS(url string) (*Repository, error) {
+func NewRepositoryFromFS(path string) (*Repository, error) {
 	repo := NewPlainRepository()
+	var err error
+	repo.Storage, err = seekable.NewFromPath(path)
 
-	path := strings.TrimPrefix(url, fileScheme)
-	dir, err := file.NewDir(path)
-	if err != nil {
-		return nil, err
-	}
-
-	packfile, err := dir.Packfile()
-	if err != nil {
-		return nil, err
-	}
-
-	idxfile, err := dir.Idxfile()
-	if err != nil {
-		// if there is no idx file, just keep on, we will manage to create one
-		// on the fly.
-		if err != file.ErrIdxNotFound {
-			return nil, err
-		}
-	}
-
-	repo.Storage, err = seekable.New(packfile, idxfile)
-
-	return repo, nil
-}
-
-const fileScheme = "file://"
-
-func isRemote(url string) bool {
-	return !strings.HasPrefix(url, fileScheme)
+	return repo, err
 }
 
 // NewPlainRepository creates a new repository without remotes

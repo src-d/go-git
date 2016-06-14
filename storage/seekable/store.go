@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v3/formats/file"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
 	"gopkg.in/src-d/go-git.v3/storage/seekable/internal/index"
 )
@@ -23,6 +24,30 @@ import (
 type ObjectStorage struct {
 	path  string
 	index index.Index
+}
+
+func NewFromPath(path string) (s *ObjectStorage, err error) {
+	dir, err := file.NewDir(path)
+	if err != nil {
+		return nil, err
+	}
+
+	packfile, err := dir.Packfile()
+	if err != nil {
+		return nil, err
+	}
+
+	idxfile, err := dir.Idxfile()
+	if err != nil {
+		// if there is no idx file, just keep on, we will manage to create one
+		// on the fly.
+		if err != file.ErrIdxNotFound {
+			return nil, err
+		}
+	}
+
+	return New(packfile, idxfile)
+
 }
 
 // New returns a new ObjectStorage for the packfile at path.
