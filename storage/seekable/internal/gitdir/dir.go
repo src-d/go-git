@@ -1,4 +1,4 @@
-package file
+package gitdir
 
 import (
 	"errors"
@@ -27,15 +27,15 @@ var (
 
 // The Dir type represents a local git repository on disk. This
 // type is not zero-value-safe, use the New function to initialize it.
-type Dir struct {
+type GitDir struct {
 	path string
 	refs map[string]core.Hash
 }
 
 // New returns a Dir value ready to be used. The path argument must be
 // an existing git repository directory (e.g. "/foo/bar/.git").
-func NewDir(path string) (*Dir, error) {
-	d := &Dir{}
+func New(path string) (*GitDir, error) {
+	d := &GitDir{}
 	var err error
 
 	d.path, err = cleanPath(path)
@@ -59,13 +59,13 @@ func cleanPath(path string) (string, error) {
 	return filepath.Clean(abs), nil
 }
 
-func (d *Dir) isInvalidPath() bool {
+func (d *GitDir) isInvalidPath() bool {
 	return !strings.HasSuffix(d.path, suffix)
 }
 
 // Refs scans the git directory collecting references, which it returns.
 // Symbolic references are resolved and included in the output.
-func (d *Dir) Refs() (map[string]core.Hash, error) {
+func (d *GitDir) Refs() (map[string]core.Hash, error) {
 	var err error
 
 	if err = d.initRefsFromPackedRefs(); err != nil {
@@ -80,7 +80,7 @@ func (d *Dir) Refs() (map[string]core.Hash, error) {
 }
 
 // Capabilities scans the git directory collection capabilities, which it returns.
-func (d *Dir) Capabilities() (*common.Capabilities, error) {
+func (d *GitDir) Capabilities() (*common.Capabilities, error) {
 	c := common.NewCapabilities()
 
 	err := d.addSymRefCapability(c)
@@ -88,7 +88,7 @@ func (d *Dir) Capabilities() (*common.Capabilities, error) {
 	return c, err
 }
 
-func (d *Dir) addSymRefCapability(cap *common.Capabilities) (err error) {
+func (d *GitDir) addSymRefCapability(cap *common.Capabilities) (err error) {
 	f, err := os.Open(filepath.Join(d.path, "HEAD"))
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ type ReadSeekCloser interface {
 }
 
 // Packfile returns the path of the packfile in the repository.
-func (d *Dir) Packfile() (string, error) {
+func (d *GitDir) Packfile() (string, error) {
 	p := d.pattern(true)
 
 	l, err := filepath.Glob(p)
@@ -140,7 +140,7 @@ func (d *Dir) Packfile() (string, error) {
 	return l[0], nil
 }
 
-func (d *Dir) pattern(isPackfile bool) string {
+func (d *GitDir) pattern(isPackfile bool) string {
 	// packfile pattern: d.path + /objects/pack/pack-40hexs.pack
 	//      idx pattern: d.path + /objects/pack/pack-40hexs.idx
 	base := filepath.Join(d.path, "objects")
@@ -161,7 +161,7 @@ func extension(isPackfile bool) string {
 const filePattern = "pack-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]"
 
 // Idxfile returns the path of the idx file in the repository.
-func (d *Dir) Idxfile() (string, error) {
+func (d *GitDir) Idxfile() (string, error) {
 	p := d.pattern(false)
 
 	l, err := filepath.Glob(p)

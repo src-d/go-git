@@ -1,4 +1,4 @@
-package file
+package gitdir
 
 import (
 	"bufio"
@@ -29,7 +29,7 @@ const (
 	symRefPrefix = "ref: "
 )
 
-func (d *Dir) initRefsFromPackedRefs() (err error) {
+func (d *GitDir) initRefsFromPackedRefs() (err error) {
 	d.refs = make(map[string]core.Hash)
 
 	path := filepath.Join(d.path, packedRefsPath)
@@ -59,7 +59,7 @@ func (d *Dir) initRefsFromPackedRefs() (err error) {
 }
 
 // process lines from a packed-refs file
-func (d *Dir) processLine(line string) error {
+func (d *GitDir) processLine(line string) error {
 	switch line[0] {
 	case '#': // comment - ignore
 		return nil
@@ -81,11 +81,11 @@ func (d *Dir) processLine(line string) error {
 	return nil
 }
 
-func (d *Dir) addRefsFromRefDir() error {
+func (d *GitDir) addRefsFromRefDir() error {
 	return d.walkTree("refs")
 }
 
-func (d *Dir) walkTree(relPath string) error {
+func (d *GitDir) walkTree(relPath string) error {
 	fs, err := ioutil.ReadDir(filepath.Join(d.path, relPath))
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (d *Dir) walkTree(relPath string) error {
 // ReadHashFile reads a single hash from a file.  If a symbolic
 // reference is found instead of a hash, the reference is resolved and
 // the proper hash is returned.
-func (d *Dir) readHashFile(path string) (core.Hash, error) {
+func (d *GitDir) readHashFile(path string) (core.Hash, error) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return core.ZeroHash, err
@@ -132,7 +132,7 @@ func isSymRef(contents string) bool {
 	return strings.HasPrefix(contents, symRefPrefix)
 }
 
-func (d *Dir) resolveSymRef(symRef string) (core.Hash, error) {
+func (d *GitDir) resolveSymRef(symRef string) (core.Hash, error) {
 	ref := strings.TrimPrefix(symRef, symRefPrefix)
 
 	hash, ok := d.refs[ref]

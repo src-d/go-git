@@ -1,4 +1,4 @@
-package file
+package gitdir
 
 import (
 	"os"
@@ -107,7 +107,7 @@ func (s *SuiteGitDir) TestNewDir(c *C) {
 	} {
 		com := Commentf("subtest %d", i)
 
-		d, err := NewDir(test.input)
+		d, err := New(test.input)
 		c.Assert(err, Equals, test.err, com)
 		if test.err == nil {
 			c.Assert(d.path, Equals, test.path, com)
@@ -180,11 +180,11 @@ func (s *SuiteGitDir) TestRefs(c *C) {
 	}
 }
 
-func (s *SuiteGitDir) newFixtureDir(c *C, fixName string) (*fixture, *Dir) {
+func (s *SuiteGitDir) newFixtureDir(c *C, fixName string) (*fixture, *GitDir) {
 	f, ok := s.fixtures[fixName]
 	c.Assert(ok, Equals, true)
 
-	d, err := NewDir(f.path)
+	d, err := New(f.path)
 	c.Assert(err, IsNil)
 
 	return &f, d

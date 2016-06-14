@@ -19,7 +19,7 @@ var dirFixtures = [...]struct {
 }{
 	{
 		name: "spinnaker",
-		tgz:  "formats/file/fixtures/spinnaker-gc.tgz",
+		tgz:  "storage/seekable/internal/gitdir/fixtures/spinnaker-gc.tgz",
 	},
 }
 
