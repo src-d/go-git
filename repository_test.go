@@ -73,7 +73,7 @@ func (s *SuiteRepository) TestNewSeekableRepository(c *C) {
 		c.Assert(err, IsNil, com)
 
 		err = repo.PullDefault()
-		c.Assert(err, IsNil, com)
+		c.Assert(err, ErrorMatches, `unable to find remote "origin"`)
 
 		c.Assert(repo.Storage, NotNil, com)
 		c.Assert(repo.Storage, FitsTypeOf, &seekable.ObjectStorage{}, com)

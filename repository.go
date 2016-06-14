@@ -32,66 +32,30 @@ type Repository struct {
 
 // NewRepository creates a new repository setting remote as default remote
 func NewRepository(url string, auth common.AuthMethod) (*Repository, error) {
-	var r *Remote
-	var err error
-
-	if auth == nil {
-		r, err = NewRemote(url)
-	} else {
-		r, err = NewAuthenticatedRemote(url, auth)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
 	repo := NewPlainRepository()
-	repo.Remotes[DefaultRemoteName] = r
 	repo.URL = url
+
+	if isRemote(url) {
+		r, err := NewAuthenticatedRemote(url, auth)
+		repo.Remotes[DefaultRemoteName] = r
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		repo.useLocalStorage(url)
+	}
 
 	return repo, nil
 }
 
-// NewPlainRepository creates a new repository without remotes
-func NewPlainRepository() *Repository {
-	return &Repository{
-		Remotes: map[string]*Remote{},
-		Storage: memory.NewObjectStorage(),
-	}
-}
-
-// Pull connect and fetch the given branch from the given remote, the branch
-// should be provided with the full path not only the abbreviation, eg.:
-// "refs/heads/master"
-func (r *Repository) Pull(remoteName, branch string) (err error) {
-	remote, ok := r.Remotes[remoteName]
-	if !ok {
-		return fmt.Errorf("unable to find remote %q", remoteName)
-	}
-
-	return r.setStorage(remote, branch)
-}
-
-func (r *Repository) setStorage(remote *Remote, branch string) error {
-	if isLocalRemote(remote.Endpoint) {
-		return r.useLocalStorage(remote.Endpoint)
-	}
-
-	return r.fillStorageUsingFetch(remote, branch)
-}
-
 const fileScheme = "file://"
 
-func isLocalRemote(endpoint common.Endpoint) bool {
-	if strings.HasPrefix(string(endpoint), fileScheme) {
-		return true
-	}
-
-	return false
+func isRemote(url string) bool {
+	return !strings.HasPrefix(url, fileScheme)
 }
 
-func (r *Repository) useLocalStorage(endpoint common.Endpoint) error {
-	path := strings.TrimPrefix(string(endpoint), fileScheme)
+func (r *Repository) useLocalStorage(url string) error {
+	path := strings.TrimPrefix(url, fileScheme)
 	dir, err := file.NewDir(path)
 	if err != nil {
 		return err
@@ -116,7 +80,23 @@ func (r *Repository) useLocalStorage(endpoint common.Endpoint) error {
 	return err
 }
 
-func (r *Repository) fillStorageUsingFetch(remote *Remote, branch string) (err error) {
+// NewPlainRepository creates a new repository without remotes
+func NewPlainRepository() *Repository {
+	return &Repository{
+		Remotes: map[string]*Remote{},
+		Storage: memory.NewObjectStorage(),
+	}
+}
+
+// Pull connect and fetch the given branch from the given remote, the branch
+// should be provided with the full path not only the abbreviation, eg.:
+// "refs/heads/master"
+func (r *Repository) Pull(remoteName, branch string) (err error) {
+	remote, ok := r.Remotes[remoteName]
+	if !ok {
+		return fmt.Errorf("unable to find remote %q", remoteName)
+	}
+
 	if err := remote.Connect(); err != nil {
 		return err
 	}
