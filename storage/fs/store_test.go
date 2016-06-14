@@ -1,4 +1,4 @@
-package seekable_test
+package fs_test
 
 import (
 	"os"
@@ -8,8 +8,8 @@ import (
 
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
+	"gopkg.in/src-d/go-git.v3/storage/fs"
 	"gopkg.in/src-d/go-git.v3/storage/memory"
-	"gopkg.in/src-d/go-git.v3/storage/seekable"
 
 	. "gopkg.in/check.v1"
 )
@@ -21,7 +21,7 @@ type SeekableSuite struct{}
 var _ = Suite(&SeekableSuite{})
 
 func (s *SeekableSuite) TestNewFailNoData(c *C) {
-	_, err := seekable.New("", "")
+	_, err := fs.New("", "")
 	c.Assert(err, ErrorMatches, ".* no such file or directory")
 }
 
@@ -47,7 +47,7 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 		lastDot := strings.LastIndex(packfilePath, ".")
 		idxPath := packfilePath[:lastDot] + ".idx"
 
-		sto, err := seekable.New(packfilePath, idxPath)
+		sto, err := fs.New(packfilePath, idxPath)
 		c.Assert(err, IsNil, com)
 
 		for _, typ := range [...]core.ObjectType{
@@ -103,7 +103,7 @@ func (s *SeekableSuite) TestIterCompareWithMemoryStorage(c *C) {
 		lastDot := strings.LastIndex(packfilePath, ".")
 		idxPath := packfilePath[:lastDot] + ".idx"
 
-		sto, err := seekable.New(packfilePath, idxPath)
+		sto, err := fs.New(packfilePath, idxPath)
 		c.Assert(err, IsNil, com)
 
 		for _, typ := range [...]core.ObjectType{
@@ -164,7 +164,7 @@ func (s *SeekableSuite) TestSet(c *C) {
 	lastDot := strings.LastIndex(path, ".")
 	idxPath := path[:lastDot] + ".idx"
 
-	sto, err := seekable.New(path, idxPath)
+	sto, err := fs.New(path, idxPath)
 	c.Assert(err, IsNil)
 
 	_, err = sto.Set(&memory.Object{})

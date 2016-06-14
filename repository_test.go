@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v3/clients/http"
 	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/storage/seekable"
+	"gopkg.in/src-d/go-git.v3/storage/fs"
 	"gopkg.in/src-d/go-git.v3/utils/tgz"
 
 	. "gopkg.in/check.v1"
@@ -19,7 +19,7 @@ var dirFixtures = [...]struct {
 }{
 	{
 		name: "spinnaker",
-		tgz:  "storage/seekable/internal/gitdir/fixtures/spinnaker-gc.tgz",
+		tgz:  "storage/fs/internal/gitdir/fixtures/spinnaker-gc.tgz",
 	},
 }
 
@@ -75,7 +75,7 @@ func (s *SuiteRepository) TestNewRepositoryFromFS(c *C) {
 		c.Assert(err, ErrorMatches, `unable to find remote "origin"`)
 
 		c.Assert(repo.Storage, NotNil, com)
-		c.Assert(repo.Storage, FitsTypeOf, &seekable.ObjectStorage{}, com)
+		c.Assert(repo.Storage, FitsTypeOf, &fs.ObjectStorage{}, com)
 	}
 }
 

@@ -1,4 +1,4 @@
-package seekable
+package fs
 
 import (
 	"fmt"
@@ -7,20 +7,12 @@ import (
 
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
-	"gopkg.in/src-d/go-git.v3/storage/seekable/internal/gitdir"
-	"gopkg.in/src-d/go-git.v3/storage/seekable/internal/index"
+	"gopkg.in/src-d/go-git.v3/storage/fs/internal/gitdir"
+	"gopkg.in/src-d/go-git.v3/storage/fs/internal/index"
 )
 
-// ObjectStorage is an implementation of core.ObjectStorage for seekable
-// packfiles.
-//
-// The objects in the packfile are not stored in memory, instead
-// every Get call will access the packfile, with some help from
-// the packfile index and the fact that is seekable to speed
-// things up.
-//
-// This means the memory footprint of this storage is much smaller
-// than a memory.ObjectStorage, but it will also be probably slower.
+// ObjectStorage is an implementation of core.ObjectStorage that
+// stores data on disk.
 type ObjectStorage struct {
 	path  string
 	index index.Index

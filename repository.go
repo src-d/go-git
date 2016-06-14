@@ -7,8 +7,8 @@ import (
 	"gopkg.in/src-d/go-git.v3/clients/common"
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
+	"gopkg.in/src-d/go-git.v3/storage/fs"
 	"gopkg.in/src-d/go-git.v3/storage/memory"
-	"gopkg.in/src-d/go-git.v3/storage/seekable"
 )
 
 var (
@@ -43,7 +43,7 @@ func NewRepository(url string, auth common.AuthMethod) (*Repository, error) {
 func NewRepositoryFromFS(path string) (*Repository, error) {
 	repo := NewPlainRepository()
 	var err error
-	repo.Storage, err = seekable.NewFromPath(path)
+	repo.Storage, err = fs.NewFromPath(path)
 
 	return repo, err
 }
