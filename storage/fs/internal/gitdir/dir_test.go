@@ -82,11 +82,10 @@ func (s *SuiteGitDir) TearDownSuite(c *C) {
 	}
 }
 
-func (s *SuiteGitDir) TestNewDir(c *C) {
+func (s *SuiteGitDir) TestNewErrors(c *C) {
 	for i, test := range [...]struct {
 		input string
 		err   error
-		path  string
 	}{
 		{
 			input: "",
@@ -101,17 +100,14 @@ func (s *SuiteGitDir) TestNewDir(c *C) {
 			input: "/tmp/foo",
 			err:   ErrBadGitDirName,
 		}, {
-			input: "/tmp/../tmp/foo/.git",
-			path:  "/tmp/foo/.git",
+			input: "./foo/.git",
+			err:   ErrNotFound,
 		},
 	} {
 		com := Commentf("subtest %d", i)
 
-		d, err := New(test.input)
+		_, err := New(test.input)
 		c.Assert(err, Equals, test.err, com)
-		if test.err == nil {
-			c.Assert(d.path, Equals, test.path, com)
-		}
 	}
 }
 

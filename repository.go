@@ -43,7 +43,7 @@ func NewRepository(url string, auth common.AuthMethod) (*Repository, error) {
 func NewRepositoryFromFS(path string) (*Repository, error) {
 	repo := NewPlainRepository()
 	var err error
-	repo.Storage, err = fs.NewFromPath(path)
+	repo.Storage, err = fs.New(path)
 
 	return repo, err
 }

@@ -18,35 +18,18 @@ type ObjectStorage struct {
 	index index.Index
 }
 
-func NewFromPath(path string) (s *ObjectStorage, err error) {
+// New returns a new ObjectStorage for the git directory at the specified path.
+func New(path string) (s *ObjectStorage, err error) {
 	dir, err := gitdir.New(path)
 	if err != nil {
 		return nil, err
 	}
 
-	packfile, err := dir.Packfile()
+	packfilePath, err := dir.Packfile()
 	if err != nil {
 		return nil, err
 	}
 
-	idxfile, err := dir.Idxfile()
-	if err != nil {
-		// if there is no idx file, just keep on, we will manage to create one
-		// on the fly.
-		if err != gitdir.ErrIdxNotFound {
-			return nil, err
-		}
-	}
-
-	return New(packfile, idxfile)
-
-}
-
-// New returns a new ObjectStorage for the packfile at path.
-//
-// If no idx reader is provided, the index will be generated
-// by reading the packfile.
-func New(packfilePath, idxPath string) (s *ObjectStorage, err error) {
 	packfile, err := os.Open(packfilePath)
 	if err != nil {
 		return nil, err
@@ -59,7 +42,16 @@ func New(packfilePath, idxPath string) (s *ObjectStorage, err error) {
 		}
 	}()
 
-	idxfile, err := os.Open(idxPath)
+	idxfilePath, err := dir.Idxfile()
+	if err != nil {
+		// if there is no idx file, just keep on, we will manage to create one
+		// on the fly.
+		if err != gitdir.ErrIdxNotFound {
+			return nil, err
+		}
+	}
+
+	idxfile, err := os.Open(idxfilePath)
 	if err != nil {
 		return nil, err
 	}

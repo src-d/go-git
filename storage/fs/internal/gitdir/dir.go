@@ -2,7 +2,6 @@ package gitdir
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -19,20 +18,32 @@ const (
 )
 
 var (
-	// ErrBadGitDirName is returned when the passed path is not a .git directory.
+	// ErrNotFound is returned by New when the path is not found.
+	ErrNotFound = errors.New("path not found")
+	// ErrBadGitDirName is returned by when the passed path is not a .git directory.
 	ErrBadGitDirName = errors.New(`Bad git dir name (must end in ".git")`)
-	// ErrIdxNotFound is returned when the idx file is not found on the repository.
+	// ErrIdxNotFound is returned by Idxfile when the idx file is not found on the
+	// repository.
 	ErrIdxNotFound = errors.New("idx file not found")
+	// ErrMoreThanOnePackfile is returned by Packfile when more than one packfile
+	// is found in the repository
+	ErrMoreThanOnePackfile = errors.New("more than one packfile found")
+	// ErrPackfileNotFound is returned by Packfile when the packfile is not found
+	// on the repository.
+	ErrPackfileNotFound = errors.New("packfile not found")
+	// ErrMoreThanOneIdxfile is returned by Idxfile when more than one idxfile
+	// is found in the repository
+	ErrMoreThanOneIdxfile = errors.New("more than one idxfile found")
 )
 
-// The Dir type represents a local git repository on disk. This
+// The GitDir type represents a local git repository on disk. This
 // type is not zero-value-safe, use the New function to initialize it.
 type GitDir struct {
 	path string
 	refs map[string]core.Hash
 }
 
-// New returns a Dir value ready to be used. The path argument must be
+// New returns a GitDir value ready to be used. The path argument must be
 // an existing git repository directory (e.g. "/foo/bar/.git").
 func New(path string) (*GitDir, error) {
 	d := &GitDir{}
@@ -45,6 +56,13 @@ func New(path string) (*GitDir, error) {
 
 	if d.isInvalidPath() {
 		return nil, ErrBadGitDirName
+	}
+
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrNotFound
+		}
+		return nil, err
 	}
 
 	return d, nil
@@ -130,11 +148,11 @@ func (d *GitDir) Packfile() (string, error) {
 	}
 
 	if len(l) == 0 {
-		return "", fmt.Errorf("packfile not found")
+		return "", ErrPackfileNotFound
 	}
 
 	if len(l) > 1 {
-		return "", fmt.Errorf("found more than one packfile")
+		return "", ErrMoreThanOnePackfile
 	}
 
 	return l[0], nil
@@ -174,7 +192,7 @@ func (d *GitDir) Idxfile() (string, error) {
 	}
 
 	if len(l) > 1 {
-		return "", fmt.Errorf("found more than one idxfile")
+		return "", ErrMoreThanOneIdxfile
 	}
 
 	return l[0], nil
