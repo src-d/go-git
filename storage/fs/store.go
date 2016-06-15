@@ -2,7 +2,6 @@ package fs
 
 import (
 	"fmt"
-	"io"
 	"os"
 
 	"gopkg.in/src-d/go-git.v3/core"
@@ -11,82 +10,61 @@ import (
 	"gopkg.in/src-d/go-git.v3/storage/fs/internal/index"
 )
 
-// ObjectStorage is an implementation of core.ObjectStorage that
-// stores data on disk.
+// ObjectStorage is an implementation of core.ObjectStorage that stores
+// data on disk in the standard git format (this is, the .git directory).
+//
+// Zero values of this type are not safe to use, see the New function below.
+//
+// Currently only reads are supported, no writting.
+//
+// Also values from this type are not yet able to track changes on disk, this is,
+// if the git repository changes, the fields of this value will be outdated.
 type ObjectStorage struct {
-	path  string
+	dir   *gitdir.GitDir
 	index index.Index
 }
 
 // New returns a new ObjectStorage for the git directory at the specified path.
-func New(path string) (s *ObjectStorage, err error) {
-	dir, err := gitdir.New(path)
+func New(path string) (*ObjectStorage, error) {
+	sto := &ObjectStorage{}
+
+	var err error
+	sto.dir, err = gitdir.New(path)
 	if err != nil {
 		return nil, err
 	}
 
-	packfilePath, err := dir.Packfile()
+	idxfile, err := sto.dir.Idxfile()
 	if err != nil {
 		return nil, err
 	}
 
-	packfile, err := os.Open(packfilePath)
-	if err != nil {
-		return nil, err
-	}
+	sto.index, err = buildIndex(idxfile)
 
-	defer func() {
-		errClose := packfile.Close()
-		if err == nil {
-			err = errClose
-		}
-	}()
-
-	idxfilePath, err := dir.Idxfile()
-	if err != nil {
-		// if there is no idx file, just keep on, we will manage to create one
-		// on the fly.
-		if err != gitdir.ErrIdxNotFound {
-			return nil, err
-		}
-	}
-
-	idxfile, err := os.Open(idxfilePath)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		errClose := idxfile.Close()
-		if err == nil {
-			err = errClose
-		}
-	}()
-
-	index, err := buildIndex(packfile, idxfile)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ObjectStorage{
-		path:  packfilePath,
-		index: index,
-	}, nil
+	return sto, nil
 }
 
-func buildIndex(packfile io.Reader, idx io.Reader) (index.Index, error) {
-	if idx != nil {
-		return index.NewFromIdx(idx)
+func buildIndex(path string) (index.Index, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
 	}
 
-	return index.NewFromPackfile(packfile)
+	defer func() {
+		errClose := f.Close()
+		if err == nil {
+			err = errClose
+		}
+	}()
+
+	return index.NewFromIdx(f)
 }
 
 // Set adds a new object to the storage.
 // This method always returns an error as this particular
 // implementation is read only.
 func (s *ObjectStorage) Set(core.Object) (core.Hash, error) {
-	return core.ZeroHash, fmt.Errorf("set operation not permitted")
+	return core.ZeroHash, fmt.Errorf("not implemented yet")
 }
 
 // Get returns the object with the given hash, by searching the
@@ -97,7 +75,12 @@ func (s *ObjectStorage) Get(h core.Hash) (core.Object, error) {
 		return nil, err
 	}
 
-	f, err := os.Open(s.path)
+	path, err := s.dir.Packfile()
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +126,12 @@ func (s *ObjectStorage) ByHash(hash core.Hash) (core.Object, error) {
 // Given the nature of this storage, it also returns objects that
 // have not yet been seen.
 func (s *ObjectStorage) ByOffset(offset int64) (core.Object, error) {
-	f, err := os.Open(s.path)
+	path, err := s.dir.Packfile()
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}

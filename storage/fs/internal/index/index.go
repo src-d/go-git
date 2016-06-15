@@ -12,11 +12,6 @@ import (
 // the packfile.
 type Index map[core.Hash]int64
 
-// NewFromPackfile returns a new index from a packfile file reader.
-func NewFromPackfile(packfile io.Reader) (Index, error) {
-	return nil, fmt.Errorf("not implemented yet")
-}
-
 // NewFromIdx returns a new index from an idx file reader.
 func NewFromIdx(r io.Reader) (Index, error) {
 	d := idxfile.NewDecoder(r)

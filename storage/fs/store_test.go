@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"testing"
 
 	"gopkg.in/src-d/go-git.v3/core"
@@ -18,29 +19,80 @@ import (
 
 func Test(t *testing.T) { TestingT(t) }
 
-type SeekableSuite struct{}
+type FsSuite struct{}
 
-var _ = Suite(&SeekableSuite{})
+var _ = Suite(&FsSuite{})
 
-func (s *SeekableSuite) TestNewFailNoData(c *C) {
-	_, err := fs.New("not_found/.git")
-	c.Assert(err, Equals, gitdir.ErrNotFound)
+var fixtures map[string]string // id to git dir paths (see initFixtures below)
 
-	_, err = fs.New("not_found")
-	c.Assert(err, Equals, gitdir.ErrBadGitDirName)
+func fixture(id string, c *C) string {
+	path, ok := fixtures[id]
+	c.Assert(ok, Equals, true, Commentf("fixture %q not found", id))
+
+	return path
 }
 
-func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
-	for i, tgzPath := range [...]string{
-		"internal/gitdir/fixtures/spinnaker-gc.tgz",
-	} {
-		com := Commentf("at subtest %d, (tgz = %q)", i, tgzPath)
+var initFixtures = [...]struct {
+	id  string
+	tgz string
+}{
+	{
+		id:  "spinnaker",
+		tgz: "internal/gitdir/fixtures/spinnaker-gc.tgz",
+	}, {
+		id:  "spinnaker-no-idx",
+		tgz: "internal/gitdir/fixtures/spinnaker-no-idx.tgz",
+	}, {
+		id:  "binary-relations",
+		tgz: "internal/gitdir/fixtures/alcortesm-binary-relations.tgz",
+	},
+}
 
-		path, err := tgz.Extract(tgzPath)
-		c.Assert(err, IsNil, com)
-		com = Commentf("at subtest %d, (tgz = %q, extracted to %q)",
-			i, tgzPath, path)
-		path = path + "/.git"
+func (s *FsSuite) SetUpSuite(c *C) {
+	fixtures = make(map[string]string, len(initFixtures))
+	for _, init := range initFixtures {
+		path, err := tgz.Extract(init.tgz)
+		c.Assert(err, IsNil, Commentf("error extracting %s\n", init.tgz))
+		fixtures[init.id] = path
+	}
+}
+
+func (s *FsSuite) TearDownSuite(c *C) {
+	for _, v := range fixtures {
+		err := os.RemoveAll(v)
+		c.Assert(err, IsNil, Commentf("error removing fixture %q\n", v))
+	}
+}
+
+func (s *FsSuite) TestNewErrorNotFound(c *C) {
+	_, err := fs.New("not_found/.git")
+	c.Assert(err, Equals, gitdir.ErrNotFound)
+}
+
+func (s *FsSuite) TestNewIdxError(c *C) {
+	path := fixture("spinnaker-no-idx", c)
+	_, err := fs.New(path)
+	c.Assert(err, Equals, gitdir.ErrIdxNotFound)
+}
+
+func (s *FsSuite) TestGetHashNotFound(c *C) {
+	path := fixture("spinnaker", c)
+
+	sto, err := fs.New(path)
+	c.Assert(err, IsNil)
+
+	_, err = sto.Get(core.ZeroHash)
+	c.Assert(err, Equals, core.ErrObjectNotFound)
+}
+
+func (s *FsSuite) TestGetCompareWithMemoryStorage(c *C) {
+	for i, fixId := range [...]string{
+		"spinnaker",
+		"binary-relations",
+	} {
+		path := fixture(fixId, c)
+		com := Commentf("at subtest %d, (fixture id = %q, extracted to %q)",
+			i, fixId, path)
 
 		memSto, err := memStorageFromGitDir(path)
 		c.Assert(err, IsNil, com)
@@ -52,9 +104,6 @@ func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
 		c.Assert(err, IsNil, com)
 		c.Assert(equal, Equals, true,
 			Commentf("%s - %s\n", com.CheckCommentString(), reason))
-
-		err = os.RemoveAll(path)
-		c.Assert(err, IsNil, com)
 	}
 }
 
@@ -64,7 +113,6 @@ func memStorageFromGitDir(path string) (*memory.ObjectStorage, error) {
 		return nil, err
 	}
 
-	fmt.Println(path)
 	packfilePath, err := dir.Packfile()
 	if err != nil {
 		return nil, err
@@ -119,8 +167,6 @@ func equalsStorages(a, b core.ObjectStorage) (bool, string, error) {
 				return equal, reason, err
 			}
 		}
-
-		iter.Close()
 	}
 
 	return true, "", nil
@@ -159,85 +205,20 @@ func equalsObjects(a, b core.Object) (bool, string, error) {
 	return true, "", nil
 }
 
-/*
-func (s *SeekableSuite) TestGetCompareWithMemoryStorage(c *C) {
-	for i, packfilePath := range [...]string{
-		"../../formats/packfile/fixtures/spinnaker-spinnaker.pack",
-		"../../formats/packfile/fixtures/alcortesm-binary-relations.pack",
-		"../../formats/packfile/fixtures/git-fixture.ref-delta",
+func (s *FsSuite) TestIterCompareWithMemoryStorage(c *C) {
+	for i, fixId := range [...]string{
+		"spinnaker",
+		"binary-relations",
 	} {
-		com := Commentf("at subtest %d", i)
 
-		memSto := memory.NewObjectStorage()
-		f, err := os.Open(packfilePath)
+		path := fixture(fixId, c)
+		com := Commentf("at subtest %d, (fixture id = %q, extracted to %q)",
+			i, fixId, path)
+
+		memSto, err := memStorageFromDirPath(path)
 		c.Assert(err, IsNil, com)
 
-		d := packfile.NewDecoder(f)
-		_, err = d.Decode(memSto)
-		c.Assert(err, IsNil, com)
-
-		err = f.Close()
-		c.Assert(err, IsNil, com)
-
-		lastDot := strings.LastIndex(packfilePath, ".")
-		idxPath := packfilePath[:lastDot] + ".idx"
-
-		sto, err := fs.New(packfilePath, idxPath)
-		c.Assert(err, IsNil, com)
-
-		for _, typ := range [...]core.ObjectType{
-			core.CommitObject,
-			core.TreeObject,
-			core.BlobObject,
-			core.TagObject,
-		} {
-			iter, err := memSto.Iter(typ)
-			c.Assert(err, IsNil, com)
-
-			for {
-				memObject, err := iter.Next()
-				if err != nil {
-					iter.Close()
-					break
-				}
-
-				obt, err := sto.Get(memObject.Hash())
-				c.Assert(err, IsNil, com)
-
-				c.Assert(obt.Type(), Equals, memObject.Type(), com)
-				c.Assert(obt.Size(), Equals, memObject.Size(), com)
-				if memObject.Content() != nil {
-					c.Assert(obt.Content(), DeepEquals, memObject.Content(),
-						com)
-				}
-				c.Assert(obt.Hash(), Equals, memObject.Hash(), com)
-			}
-
-			iter.Close()
-		}
-	}
-}
-func (s *SeekableSuite) TestIterCompareWithMemoryStorage(c *C) {
-	for i, packfilePath := range [...]string{
-		"../../formats/packfile/fixtures/spinnaker-spinnaker.pack",
-		"../../formats/packfile/fixtures/alcortesm-binary-relations.pack",
-		"../../formats/packfile/fixtures/git-fixture.ref-delta",
-	} {
-		com := Commentf("at subtest %d", i)
-
-		memSto := memory.NewObjectStorage()
-		f, err := os.Open(packfilePath)
-		c.Assert(err, IsNil, com)
-		d := packfile.NewDecoder(f)
-		_, err = d.Decode(memSto)
-		c.Assert(err, IsNil, com)
-		err = f.Close()
-		c.Assert(err, IsNil, com)
-
-		lastDot := strings.LastIndex(packfilePath, ".")
-		idxPath := packfilePath[:lastDot] + ".idx"
-
-		sto, err := fs.New(packfilePath, idxPath)
+		fsSto, err := fs.New(path)
 		c.Assert(err, IsNil, com)
 
 		for _, typ := range [...]core.ObjectType{
@@ -250,14 +231,44 @@ func (s *SeekableSuite) TestIterCompareWithMemoryStorage(c *C) {
 			memObjs, err := iterToSortedSlice(memSto, typ)
 			c.Assert(err, IsNil, com)
 
-			seekableObjs, err := iterToSortedSlice(sto, typ)
+			fsObjs, err := iterToSortedSlice(fsSto, typ)
 			c.Assert(err, IsNil, com)
 
-			for i, exp := range memObjs {
-				c.Assert(seekableObjs[i].Hash(), Equals, exp.Hash(), com)
+			for i, o := range memObjs {
+				c.Assert(fsObjs[i].Hash(), Equals, o.Hash(), com)
 			}
 		}
 	}
+}
+
+func memStorageFromDirPath(path string) (*memory.ObjectStorage, error) {
+	dir, err := gitdir.New(path)
+	if err != nil {
+		return nil, err
+	}
+
+	packfilePath, err := dir.Packfile()
+	if err != nil {
+		return nil, err
+	}
+
+	sto := memory.NewObjectStorage()
+	f, err := os.Open(packfilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	d := packfile.NewDecoder(f)
+	_, err = d.Decode(sto)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = f.Close(); err != nil {
+		return nil, err
+	}
+
+	return sto, nil
 }
 
 func iterToSortedSlice(storage core.ObjectStorage, typ core.ObjectType) ([]core.Object,
@@ -278,8 +289,6 @@ func iterToSortedSlice(storage core.ObjectStorage, typ core.ObjectType) ([]core.
 		r = append(r, obj)
 	}
 
-	iter.Close()
-
 	sort.Sort(byHash(r))
 
 	return r, nil
@@ -293,15 +302,45 @@ func (a byHash) Less(i, j int) bool {
 	return a[i].Hash().String() < a[j].Hash().String()
 }
 
-func (s *SeekableSuite) TestSet(c *C) {
-	path := "../../formats/packfile/fixtures/spinnaker-spinnaker.pack"
-	lastDot := strings.LastIndex(path, ".")
-	idxPath := path[:lastDot] + ".idx"
+func (s *FsSuite) TestSet(c *C) {
+	path := fixture("spinnaker", c)
 
-	sto, err := fs.New(path, idxPath)
+	sto, err := fs.New(path)
 	c.Assert(err, IsNil)
 
 	_, err = sto.Set(&memory.Object{})
-	c.Assert(err, ErrorMatches, "set operation not permitted")
+	c.Assert(err, ErrorMatches, "not implemented yet")
 }
-*/
+
+func (s *FsSuite) TestByHash(c *C) {
+	path := fixture("spinnaker", c)
+
+	sto, err := fs.New(path)
+	c.Assert(err, IsNil)
+
+	for _, typ := range [...]core.ObjectType{
+		core.CommitObject,
+		core.TreeObject,
+		core.BlobObject,
+		core.TagObject,
+	} {
+
+		iter, err := sto.Iter(typ)
+		c.Assert(err, IsNil)
+
+		for {
+			o, err := iter.Next()
+			if err != nil {
+				iter.Close()
+				break
+			}
+
+			oByHash, err := sto.ByHash(o.Hash())
+			c.Assert(err, IsNil)
+
+			equal, reason, err := equalsObjects(o, oByHash)
+			c.Assert(err, IsNil)
+			c.Assert(equal, Equals, true, Commentf("%s", reason))
+		}
+	}
+}

@@ -88,19 +88,10 @@ func (s *SuiteGitDir) TestNewErrors(c *C) {
 		err   error
 	}{
 		{
-			input: "",
-			err:   ErrBadGitDirName,
+			input: "./tmp/foo",
+			err:   ErrNotFound,
 		}, {
-			input: "foo",
-			err:   ErrBadGitDirName,
-		}, {
-			input: "/",
-			err:   ErrBadGitDirName,
-		}, {
-			input: "/tmp/foo",
-			err:   ErrBadGitDirName,
-		}, {
-			input: "./foo/.git",
+			input: "./tmp/foo/.git",
 			err:   ErrNotFound,
 		},
 	} {

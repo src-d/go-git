@@ -20,8 +20,6 @@ const (
 var (
 	// ErrNotFound is returned by New when the path is not found.
 	ErrNotFound = errors.New("path not found")
-	// ErrBadGitDirName is returned by when the passed path is not a .git directory.
-	ErrBadGitDirName = errors.New(`Bad git dir name (must end in ".git")`)
 	// ErrIdxNotFound is returned by Idxfile when the idx file is not found on the
 	// repository.
 	ErrIdxNotFound = errors.New("idx file not found")
@@ -54,10 +52,6 @@ func New(path string) (*GitDir, error) {
 		return nil, err
 	}
 
-	if d.isInvalidPath() {
-		return nil, ErrBadGitDirName
-	}
-
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return nil, ErrNotFound
@@ -74,11 +68,13 @@ func cleanPath(path string) (string, error) {
 		return "", err
 	}
 
-	return filepath.Clean(abs), nil
-}
+	abs = filepath.Clean(abs)
 
-func (d *GitDir) isInvalidPath() bool {
-	return !strings.HasSuffix(d.path, suffix)
+	if !strings.HasSuffix(abs, suffix) {
+		abs = filepath.Join(abs, suffix)
+	}
+
+	return abs, nil
 }
 
 // Refs scans the git directory collecting references, which it returns.

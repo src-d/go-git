@@ -3,7 +3,6 @@ package git
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"gopkg.in/src-d/go-git.v3/clients/http"
 	"gopkg.in/src-d/go-git.v3/core"
@@ -40,7 +39,7 @@ func (s *SuiteRepository) SetUpSuite(c *C) {
 		path, err := tgz.Extract(fix.tgz)
 		c.Assert(err, IsNil, com)
 
-		s.dirFixturePaths[fix.name] = filepath.Join(path, ".git")
+		s.dirFixturePaths[fix.name] = path
 	}
 }
 
