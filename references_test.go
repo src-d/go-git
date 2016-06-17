@@ -40,7 +40,7 @@ var referencesTests = [...]struct {
 	repo   string
 	commit string
 	path   string
-	// exp output data form the revlist
+	// expected output data form the revlist
 	revs []string
 }{
 	// Tyba git-fixture

@@ -60,7 +60,6 @@ func readTypeAndLength(packfile io.Reader) (core.ObjectType, int64, error) {
 	}
 
 	typ := parseType(buf[0])
-
 	length, err := readLength(buf[0], packfile)
 
 	return typ, length, err
@@ -153,6 +152,7 @@ func inflate(r io.Reader, w io.Writer) (err error) {
 	}()
 
 	_, err = io.Copy(w, zr)
+
 	return err
 }
 

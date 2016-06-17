@@ -23,6 +23,7 @@ func (t *ReadCounter) Read(p []byte) (n int, err error) {
 	}
 
 	t.count += int64(n)
+
 	return n, err
 }
 
@@ -39,6 +40,7 @@ func (t *ReadCounter) ReadByte() (c byte, err error) {
 	}
 
 	t.count++
+
 	return p[0], nil
 }
 
