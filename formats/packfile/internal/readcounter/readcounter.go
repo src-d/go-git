@@ -5,13 +5,13 @@ import (
 	"io"
 )
 
-// Tracker is a reader that keeps track of the number of bytes readed.
+// ReadCounter is a reader that keeps track of the number of bytes readed.
 type ReadCounter struct {
 	io.Reader
 	count int64
 }
 
-// NewTracker returns a new tracker for the given stream r.
+// New returns a new tracker for the given stream r.
 func New(r io.Reader) *ReadCounter {
 	return &ReadCounter{Reader: r, count: 0}
 }
@@ -26,6 +26,7 @@ func (t *ReadCounter) Read(p []byte) (n int, err error) {
 	return n, err
 }
 
+// ReadByte reads a byte from the readcounter.
 func (t *ReadCounter) ReadByte() (c byte, err error) {
 	var p [1]byte
 	n, err := t.Reader.Read(p[:])
@@ -41,7 +42,7 @@ func (t *ReadCounter) ReadByte() (c byte, err error) {
 	return p[0], nil
 }
 
-// Position returns the number of bytes read so far.
+// Count returns the number of bytes read so far.
 func (t *ReadCounter) Count() int64 {
 	return t.count
 }

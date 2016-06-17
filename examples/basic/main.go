@@ -15,7 +15,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := r.PullDefault(); err != nil {
+	if err = r.PullDefault(); err != nil {
 		panic(err)
 	}
 

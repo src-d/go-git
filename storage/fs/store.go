@@ -41,7 +41,7 @@ func New(path string) (*ObjectStorage, error) {
 
 	s.index, err = buildIndex(idxfile)
 
-	return s, nil
+	return s, err
 }
 
 func buildIndex(path string) (index.Index, error) {

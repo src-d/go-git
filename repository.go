@@ -77,7 +77,7 @@ func (r *Repository) Pull(remoteName, branch string) (err error) {
 		return fmt.Errorf("unable to find remote %q", remoteName)
 	}
 
-	if err := remote.Connect(); err != nil {
+	if err = remote.Connect(); err != nil {
 		return err
 	}
 
