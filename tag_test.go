@@ -25,7 +25,7 @@ var tagFixtures = []packedFixture{
 
 var tagTests = []struct {
 	repo string                 // the repo name in the test suite's map of fixtures
-	tags map[string]expectedTag // the exp tags to test, mapped by tag hash
+	tags map[string]expectedTag // the expected tags to test, mapped by tag hash
 }{
 	// https://api.github.com/repos/spinnaker/spinnaker/git/tags/TAGHASH
 	{"https://github.com/spinnaker/spinnaker.git", map[string]expectedTag{
@@ -166,7 +166,7 @@ func testTagIter(c *C, iter *TagIter, tags map[string]expectedTag, com string) {
 		c.Assert(tag.Hash.IsZero(), Equals, false)
 
 		exp, ok := tags[tag.Hash.String()]
-		c.Assert(ok, Equals, true, Commentf("%sunexp tag hash=%v", com, tag.Hash))
+		c.Assert(ok, Equals, true, Commentf("%sunexpected tag hash=%v", com, tag.Hash))
 
 		testTagExpected(c, tag, tag.Hash, exp, com)
 	}
