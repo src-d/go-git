@@ -58,7 +58,7 @@ func (s *BlameCommon) mockBlame(t blameTest, c *C) (blame *Blame) {
 	lines, err := f.Lines()
 	c.Assert(err, IsNil)
 	c.Assert(len(t.blames), Equals, len(lines), Commentf(
-		"repo=%s, path=%s, rev=%s: the number of lines in the file and the number of exp blames differ (len(blames)=%d, len(lines)=%d)\nblames=%#q\nlines=%#q", t.repo, t.path, t.rev, len(t.blames), len(lines), t.blames, lines))
+		"repo=%s, path=%s, rev=%s: the number of lines in the file and the number of expected blames differ (len(blames)=%d, len(lines)=%d)\nblames=%#q\nlines=%#q", t.repo, t.path, t.rev, len(t.blames), len(lines), t.blames, lines))
 
 	blamedLines := make([]*line, 0, len(t.blames))
 	for i := range t.blames {
