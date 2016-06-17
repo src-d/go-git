@@ -2,7 +2,6 @@ package gitdir
 
 import (
 	"errors"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -41,8 +40,10 @@ type GitDir struct {
 	refs map[string]core.Hash
 }
 
-// New returns a GitDir value ready to be used. The path argument must be
-// an existing git repository directory (e.g. "/foo/bar/.git").
+// New returns a GitDir value ready to be used. The path argument must
+// be an existing git repository directory (e.g. "/foo/bar/.git") or the
+// directory inmediately above it (e.g. "/foo/bar" given that
+// "/foo/bar/.git" exists). Relative and absolute paths are allowed.
 func New(path string) (*GitDir, error) {
 	d := &GitDir{}
 	var err error
@@ -82,7 +83,9 @@ func cleanPath(path string) (string, error) {
 func (d *GitDir) Refs() (map[string]core.Hash, error) {
 	var err error
 
-	if err = d.initRefsFromPackedRefs(); err != nil {
+	d.refs = make(map[string]core.Hash)
+
+	if err = d.addRefsFromPackedRefs(); err != nil {
 		return nil, err
 	}
 
@@ -119,39 +122,33 @@ func (d *GitDir) addSymRefCapability(cap *common.Capabilities) (err error) {
 	if err != nil {
 		return err
 	}
-	contents := strings.TrimSpace(string(b))
+	data := strings.TrimSpace(string(b))
 
 	c := "symref"
-	ref := strings.TrimPrefix(contents, symRefPrefix)
+	ref := strings.TrimPrefix(data, symRefPrefix)
 	cap.Set(c, "HEAD:"+ref)
 
 	return nil
-}
-
-// ReadSeekCloser is an io.ReadSeeker with a Close method.
-type ReadSeekCloser interface {
-	io.ReadSeeker
-	Close() error
 }
 
 // Packfile returns the path of the packfile in the repository.
 func (d *GitDir) Packfile() (string, error) {
 	p := d.pattern(true)
 
-	l, err := filepath.Glob(p)
+	list, err := filepath.Glob(p)
 	if err != nil {
 		return "", err
 	}
 
-	if len(l) == 0 {
+	if len(list) == 0 {
 		return "", ErrPackfileNotFound
 	}
 
-	if len(l) > 1 {
+	if len(list) > 1 {
 		return "", ErrMoreThanOnePackfile
 	}
 
-	return l[0], nil
+	return list[0], nil
 }
 
 func (d *GitDir) pattern(isPackfile bool) string {
@@ -178,18 +175,18 @@ const filePattern = "pack-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-
 func (d *GitDir) Idxfile() (string, error) {
 	p := d.pattern(false)
 
-	l, err := filepath.Glob(p)
+	list, err := filepath.Glob(p)
 	if err != nil {
 		return "", err
 	}
 
-	if len(l) == 0 {
+	if len(list) == 0 {
 		return "", ErrIdxNotFound
 	}
 
-	if len(l) > 1 {
+	if len(list) > 1 {
 		return "", ErrMoreThanOneIdxfile
 	}
 
-	return l[0], nil
+	return list[0], nil
 }

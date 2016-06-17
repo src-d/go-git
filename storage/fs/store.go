@@ -18,7 +18,7 @@ import (
 // Currently only reads are supported, no writting.
 //
 // Also values from this type are not yet able to track changes on disk, this is,
-// if the git repository changes, the fields of this value will be outdated.
+// Gitdir values will get outdated as soon as repositories change on disk.
 type ObjectStorage struct {
 	dir   *gitdir.GitDir
 	index index.Index
@@ -26,22 +26,22 @@ type ObjectStorage struct {
 
 // New returns a new ObjectStorage for the git directory at the specified path.
 func New(path string) (*ObjectStorage, error) {
-	sto := &ObjectStorage{}
+	s := &ObjectStorage{}
 
 	var err error
-	sto.dir, err = gitdir.New(path)
+	s.dir, err = gitdir.New(path)
 	if err != nil {
 		return nil, err
 	}
 
-	idxfile, err := sto.dir.Idxfile()
+	idxfile, err := s.dir.Idxfile()
 	if err != nil {
 		return nil, err
 	}
 
-	sto.index, err = buildIndex(idxfile)
+	s.index, err = buildIndex(idxfile)
 
-	return sto, nil
+	return s, nil
 }
 
 func buildIndex(path string) (index.Index, error) {
@@ -60,15 +60,15 @@ func buildIndex(path string) (index.Index, error) {
 	return index.NewFromIdx(f)
 }
 
-// Set adds a new object to the storage.
-// This method always returns an error as this particular
-// implementation is read only.
+// Set adds a new object to the storage. As this functionality is not
+// yet supported, this method always returns a "not implemented yet"
+// error an zero hash.
 func (s *ObjectStorage) Set(core.Object) (core.Hash, error) {
 	return core.ZeroHash, fmt.Errorf("not implemented yet")
 }
 
-// Get returns the object with the given hash, by searching the
-// packfile.
+// Get returns the object with the given hash, by searching for it in
+// the packfile.
 func (s *ObjectStorage) Get(h core.Hash) (core.Object, error) {
 	offset, err := s.index.Get(h)
 	if err != nil {

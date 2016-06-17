@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v3/clients/common"
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/utils/tgz"
+
+	. "gopkg.in/check.v1"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -196,61 +197,53 @@ func (s *SuiteGitDir) TestCapabilities(c *C) {
 }
 
 func (s *SuiteGitDir) TestPackfile(c *C) {
-	for _, test := range [...]struct {
-		fixture string
-		err     string // error regexp
-	}{
-		{
-			fixture: "spinnaker",
-		}, {
-			fixture: "no-packfile",
-			err:     "packfile not found",
-		},
-	} {
-		s.checkFile(c, true, test.fixture, test.err)
+	packfile := func(d *GitDir) (string, error) {
+		return d.Packfile()
 	}
-}
-
-func (s *SuiteGitDir) TestIdxfile(c *C) {
+	idxfile := func(d *GitDir) (string, error) {
+		return d.Idxfile()
+	}
 	for _, test := range [...]struct {
 		fixture string
+		fn      getPathFn
 		err     string // error regexp
 	}{
 		{
 			fixture: "spinnaker",
+			fn:      packfile,
+		}, {
+			fixture: "spinnaker",
+			fn:      idxfile,
 		}, {
 			fixture: "no-packfile",
+			fn:      packfile,
+			err:     "packfile not found",
+		}, {
+			fixture: "no-packfile",
+			fn:      idxfile,
 			err:     "idx file not found",
 		},
 	} {
-		s.checkFile(c, false, test.fixture, test.err)
+		fix, dir := s.newFixtureDir(c, test.fixture)
+
+		path, err := test.fn(dir)
+
+		if test.err != "" {
+			c.Assert(err, ErrorMatches, test.err)
+		} else {
+			c.Assert(err, IsNil)
+
+			rel, err := filepath.Rel(dir.path, path)
+			c.Assert(err, IsNil)
+
+			c.Assert(noExt(rel), Equals, noExt(fix.packfile))
+		}
 	}
 }
 
-func (s *SuiteGitDir) checkFile(c *C, isPackfile bool,
-	fixtureName string, expectedErr string) {
-
-	fix, dir := s.newFixtureDir(c, fixtureName)
-
-	var pakPath string
-	var fixPath string
-	var err error
-	if isPackfile {
-		pakPath, err = dir.Packfile()
-		fixPath = fix.packfile
-	} else {
-		pakPath, err = dir.Idxfile()
-		fixPath = fix.idxfile
-	}
-
-	if expectedErr != "" {
-		c.Assert(err, ErrorMatches, expectedErr)
-	} else {
-		c.Assert(err, IsNil)
-
-		rel, err := filepath.Rel(dir.path, pakPath)
-		c.Assert(err, IsNil)
-
-		c.Assert(rel, Equals, fixPath)
-	}
+func noExt(path string) string {
+	ext := filepath.Ext(path)
+	return path[0 : len(path)-len(ext)]
 }
+
+type getPathFn func(*GitDir) (string, error)

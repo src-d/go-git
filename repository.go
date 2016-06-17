@@ -40,8 +40,20 @@ func NewRepository(url string, auth common.AuthMethod) (*Repository, error) {
 	return repo, nil
 }
 
+// NewRepositoryFromFS creates a new repository from an standard git
+// repository on disk.
+//
+// Repositories created like this don't hold a local copy of the
+// original repository objects, instead all queries are resolved by
+// looking at the original repository packfile. This is very cheap in
+// terms of memory and allows to process repositories bigger than your
+// memory.
+//
+// To be able to use git repositories this way, you must run "git gc" on
+// them beforehand.
 func NewRepositoryFromFS(path string) (*Repository, error) {
 	repo := NewPlainRepository()
+
 	var err error
 	repo.Storage, err = fs.New(path)
 
@@ -90,11 +102,9 @@ func (r *Repository) Pull(remoteName, branch string) (err error) {
 	defer checkClose(reader, &err)
 
 	d := packfile.NewDecoder(reader)
-	if _, err = d.Decode(r.Storage); err != nil {
-		return err
-	}
+	_, err = d.Decode(r.Storage)
 
-	return nil
+	return err
 }
 
 // PullDefault like Pull but retrieve the default branch from the default remote

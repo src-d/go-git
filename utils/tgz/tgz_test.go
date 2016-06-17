@@ -22,9 +22,6 @@ func (s *SuiteTGZ) TestExtract(c *C) {
 		path, err := Extract(test.tgz)
 		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err, com)
-
-			_, err = os.Stat(path)
-			c.Assert(os.IsNotExist(err), Equals, true, com)
 		} else {
 			c.Assert(err, IsNil, com)
 

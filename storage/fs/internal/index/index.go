@@ -8,8 +8,8 @@ import (
 	"gopkg.in/src-d/go-git.v3/formats/idxfile"
 )
 
-// Index is a database of the hashes of the objects and their offsets in
-// the packfile.
+// Index is a database of objects and their offset in a packfile.
+// Objects are identified by their hash.
 type Index map[core.Hash]int64
 
 // NewFromIdx returns a new index from an idx file reader.
@@ -21,18 +21,18 @@ func NewFromIdx(r io.Reader) (Index, error) {
 		return nil, err
 	}
 
-	result := make(Index)
-	for _, entry := range idx.Entries {
-		if _, ok := result[entry.Hash]; ok {
-			return nil, fmt.Errorf("duplicated hash: %s", entry.Hash)
+	ind := make(Index)
+	for _, e := range idx.Entries {
+		if _, ok := ind[e.Hash]; ok {
+			return nil, fmt.Errorf("duplicated hash: %s", e.Hash)
 		}
-		result[entry.Hash] = int64(entry.Offset)
+		ind[e.Hash] = int64(e.Offset)
 	}
 
-	return result, nil
+	return ind, nil
 }
 
-// Get returns the offset of an object in the packfile.
+// Get returns the offset that an object has the packfile.
 func (i Index) Get(h core.Hash) (int64, error) {
 	offset, ok := i[h]
 	if !ok {

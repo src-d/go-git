@@ -17,11 +17,10 @@ const (
 // Extract decompress a gziped tarball into a new temporal directory
 // created just for this purpose.
 //
-// On success, the path of new directory and a nil error is returned.
-//
-// On error, a non-nil error and an empty string are returned if the
-// newly created directory was correctly deleted. If not, its path is
-// returned instead of the empty string.
+// On success, the path of newly created directory and a nil error is
+// returned. Otherwise an error is returned along with the path of the
+// newly created directory with whatever information was extracted
+// before the error or a empty string if no directory was created.
 func Extract(tgz string) (d string, err error) {
 	f, err := os.Open(tgz)
 	if err != nil {
@@ -42,29 +41,14 @@ func Extract(tgz string) (d string, err error) {
 
 	tar, err := zipTarReader(f)
 	if err != nil {
-		return deleteDir(d, err)
+		return d, err
 	}
 
 	if err = unTar(tar, d); err != nil {
-		return deleteDir(d, err)
+		return d, err
 	}
 
 	return d, nil
-}
-
-func deleteDir(dir string, prevErr error) (string, error) {
-	path := ""
-	err := prevErr
-
-	errDelete := os.RemoveAll(dir)
-	if errDelete != nil {
-		path = dir
-		if prevErr == nil {
-			err = errDelete
-		}
-	}
-
-	return path, err
 }
 
 func zipTarReader(r io.Reader) (*tar.Reader, error) {

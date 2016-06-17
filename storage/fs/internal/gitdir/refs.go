@@ -29,9 +29,7 @@ const (
 	symRefPrefix = "ref: "
 )
 
-func (d *GitDir) initRefsFromPackedRefs() (err error) {
-	d.refs = make(map[string]core.Hash)
-
+func (d *GitDir) addRefsFromPackedRefs() (err error) {
 	path := filepath.Join(d.path, packedRefsPath)
 	f, err := os.Open(path)
 	if err != nil {

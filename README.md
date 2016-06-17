@@ -100,8 +100,11 @@ and its packfile; this is much slower than having all the repository contents in
 memory, but uses very little memory.
 
 ```go
+// Prepare the repository as follows
 // git clone https://github.com/src-d/go-git /tmp/go-git
-r, err := git.NewRepositoryForFS("/tmp/go-git/.git")
+// pushd /tmp/go-git ; git gc ; popd
+
+r, err := git.NewRepositoryFromFS("/tmp/go-git")
 if err != nil {
 	panic(err)
 }
