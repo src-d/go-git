@@ -104,6 +104,7 @@ func repeat(s string, n int) []string {
 	for i := 0; i < n; i++ {
 		r = append(r, s)
 	}
+
 	return r
 }
 
@@ -113,6 +114,7 @@ func concat(vargs ...[]string) []string {
 	for _, ss := range vargs {
 		r = append(r, ss...)
 	}
+
 	return r
 }
 
