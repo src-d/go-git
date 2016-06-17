@@ -36,10 +36,6 @@ type AuthMethod interface {
 type Endpoint string
 
 func NewEndpoint(url string) (Endpoint, error) {
-	if strings.HasPrefix(url, "file://") {
-		return Endpoint(url), nil
-	}
-
 	vcs, err := vcsurl.Parse(url)
 	if err != nil {
 		return "", core.NewPermanentError(err)
