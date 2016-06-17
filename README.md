@@ -155,6 +155,14 @@ if err != nil {
 fmt.Println(commit)
 ```
 
+Wrapping
+--------
+
+go-git can be wrapped into any language which supports shared library interop.
+[Python wrapper](https://github.com/src-d/gypogit) already exists.
+This is provided by "cshared" [cgo](https://golang.org/cmd/cgo/) files which can be built
+with `go build -o libgogit.so -buildmode=c-shared github.com/src-d/go-git/cshared`.
+
 Acknowledgements
 ----------------
 
