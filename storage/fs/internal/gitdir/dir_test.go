@@ -38,7 +38,7 @@ var initFixtures = [...]struct {
 
 type fixture struct {
 	path         string               // repo names to paths of the extracted tgz
-	capabilities *common.Capabilities // exp capabilities
+	capabilities *common.Capabilities // expected capabilities
 	packfile     string               // path of the packfile
 	idxfile      string               // path of the idxfile
 }

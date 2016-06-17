@@ -61,7 +61,7 @@ func PatchDelta(src, delta []byte) []byte {
 // stream.
 //
 // This must be called twice on the delta data buffer, first to get the
-// exp source buffer size, and again to get the target buffer size.
+// expected source buffer size, and again to get the target buffer size.
 func decodeLEB128(input []byte) (uint, []byte) {
 	var num, sz uint
 	var b byte

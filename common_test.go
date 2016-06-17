@@ -90,7 +90,7 @@ var _ = Suite(&SuiteCommon{})
 
 var countLinesTests = [...]struct {
 	i string // the string we want to count lines from
-	e int    // the exp number of lines in i
+	e int    // the expected number of lines in i
 }{
 	{"", 0},
 	{"a", 1},

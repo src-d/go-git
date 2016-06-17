@@ -32,9 +32,9 @@ func (s *SuiteTree) TestFile(c *C) {
 		repo     string // the repo name as in localRepos
 		commit   string // the commit to search for the file
 		path     string // the path of the file to find
-		blobHash string // exp hash of the returned file
-		size     int64  // exp size of the returned file
-		found    bool   // exp found value
+		blobHash string // expected hash of the returned file
+		size     int64  // expected size of the returned file
+		found    bool   // expected found value
 	}{
 		// use git ls-tree commit to get the hash of the blobs
 		{
@@ -208,7 +208,7 @@ func (s *SuiteTree) TestFiles(c *C) {
 	for i, t := range []struct {
 		repo   string   // the repo name as in localRepos
 		commit string   // the commit to search for the file
-		files  []string // the exp files in the commit
+		files  []string // the expected files in the commit
 	}{
 		{"https://github.com/alcortesm/binary-relations.git", "b373f85fa2594d7dcd9989f4a5858a81647fb8ea", []string{
 			"binary-relations.tex",

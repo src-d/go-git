@@ -73,7 +73,7 @@ var contentsTests = []struct {
 	repo     string // the repo name as in localRepos
 	commit   string // the commit to search for the file
 	path     string // the path of the file to find
-	contents string // exp contents of the file
+	contents string // expected contents of the file
 }{
 	{
 		"https://github.com/tyba/git-fixture.git",
@@ -120,7 +120,7 @@ var linesTests = []struct {
 	repo   string   // the repo name as in localRepos
 	commit string   // the commit to search for the file
 	path   string   // the path of the file to find
-	lines  []string // exp lines in the file
+	lines  []string // expected lines in the file
 }{
 	{
 		"https://github.com/tyba/git-fixture.git",
