@@ -12,6 +12,11 @@ import (
 // Objects are identified by their hash.
 type Index map[core.Hash]int64
 
+// NewFrompackfile returns a new index from a packfile reader.
+func NewFromPackfile(r io.Reader) (Index, error) {
+	return nil, fmt.Errorf("TODO")
+}
+
 // NewFromIdx returns a new index from an idx file reader.
 func NewFromIdx(r io.Reader) (Index, error) {
 	d := idxfile.NewDecoder(r)

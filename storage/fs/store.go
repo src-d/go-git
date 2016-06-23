@@ -34,17 +34,45 @@ func New(path string) (*ObjectStorage, error) {
 		return nil, err
 	}
 
-	idxfile, err := s.dir.Idxfile()
-	if err != nil {
-		return nil, err
-	}
-
-	s.index, err = buildIndex(idxfile)
+	s.index, err = buildIndex(s.dir)
 
 	return s, err
 }
 
-func buildIndex(path string) (index.Index, error) {
+func buildIndex(dir *gitdir.GitDir) (index.Index, error) {
+	idxfile, err := dir.Idxfile()
+	if err != nil {
+		if err == gitdir.ErrIdxNotFound {
+			return buildIndexFromPackfile(dir)
+		}
+		return nil, err
+	}
+
+	return buildIndexFromIdxfile(idxfile)
+}
+
+func buildIndexFromPackfile(dir *gitdir.GitDir) (index.Index, error) {
+	packfile, err := dir.Packfile()
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := os.Open(packfile)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		errClose := f.Close()
+		if err == nil {
+			err = errClose
+		}
+	}()
+
+	return index.NewFromPackfile(f)
+}
+
+func buildIndexFromIdxfile(path string) (index.Index, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err

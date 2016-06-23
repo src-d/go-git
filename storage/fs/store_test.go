@@ -69,12 +69,6 @@ func (s *FsSuite) TestNewErrorNotFound(c *C) {
 	c.Assert(err, Equals, gitdir.ErrNotFound)
 }
 
-func (s *FsSuite) TestNewIdxError(c *C) {
-	path := fixture("spinnaker-no-idx", c)
-	_, err := fs.New(path)
-	c.Assert(err, Equals, gitdir.ErrIdxNotFound)
-}
-
 func (s *FsSuite) TestGetHashNotFound(c *C) {
 	path := fixture("spinnaker", c)
 
@@ -88,6 +82,7 @@ func (s *FsSuite) TestGetHashNotFound(c *C) {
 func (s *FsSuite) TestGetCompareWithMemoryStorage(c *C) {
 	for i, fixId := range [...]string{
 		"spinnaker",
+		"spinnaker-no-idx",
 		"binary-relations",
 	} {
 		path := fixture(fixId, c)
