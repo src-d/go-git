@@ -78,33 +78,45 @@ func NewDecoder(r io.Reader) *Decoder {
 // Decode reads a packfile and stores it in the value pointed to by s.
 func (d *Decoder) Decode(s core.ObjectStorage) (int64, error) {
 	d.s = s
+
+	count, err := d.readHeader()
+	if err != nil {
+		return d.readCounter.Count(), err
+	}
+
+	err = d.readObjects(count)
+
+	return d.readCounter.Count(), err
+}
+
+func (d *Decoder) readHeader() (uint32, error) {
 	if err := d.validateHeader(); err != nil {
 		if err == io.EOF {
-			return -1, ErrEmptyPackfile
+			return 0, ErrEmptyPackfile
 		}
 
-		return -1, err
+		return 0, err
 	}
 
 	ver, err := d.readInt32()
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	if ver > VersionSupported {
-		return -1, ErrUnsupportedVersion
+		return 0, ErrUnsupportedVersion
 	}
 
 	count, err := d.readInt32()
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	if count > d.MaxObjectsLimit {
-		return -1, ErrMaxObjectsLimitReached
+		return 0, ErrMaxObjectsLimitReached
 	}
 
-	return d.readCounter.Count(), d.readObjects(count)
+	return count, nil
 }
 
 func (d *Decoder) validateHeader() error {
