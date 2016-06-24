@@ -235,7 +235,3 @@ func (e *DecoderError) addDetails(format string, args ...interface{}) *DecoderEr
 		details: fmt.Sprintf(format, args...),
 	}
 }
-
-func (d *Decoder) HasesOffsets() (map[core.Hash]int64, error) {
-	return nil, fmt.Errorf("TODO")
-}
