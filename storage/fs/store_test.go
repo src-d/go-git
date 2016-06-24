@@ -203,6 +203,7 @@ func equalsObjects(a, b core.Object) (bool, string, error) {
 func (s *FsSuite) TestIterCompareWithMemoryStorage(c *C) {
 	for i, fixId := range [...]string{
 		"spinnaker",
+		"spinnaker-no-idx",
 		"binary-relations",
 	} {
 
