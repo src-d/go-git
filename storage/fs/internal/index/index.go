@@ -6,6 +6,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/formats/idxfile"
+	"gopkg.in/src-d/go-git.v3/formats/packfile"
 )
 
 // Index is a database of objects and their offset in a packfile.
@@ -14,7 +15,13 @@ type Index map[core.Hash]int64
 
 // NewFrompackfile returns a new index from a packfile reader.
 func NewFromPackfile(r io.Reader) (Index, error) {
-	return nil, fmt.Errorf("TODO")
+	d := packfile.NewDecoder(r)
+	hasesOffsets, err := d.HasesOffsets()
+	if err != nil {
+		return nil, err
+	}
+
+	return Index(hasesOffsets), nil
 }
 
 // NewFromIdx returns a new index from an idx file reader.
