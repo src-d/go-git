@@ -11,7 +11,7 @@ type ReadCounter struct {
 	count int64
 }
 
-// New returns a new tracker for the given stream r.
+// New returns a new ReadCounter for the given stream r.
 func New(r io.Reader) *ReadCounter {
 	return &ReadCounter{Reader: r, count: 0}
 }
