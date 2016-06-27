@@ -1,11 +1,16 @@
 package packfile
 
 import (
+	"bytes"
 	"encoding/binary"
 	"io"
 )
 
 var (
+	// ErrEmptyPackfile is returned when no data is found in the packfile
+	ErrEmptyPackfile = newError("empty packfile")
+	// ErrBadSignature is returned when the signature in the packfile is incorrect.
+	ErrBadSignature = newError("malformed pack file signature")
 	// ErrUnsupportedVersion is returned by Decode when packfile version is
 	// different than VersionSupported.
 	ErrUnsupportedVersion = newError("unsupported packfile version")
@@ -19,7 +24,7 @@ const (
 var (
 	// ReadVersion reads and returns the version field of a packfile.
 	ReadVersion = readInt32
-	// ReadVersion reads and returns the count of objects field of a packfile.
+	// ReadCount reads and returns the count of objects field of a packfile.
 	ReadCount = readInt32
 )
 
@@ -34,4 +39,17 @@ func readInt32(r io.Reader) (uint32, error) {
 
 func IsSupportedVersion(v uint32) bool {
 	return v == VersionSupported
+}
+
+func ReadSignature(r io.Reader) ([]byte, error) {
+	var sig = make([]byte, 4)
+	if _, err := io.ReadFull(r, sig); err != nil {
+		return []byte{}, err
+	}
+
+	return sig, nil
+}
+
+func IsValidSignature(sig []byte) bool {
+	return bytes.Equal(sig, []byte{'P', 'A', 'C', 'K'})
 }

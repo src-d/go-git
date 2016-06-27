@@ -13,12 +13,8 @@ import (
 )
 
 var (
-	// ErrEmptyPackfile is returned by Decode when no data is found in the packfile
-	ErrEmptyPackfile = newDecoderError("empty packfile")
 	// ErrMaxObjectsLimitReached is returned by Decode when the number of objects in the packfile is higher than Decoder.MaxObjectsLimit.
 	ErrMaxObjectsLimitReached = newDecoderError("max. objects limit reached")
-	// ErrMalformedPackfile is returned by Decode when the packfile is corrupt.
-	ErrMalformedPackfile = newDecoderError("malformed pack file, does not start with 'PACK'")
 	// ErrInvalidObject is returned by Decode when an invalid object is found in the packfile.
 	ErrInvalidObject = newDecoderError("invalid git object")
 	// ErrPackEntryNotFound is returned by Decode when a reference in the packfile references and unknown object.
@@ -60,16 +56,16 @@ func NewFromPackfile(r io.ReadSeeker) (Index, error) {
 }
 
 func readHeader(r io.Reader) (uint32, error) {
-	sig, err := readSignature(r)
+	sig, err := packfile.ReadSignature(r)
 	if err != nil {
 		if err == io.EOF {
-			return 0, ErrEmptyPackfile
+			return 0, packfile.ErrEmptyPackfile
 		}
 		return 0, err
 	}
 
-	if !isValidSignature(sig) {
-		return 0, ErrMalformedPackfile
+	if !packfile.IsValidSignature(sig) {
+		return 0, packfile.ErrBadSignature
 	}
 
 	ver, err := packfile.ReadVersion(r)
@@ -91,19 +87,6 @@ func readHeader(r io.Reader) (uint32, error) {
 	}
 
 	return count, nil
-}
-
-func readSignature(r io.Reader) ([]byte, error) {
-	var sig = make([]byte, 4)
-	if _, err := io.ReadFull(r, sig); err != nil {
-		return []byte{}, err
-	}
-
-	return sig, nil
-}
-
-func isValidSignature(sig []byte) bool {
-	return bytes.Equal(sig, []byte{'P', 'A', 'C', 'K'})
 }
 
 func isValidCount(c uint32) bool {

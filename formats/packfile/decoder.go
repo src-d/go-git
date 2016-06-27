@@ -1,7 +1,6 @@
 package packfile
 
 import (
-	"bytes"
 	"io"
 
 	"gopkg.in/src-d/go-git.v3/core"
@@ -20,12 +19,8 @@ const (
 )
 
 var (
-	// ErrEmptyPackfile is returned by Decode when no data is found in the packfile
-	ErrEmptyPackfile = newError("empty packfile")
 	// ErrMaxObjectsLimitReached is returned by Decode when the number of objects in the packfile is higher than Decoder.MaxObjectsLimit.
 	ErrMaxObjectsLimitReached = newError("max. objects limit reached")
-	// ErrMalformedPackfile is returned by Decode when the packfile is corrupt.
-	ErrMalformedPackfile = newError("malformed pack file, does not start with 'PACK'")
 	// ErrInvalidObject is returned by Decode when an invalid object is found in the packfile.
 	ErrInvalidObject = newError("invalid git object")
 	// ErrPackEntryNotFound is returned by Decode when a reference in the packfile references and unknown object.
@@ -114,13 +109,16 @@ func (d *Decoder) readHeader() (uint32, error) {
 }
 
 func (d *Decoder) validateHeader() error {
-	var h = make([]byte, 4)
-	if _, err := io.ReadFull(d.readCounter, h); err != nil {
+	sig, err := ReadSignature(d.readCounter)
+	if err != nil {
+		if err == io.EOF {
+			return ErrEmptyPackfile
+		}
 		return err
 	}
 
-	if !bytes.Equal(h, []byte{'P', 'A', 'C', 'K'}) {
-		return ErrMalformedPackfile
+	if !IsValidSignature(sig) {
+		return ErrBadSignature
 	}
 
 	return nil
