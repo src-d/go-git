@@ -3,7 +3,6 @@ package index
 import (
 	"bytes"
 	"compress/zlib"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
@@ -16,8 +15,6 @@ import (
 var (
 	// ErrEmptyPackfile is returned by Decode when no data is found in the packfile
 	ErrEmptyPackfile = newDecoderError("empty packfile")
-	// ErrUnsupportedVersion is returned by Decode when packfile version is different than VersionSupported.
-	ErrUnsupportedVersion = newDecoderError("unsupported packfile version")
 	// ErrMaxObjectsLimitReached is returned by Decode when the number of objects in the packfile is higher than Decoder.MaxObjectsLimit.
 	ErrMaxObjectsLimitReached = newDecoderError("max. objects limit reached")
 	// ErrMalformedPackfile is returned by Decode when the packfile is corrupt.
@@ -31,11 +28,9 @@ var (
 )
 
 const (
-	// DefaultMaxObjectsLimit is the maximum amount of objects the decoder will decode before
-	// returning ErrMaxObjectsLimitReached.
-	DefaultMaxObjectsLimit = 1 << 20
-	// VersionSupported is the packfile version supported by this decoder.
-	VersionSupported = 2
+	// DefaultMaxObjectsLimit is the maximum amount of objects the decoder will
+	// decode before returning ErrMaxObjectsLimitReached.
+	DefaultMaxObjectsLimit = 1 << 30
 )
 
 // NewFrompackfile returns a new index from a packfile reader.
@@ -77,16 +72,16 @@ func readHeader(r io.Reader) (uint32, error) {
 		return 0, ErrMalformedPackfile
 	}
 
-	ver, err := readVersion(r)
+	ver, err := packfile.ReadVersion(r)
 	if err != nil {
 		return 0, err
 	}
 
-	if !isSupportedVersion(ver) {
-		return 0, ErrUnsupportedVersion
+	if !packfile.IsSupportedVersion(ver) {
+		return 0, packfile.ErrUnsupportedVersion.AddDetails("%d", ver)
 	}
 
-	count, err := readCount(r)
+	count, err := packfile.ReadCount(r)
 	if err != nil {
 		return 0, err
 	}
@@ -109,28 +104,6 @@ func readSignature(r io.Reader) ([]byte, error) {
 
 func isValidSignature(sig []byte) bool {
 	return bytes.Equal(sig, []byte{'P', 'A', 'C', 'K'})
-}
-
-func readVersion(r io.Reader) (uint32, error) {
-	var v uint32
-	if err := binary.Read(r, binary.BigEndian, &v); err != nil {
-		return 0, err
-	}
-
-	return v, nil
-}
-
-func isSupportedVersion(v uint32) bool {
-	return v == VersionSupported
-}
-
-func readCount(r io.Reader) (uint32, error) {
-	var c uint32
-	if err := binary.Read(r, binary.BigEndian, &c); err != nil {
-		return 0, err
-	}
-
-	return c, nil
 }
 
 func isValidCount(c uint32) bool {

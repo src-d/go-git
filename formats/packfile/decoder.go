@@ -2,8 +2,6 @@ package packfile
 
 import (
 	"bytes"
-	"encoding/binary"
-	"fmt"
 	"io"
 
 	"gopkg.in/src-d/go-git.v3/core"
@@ -23,27 +21,23 @@ const (
 
 var (
 	// ErrEmptyPackfile is returned by Decode when no data is found in the packfile
-	ErrEmptyPackfile = newDecoderError("empty packfile")
-	// ErrUnsupportedVersion is returned by Decode when packfile version is different than VersionSupported.
-	ErrUnsupportedVersion = newDecoderError("unsupported packfile version")
+	ErrEmptyPackfile = newError("empty packfile")
 	// ErrMaxObjectsLimitReached is returned by Decode when the number of objects in the packfile is higher than Decoder.MaxObjectsLimit.
-	ErrMaxObjectsLimitReached = newDecoderError("max. objects limit reached")
+	ErrMaxObjectsLimitReached = newError("max. objects limit reached")
 	// ErrMalformedPackfile is returned by Decode when the packfile is corrupt.
-	ErrMalformedPackfile = newDecoderError("malformed pack file, does not start with 'PACK'")
+	ErrMalformedPackfile = newError("malformed pack file, does not start with 'PACK'")
 	// ErrInvalidObject is returned by Decode when an invalid object is found in the packfile.
-	ErrInvalidObject = newDecoderError("invalid git object")
+	ErrInvalidObject = newError("invalid git object")
 	// ErrPackEntryNotFound is returned by Decode when a reference in the packfile references and unknown object.
-	ErrPackEntryNotFound = newDecoderError("can't find a pack entry")
+	ErrPackEntryNotFound = newError("can't find a pack entry")
 	// ErrZLib is returned by Decode when there was an error unzipping the packfile contents.
-	ErrZLib = newDecoderError("zlib reading error")
+	ErrZLib = newError("zlib reading error")
 )
 
 const (
 	// DefaultMaxObjectsLimit is the maximum amount of objects the decoder will decode before
 	// returning ErrMaxObjectsLimitReached.
 	DefaultMaxObjectsLimit = 1 << 20
-	// VersionSupported is the packfile version supported by this decoder.
-	VersionSupported = 2
 )
 
 // Decoder reads and decodes packfiles from an input stream.
@@ -98,7 +92,7 @@ func (d *Decoder) readHeader() (uint32, error) {
 		return 0, err
 	}
 
-	ver, err := d.readInt32()
+	ver, err := ReadVersion(d.readCounter)
 	if err != nil {
 		return 0, err
 	}
@@ -107,7 +101,7 @@ func (d *Decoder) readHeader() (uint32, error) {
 		return 0, ErrUnsupportedVersion
 	}
 
-	count, err := d.readInt32()
+	count, err := ReadCount(d.readCounter)
 	if err != nil {
 		return 0, err
 	}
@@ -130,15 +124,6 @@ func (d *Decoder) validateHeader() error {
 	}
 
 	return nil
-}
-
-func (d *Decoder) readInt32() (uint32, error) {
-	var v uint32
-	if err := binary.Read(d.readCounter, binary.BigEndian, &v); err != nil {
-		return 0, err
-	}
-
-	return v, nil
 }
 
 func (d *Decoder) readObjects(count uint32) error {
@@ -188,7 +173,7 @@ func (d *Decoder) newObject() (core.Object, error) {
 	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
 		cont, err = readContent(d.readCounter)
 	default:
-		err = ErrInvalidObject.addDetails("tag %q", typ)
+		err = ErrInvalidObject.AddDetails("tag %q", typ)
 	}
 	if err != nil {
 		return nil, err
@@ -206,32 +191,8 @@ func (d *Decoder) ByHash(hash core.Hash) (core.Object, error) {
 func (d *Decoder) ByOffset(offset int64) (core.Object, error) {
 	hash, ok := d.offsets[offset]
 	if !ok {
-		return nil, ErrPackEntryNotFound.addDetails("offset %d", offset)
+		return nil, ErrPackEntryNotFound.AddDetails("offset %d", offset)
 	}
 
 	return d.ByHash(hash)
-}
-
-// DecoderError specifies errors returned by Decode.
-type DecoderError struct {
-	reason, details string
-}
-
-func newDecoderError(reason string) *DecoderError {
-	return &DecoderError{reason: reason}
-}
-
-func (e *DecoderError) Error() string {
-	if e.details == "" {
-		return e.reason
-	}
-
-	return fmt.Sprintf("%s: %s", e.reason, e.details)
-}
-
-func (e *DecoderError) addDetails(format string, args ...interface{}) *DecoderError {
-	return &DecoderError{
-		reason:  e.reason,
-		details: fmt.Sprintf(format, args...),
-	}
 }
