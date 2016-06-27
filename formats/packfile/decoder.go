@@ -68,60 +68,19 @@ func NewDecoder(r io.Reader) *Decoder {
 func (d *Decoder) Decode(s core.ObjectStorage) (int64, error) {
 	d.s = s
 
-	count, err := d.readHeader()
+	count, err := ReadHeader(d.readCounter)
 	if err != nil {
 		return d.readCounter.Count(), err
+	}
+
+	if count > d.MaxObjectsLimit {
+		return d.readCounter.Count(),
+			ErrMaxObjectsLimitReached.AddDetails("%d", count)
 	}
 
 	err = d.readObjects(count)
 
 	return d.readCounter.Count(), err
-}
-
-func (d *Decoder) readHeader() (uint32, error) {
-	if err := d.validateHeader(); err != nil {
-		if err == io.EOF {
-			return 0, ErrEmptyPackfile
-		}
-
-		return 0, err
-	}
-
-	ver, err := ReadVersion(d.readCounter)
-	if err != nil {
-		return 0, err
-	}
-
-	if ver > VersionSupported {
-		return 0, ErrUnsupportedVersion
-	}
-
-	count, err := ReadCount(d.readCounter)
-	if err != nil {
-		return 0, err
-	}
-
-	if count > d.MaxObjectsLimit {
-		return 0, ErrMaxObjectsLimitReached
-	}
-
-	return count, nil
-}
-
-func (d *Decoder) validateHeader() error {
-	sig, err := ReadSignature(d.readCounter)
-	if err != nil {
-		if err == io.EOF {
-			return ErrEmptyPackfile
-		}
-		return err
-	}
-
-	if !IsValidSignature(sig) {
-		return ErrBadSignature
-	}
-
-	return nil
 }
 
 func (d *Decoder) readObjects(count uint32) error {

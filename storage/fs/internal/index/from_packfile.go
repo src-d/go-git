@@ -31,9 +31,13 @@ const (
 
 // NewFrompackfile returns a new index from a packfile reader.
 func NewFromPackfile(r io.ReadSeeker) (Index, error) {
-	count, err := readHeader(r)
+	count, err := packfile.ReadHeader(r)
 	if err != nil {
 		return nil, err
+	}
+
+	if !isValidCount(count) {
+		return nil, ErrMaxObjectsLimitReached.addDetails("%d", count)
 	}
 
 	result := make(map[core.Hash]int64)
@@ -53,40 +57,6 @@ func NewFromPackfile(r io.ReadSeeker) (Index, error) {
 	}
 
 	return result, nil
-}
-
-func readHeader(r io.Reader) (uint32, error) {
-	sig, err := packfile.ReadSignature(r)
-	if err != nil {
-		if err == io.EOF {
-			return 0, packfile.ErrEmptyPackfile
-		}
-		return 0, err
-	}
-
-	if !packfile.IsValidSignature(sig) {
-		return 0, packfile.ErrBadSignature
-	}
-
-	ver, err := packfile.ReadVersion(r)
-	if err != nil {
-		return 0, err
-	}
-
-	if !packfile.IsSupportedVersion(ver) {
-		return 0, packfile.ErrUnsupportedVersion.AddDetails("%d", ver)
-	}
-
-	count, err := packfile.ReadCount(r)
-	if err != nil {
-		return 0, err
-	}
-
-	if !isValidCount(count) {
-		return 0, ErrMaxObjectsLimitReached
-	}
-
-	return count, nil
 }
 
 func isValidCount(c uint32) bool {
