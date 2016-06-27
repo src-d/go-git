@@ -30,7 +30,7 @@ const (
 )
 
 // NewFrompackfile returns a new index from a packfile reader.
-func NewFromPackfile(r io.ReadSeeker) (Index, error) {
+func NewFromPackfile(r packfile.ByteReadReadSeeker) (Index, error) {
 	count, err := packfile.ReadHeader(r)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,8 @@ func isValidCount(c uint32) bool {
 	return c <= DefaultMaxObjectsLimit
 }
 
-func readObject(r io.ReadSeeker, memo map[core.Hash]int64) (core.Object, error) {
+func readObject(r packfile.ByteReadReadSeeker,
+	memo map[core.Hash]int64) (core.Object, error) {
 
 	start, err := currentOffset(r)
 	if err != nil {
@@ -73,7 +74,7 @@ func readObject(r io.ReadSeeker, memo map[core.Hash]int64) (core.Object, error) 
 
 	var typ core.ObjectType
 	var sz int64
-	typ, sz, err = readTypeAndLength(r)
+	typ, sz, err = packfile.ReadObjectTypeAndLength(r)
 	if err != nil {
 		return nil, err
 	}
@@ -96,56 +97,6 @@ func readObject(r io.ReadSeeker, memo map[core.Hash]int64) (core.Object, error) 
 	}
 
 	return memory.NewObject(typ, sz, cont), nil
-}
-
-func readTypeAndLength(r io.Reader) (core.ObjectType, int64, error) {
-	var buf [1]byte
-	if _, err := r.Read(buf[:]); err != nil {
-		return core.ObjectType(0), 0, err
-	}
-
-	typ := parseType(buf[0])
-	length, err := readLength(buf[0], r)
-
-	return typ, length, err
-}
-
-var (
-	maskContinue    = uint8(128) // 1000 0000
-	maskType        = uint8(112) // 0111 0000
-	maskFirstLength = uint8(15)  // 0000 1111
-	firstLengthBits = uint8(4)   // the first byte has 4 bits to store the length
-	maskLength      = uint8(127) // 0111 1111
-	lengthBits      = uint8(7)   // subsequent bytes has 7 bits to store the length
-)
-
-func parseType(b byte) core.ObjectType {
-	return core.ObjectType((b & maskType) >> firstLengthBits)
-}
-
-// Reads the last 4 bits from the first byte in the object.
-// If more bytes are required for the length, read more bytes
-// and use the first 7 bits of each one until no more bytes
-// are required.
-func readLength(first byte, packfile io.Reader) (int64, error) {
-	length := int64(first & maskFirstLength)
-
-	buf := [1]byte{first}
-	shift := firstLengthBits
-	for moreBytesInLength(buf[0]) {
-		if _, err := packfile.Read(buf[:]); err != nil {
-			return 0, err
-		}
-
-		length += int64(buf[0]&maskLength) << shift
-		shift += lengthBits
-	}
-
-	return length, nil
-}
-
-func moreBytesInLength(b byte) bool {
-	return b&maskContinue > 0
 }
 
 func readContent(r io.Reader) ([]byte, error) {
@@ -217,7 +168,8 @@ func (e *DecoderError) addDetails(format string, args ...interface{}) *DecoderEr
 	}
 }
 
-func readContentOFSDelta(r io.ReadSeeker, objectStart int64, memo map[core.Hash]int64) (
+func readContentOFSDelta(r packfile.ByteReadReadSeeker,
+	objectStart int64, memo map[core.Hash]int64) (
 	content []byte, typ core.ObjectType, err error) {
 
 	_, err = currentOffset(r)
@@ -225,7 +177,7 @@ func readContentOFSDelta(r io.ReadSeeker, objectStart int64, memo map[core.Hash]
 		return nil, core.ObjectType(0), err
 	}
 
-	offset, err := readNegativeOffset(r)
+	offset, err := packfile.ReadNegativeOffset(r)
 	if err != nil {
 		return nil, core.ObjectType(0), err
 	}
@@ -259,51 +211,6 @@ func readContentOFSDelta(r io.ReadSeeker, objectStart int64, memo map[core.Hash]
 	return patched, refObj.Type(), nil
 }
 
-// Git VLQ is quite special:
-//
-// Ordinary VLQ has some redundancies, example:  the number 358 can be
-// encoded as the 2-octet VLQ 0x8166 or the 3-octet VLQ 0x808166 or the
-// 4-octet VLQ 0x80808166 and so forth.
-//
-// To avoid these redundancies, the VLQ format used in Git removes this
-// prepending redundancy and extends the representable range of shorter
-// VLQs by adding an offset to VLQs of 2 or more octets in such a way
-// that the lowest possible value for such an (N+1)-octet VLQ becomes
-// exactly one more than the maximum possible value for an N-octet VLQ.
-// In particular, since a 1-octet VLQ can store a maximum value of 127,
-// the minimum 2-octet VLQ (0x8000) is assigned the value 128 instead of
-// 0. Conversely, the maximum value of such a 2-octet VLQ (0xff7f) is
-// 16511 instead of just 16383. Similarly, the minimum 3-octet VLQ
-// (0x808000) has a value of 16512 instead of zero, which means that the
-// maximum 3-octet VLQ (0xffff7f) is 2113663 instead of just 2097151.
-// And so forth.
-//
-// This is how the offset is saved in C:
-//
-//     dheader[pos] = ofs & 127;
-//     while (ofs >>= 7)
-//         dheader[--pos] = 128 | (--ofs & 127);
-//
-func readNegativeOffset(r io.Reader) (int64, error) {
-	var b byte
-	var err error
-
-	if b, err = readByte(r); err != nil {
-		return 0, err
-	}
-
-	var offset = int64(b & maskLength)
-	for moreBytesInLength(b) {
-		offset++
-		if b, err = readByte(r); err != nil {
-			return 0, err
-		}
-		offset = (offset << lengthBits) + int64(b&maskLength)
-	}
-
-	return -offset, nil
-}
-
 func readByte(r io.Reader) (byte, error) {
 	buf := [1]byte{}
 	if _, err := r.Read(buf[:]); err != nil {
@@ -317,7 +224,7 @@ func currentOffset(r io.Seeker) (int64, error) {
 	return r.Seek(0, os.SEEK_CUR)
 }
 
-func readContentREFDelta(r io.ReadSeeker, memo map[core.Hash]int64) (
+func readContentREFDelta(r packfile.ByteReadReadSeeker, memo map[core.Hash]int64) (
 	content []byte, typ core.ObjectType, err error) {
 
 	var ref core.Hash

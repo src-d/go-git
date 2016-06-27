@@ -69,7 +69,20 @@ func buildIndexFromPackfile(dir *gitdir.GitDir) (index.Index, error) {
 		}
 	}()
 
-	return index.NewFromPackfile(f)
+	return index.NewFromPackfile(&fileByteReader{*f})
+}
+
+type fileByteReader struct {
+	os.File
+}
+
+func (f *fileByteReader) ReadByte() (byte, error) {
+	buf := [1]byte{}
+	if _, err := f.Read(buf[:]); err != nil {
+		return 0, err
+	}
+
+	return buf[0], nil
 }
 
 func buildIndexFromIdxfile(path string) (index.Index, error) {
@@ -120,7 +133,7 @@ func (s *ObjectStorage) Get(h core.Hash) (core.Object, error) {
 		}
 	}()
 
-	return packfile.ObjectAt(f, offset, s)
+	return packfile.ObjectAt(&fileByteReader{*f}, offset, s)
 }
 
 // Iter returns an iterator for all the objects in the packfile with the
@@ -171,5 +184,5 @@ func (s *ObjectStorage) ByOffset(offset int64) (core.Object, error) {
 		}
 	}()
 
-	return packfile.ObjectAt(f, offset, s)
+	return packfile.ObjectAt(&fileByteReader{*f}, offset, s)
 }

@@ -115,7 +115,7 @@ func (d *Decoder) newObject() (core.Object, error) {
 
 	objectStart := d.readCounter.Count()
 
-	typ, sz, err := readTypeAndLength(d.readCounter)
+	typ, sz, err := ReadObjectTypeAndLength(d.readCounter)
 	if err != nil {
 		return nil, err
 	}

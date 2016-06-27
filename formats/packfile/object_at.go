@@ -19,8 +19,17 @@ type AlreadySeener interface {
 	ByOffset(offset int64) (core.Object, error)
 }
 
+type ByteReadReader interface {
+	io.ByteReader
+	io.Reader
+}
+type ByteReadReadSeeker interface {
+	ByteReadReader
+	io.Seeker
+}
+
 // ObjectAt returns the object at the given offset in a packfile.
-func ObjectAt(packfile io.ReadSeeker,
+func ObjectAt(packfile ByteReadReadSeeker,
 	offset int64, remember AlreadySeener) (core.Object, error) {
 
 	_, err := packfile.Seek(offset, os.SEEK_SET)
@@ -28,7 +37,7 @@ func ObjectAt(packfile io.ReadSeeker,
 		return nil, err
 	}
 
-	typ, length, err := readTypeAndLength(packfile)
+	typ, length, err := ReadObjectTypeAndLength(packfile)
 	if err != nil {
 		return nil, err
 	}
@@ -53,64 +62,14 @@ func ObjectAt(packfile io.ReadSeeker,
 	return memory.NewObject(typ, length, cont), err
 }
 
-func readTypeAndLength(packfile io.Reader) (core.ObjectType, int64, error) {
-	var buf [1]byte
-	if _, err := packfile.Read(buf[:]); err != nil {
-		return core.ObjectType(0), 0, err
-	}
-
-	typ := parseType(buf[0])
-	length, err := readLength(buf[0], packfile)
-
-	return typ, length, err
-}
-
-var (
-	maskContinue    = uint8(128) // 1000 0000
-	maskType        = uint8(112) // 0111 0000
-	maskFirstLength = uint8(15)  // 0000 1111
-	firstLengthBits = uint8(4)   // the first byte has 4 bits to store the length
-	maskLength      = uint8(127) // 0111 1111
-	lengthBits      = uint8(7)   // subsequent bytes has 7 bits to store the length
-)
-
-func parseType(b byte) core.ObjectType {
-	return core.ObjectType((b & maskType) >> firstLengthBits)
-}
-
-// Reads the last 4 bits from the first byte in the object.
-// If more bytes are required for the length, read more bytes
-// and use the first 7 bits of each one until no more bytes
-// are required.
-func readLength(first byte, packfile io.Reader) (int64, error) {
-	length := int64(first & maskFirstLength)
-
-	buf := [1]byte{first}
-	shift := firstLengthBits
-	for moreBytesInLength(buf[0]) {
-		if _, err := packfile.Read(buf[:]); err != nil {
-			return 0, err
-		}
-
-		length += int64(buf[0]&maskLength) << shift
-		shift += lengthBits
-	}
-
-	return length, nil
-}
-
-func moreBytesInLength(b byte) bool {
-	return b&maskContinue > 0
-}
-
-func readContent(packfile io.Reader) ([]byte, error) {
+func readContent(packfile ByteReadReader) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	err := inflate(packfile, buf)
 
 	return buf.Bytes(), err
 }
 
-func readContentREFDelta(packfile io.Reader, remember AlreadySeener) (content []byte,
+func readContentREFDelta(packfile ByteReadReader, remember AlreadySeener) (content []byte,
 	typ core.ObjectType, err error) {
 
 	var ref core.Hash
@@ -136,7 +95,7 @@ func readContentREFDelta(packfile io.Reader, remember AlreadySeener) (content []
 	return content, referenced.Type(), nil
 }
 
-func inflate(r io.Reader, w io.Writer) (err error) {
+func inflate(r ByteReadReader, w io.Writer) (err error) {
 	zr, err := zlib.NewReader(r)
 	if err != nil {
 		if err != zlib.ErrHeader {
@@ -156,7 +115,7 @@ func inflate(r io.Reader, w io.Writer) (err error) {
 	return err
 }
 
-func readContentOFSDelta(packfile io.Reader,
+func readContentOFSDelta(packfile ByteReadReader,
 	objectStart int64, remember AlreadySeener) (content []byte,
 	typ core.ObjectType, err error) {
 
