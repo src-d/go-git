@@ -19,19 +19,27 @@ const (
 )
 
 var (
-	// ErrMaxObjectsLimitReached is returned by Decode when the number of objects in the packfile is higher than Decoder.MaxObjectsLimit.
-	ErrMaxObjectsLimitReached = newError("max. objects limit reached")
-	// ErrInvalidObject is returned by Decode when an invalid object is found in the packfile.
-	ErrInvalidObject = newError("invalid git object")
-	// ErrPackEntryNotFound is returned by Decode when a reference in the packfile references and unknown object.
-	ErrPackEntryNotFound = newError("can't find a pack entry")
-	// ErrZLib is returned by Decode when there was an error unzipping the packfile contents.
-	ErrZLib = newError("zlib reading error")
+	// ErrMaxObjectsLimitReached is returned by Decode when the number
+	// of objects in the packfile is higher than
+	// Decoder.MaxObjectsLimit.
+	ErrMaxObjectsLimitReached = NewError("max. objects limit reached")
+
+	// ErrInvalidObject is returned by Decode when an invalid object is
+	// found in the packfile.
+	ErrInvalidObject = NewError("invalid git object")
+
+	// ErrPackEntryNotFound is returned by Decode when a reference in
+	// the packfile references and unknown object.
+	ErrPackEntryNotFound = NewError("can't find a pack entry")
+
+	// ErrZLib is returned by Decode when there was an error unzipping
+	// the packfile contents.
+	ErrZLib = NewError("zlib reading error")
 )
 
 const (
-	// DefaultMaxObjectsLimit is the maximum amount of objects the decoder will decode before
-	// returning ErrMaxObjectsLimitReached.
+	// DefaultMaxObjectsLimit is the maximum amount of objects the
+	// decoder will decode before returning ErrMaxObjectsLimitReached.
 	DefaultMaxObjectsLimit = 1 << 20
 )
 

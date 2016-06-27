@@ -10,12 +10,12 @@ import (
 
 var (
 	// ErrEmptyPackfile is returned when no data is found in the packfile
-	ErrEmptyPackfile = newError("empty packfile")
+	ErrEmptyPackfile = NewError("empty packfile")
 	// ErrBadSignature is returned when the signature in the packfile is incorrect.
-	ErrBadSignature = newError("malformed pack file signature")
+	ErrBadSignature = NewError("malformed pack file signature")
 	// ErrUnsupportedVersion is returned by Decode when packfile version is
 	// different than VersionSupported.
-	ErrUnsupportedVersion = newError("unsupported packfile version")
+	ErrUnsupportedVersion = NewError("unsupported packfile version")
 )
 
 const (

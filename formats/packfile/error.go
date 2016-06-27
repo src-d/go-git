@@ -7,7 +7,7 @@ type Error struct {
 	reason, details string
 }
 
-func newError(reason string) *Error {
+func NewError(reason string) *Error {
 	return &Error{reason: reason}
 }
 

@@ -13,14 +13,17 @@ import (
 )
 
 var (
-	// ErrMaxObjectsLimitReached is returned by Decode when the number of objects in the packfile is higher than Decoder.MaxObjectsLimit.
-	ErrMaxObjectsLimitReached = newDecoderError("max. objects limit reached")
-	// ErrInvalidObject is returned by Decode when an invalid object is found in the packfile.
-	ErrInvalidObject = newDecoderError("invalid git object")
-	// ErrPackEntryNotFound is returned by Decode when a reference in the packfile references and unknown object.
-	ErrPackEntryNotFound = newDecoderError("can't find a pack entry")
-	// ErrZLib is returned by Decode when there was an error unzipping the packfile contents.
-	ErrZLib = newDecoderError("zlib reading error")
+	// ErrInvalidObject is returned by Decode when an invalid object is
+	// found in the packfile.
+	ErrInvalidObject = packfile.NewError("invalid git object")
+
+	// ErrPackEntryNotFound is returned by Decode when a reference in
+	// the packfile references and unknown object.
+	ErrPackEntryNotFound = packfile.NewError("can't find a pack entry")
+
+	// ErrZLib is returned by Decode when there was an error unzipping
+	// the packfile contents.
+	ErrZLib = packfile.NewError("zlib reading error")
 )
 
 const (
@@ -37,7 +40,7 @@ func NewFromPackfile(r packfile.ByteReadReadSeeker) (Index, error) {
 	}
 
 	if !isValidCount(count) {
-		return nil, ErrMaxObjectsLimitReached.addDetails("%d", count)
+		return nil, packfile.ErrMaxObjectsLimitReached.AddDetails("%d", count)
 	}
 
 	result := make(map[core.Hash]int64)
@@ -90,7 +93,7 @@ func readObject(r packfile.ByteReadReadSeeker,
 	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
 		cont, err = readContent(r)
 	default:
-		err = ErrInvalidObject.addDetails("tag %q", typ)
+		err = packfile.ErrInvalidObject.AddDetails("tag %q", typ)
 	}
 	if err != nil {
 		return nil, err
@@ -142,30 +145,6 @@ func inflate(r io.Reader, w io.Writer) (err error) {
 	_, err = io.Copy(w, zr)
 
 	return err
-}
-
-// DecoderError specifies errors returned by Decode.
-type DecoderError struct {
-	reason, details string
-}
-
-func newDecoderError(reason string) *DecoderError {
-	return &DecoderError{reason: reason}
-}
-
-func (e *DecoderError) Error() string {
-	if e.details == "" {
-		return e.reason
-	}
-
-	return fmt.Sprintf("%s: %s", e.reason, e.details)
-}
-
-func (e *DecoderError) addDetails(format string, args ...interface{}) *DecoderError {
-	return &DecoderError{
-		reason:  e.reason,
-		details: fmt.Sprintf(format, args...),
-	}
 }
 
 func readContentOFSDelta(r packfile.ByteReadReadSeeker,
