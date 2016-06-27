@@ -46,7 +46,7 @@ var initFixtures = [...]struct {
 		id:  "binary-relations",
 		tgz: "internal/gitdir/fixtures/alcortesm-binary-relations.tgz",
 	}, {
-		id:  "test",
+		id:  "ref-deltas-no-idx",
 		tgz: "internal/gitdir/fixtures/ref-deltas-no-idx.tgz",
 	},
 }
@@ -87,6 +87,7 @@ func (s *FsSuite) TestGetCompareWithMemoryStorage(c *C) {
 		"spinnaker",
 		"spinnaker-no-idx",
 		"binary-relations",
+		"ref-deltas-no-idx",
 	} {
 		path := fixture(fixId, c)
 		com := Commentf("at subtest %d, (fixture id = %q, extracted to %q)",
@@ -208,6 +209,7 @@ func (s *FsSuite) TestIterCompareWithMemoryStorage(c *C) {
 		"spinnaker",
 		"spinnaker-no-idx",
 		"binary-relations",
+		"ref-deltas-no-idx",
 	} {
 
 		path := fixture(fixId, c)

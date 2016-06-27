@@ -47,25 +47,18 @@ func NewFromPackfile(r io.ReadSeeker) (Index, error) {
 
 	result := make(map[core.Hash]int64)
 
-	fmt.Printf("%d objects in the packfile\n", count)
-
 	for i := 0; i < int(count); i++ {
-
-		fmt.Printf("trying to read object %d:\n", i)
-
 		offset, err := currentOffset(r)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("\tcurrent offset = %d:\n", offset)
 
-		obj, err := readObject(r)
+		obj, err := readObject(r, result)
 		if err != nil {
 			return nil, err
 		}
 
 		result[obj.Hash()] = offset
-		fmt.Printf("\tobject hash : %s\n", obj.Hash())
 	}
 
 	return result, nil
@@ -144,7 +137,7 @@ func isValidCount(c uint32) bool {
 	return c <= DefaultMaxObjectsLimit
 }
 
-func readObject(r io.ReadSeeker) (core.Object, error) {
+func readObject(r io.ReadSeeker, memo map[core.Hash]int64) (core.Object, error) {
 
 	start, err := currentOffset(r)
 	if err != nil {
@@ -158,29 +151,17 @@ func readObject(r io.ReadSeeker) (core.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("\treaded size (from object head): %d\n", sz)
 
 	var cont []byte
-	fmt.Printf("\tobject type: %s\n", typ)
-	offset, _ := currentOffset(r)
-	fmt.Printf("\tcurrent offset = %d:\n", offset)
 	switch typ {
 	case core.REFDeltaObject:
-		err = fmt.Errorf("REFDeltaObject not supported yet")
-		_ = cont
-		/*
-			cont, typ, err = readContentREFDelta(d.readCounter, d)
-			sz = int64(len(cont))
-		*/
+		cont, typ, err = readContentREFDelta(r, memo)
+		sz = int64(len(cont))
 	case core.OFSDeltaObject:
-		err = fmt.Errorf("OFSDeltaObject not supported yet")
-		cont, typ, err = readContentOFSDelta(r, start)
+		cont, typ, err = readContentOFSDelta(r, start, memo)
 		sz = int64(len(cont))
 	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
 		cont, err = readContent(r)
-		fmt.Printf("\treaded size (unzipped): %d\n", len(cont))
-		offset, _ := currentOffset(r)
-		fmt.Printf("\tcurrent offset = %d:\n", offset)
 	default:
 		err = ErrInvalidObject.addDetails("tag %q", typ)
 	}
@@ -310,7 +291,7 @@ func (e *DecoderError) addDetails(format string, args ...interface{}) *DecoderEr
 	}
 }
 
-func readContentOFSDelta(r io.ReadSeeker, objectStart int64) (
+func readContentOFSDelta(r io.ReadSeeker, objectStart int64, memo map[core.Hash]int64) (
 	content []byte, typ core.ObjectType, err error) {
 
 	_, err = currentOffset(r)
@@ -325,28 +306,19 @@ func readContentOFSDelta(r io.ReadSeeker, objectStart int64) (
 
 	referencedObjectOffset := objectStart + offset
 
-	fmt.Printf("\tOFS DELTA offset = %d\n", offset)
-	fmt.Printf("\tOFS DELTA destination of jump = %d\n", referencedObjectOffset)
-
 	delta, err := currentOffset(r)
 	if err != nil {
 		return nil, core.ObjectType(0), err
 	}
-	fmt.Printf("\tOFS delta data at = %d\n", delta)
 
 	r.Seek(referencedObjectOffset, os.SEEK_SET)
-	current, _ := currentOffset(r)
-	fmt.Printf("\tjust jumped to referenced object at %d\n", current)
 
-	refObj, err := readObject(r)
+	refObj, err := readObject(r, memo)
 	if err != nil {
 		return nil, core.ObjectType(0), err
 	}
-	fmt.Printf("\treaded type of referenced object: %s\n", refObj.Type())
 
 	r.Seek(delta, os.SEEK_SET)
-	current, _ = currentOffset(r)
-	fmt.Printf("\tjumped back to %d (delta data)\n", current)
 
 	diff := bytes.NewBuffer(nil)
 	if err = inflate(r, diff); err != nil {
@@ -417,4 +389,44 @@ func readByte(r io.Reader) (byte, error) {
 
 func currentOffset(r io.Seeker) (int64, error) {
 	return r.Seek(0, os.SEEK_CUR)
+}
+
+func readContentREFDelta(r io.ReadSeeker, memo map[core.Hash]int64) (
+	content []byte, typ core.ObjectType, err error) {
+
+	var ref core.Hash
+	if _, err = io.ReadFull(r, ref[:]); err != nil {
+		return nil, core.ObjectType(0), err
+	}
+
+	delta, err := currentOffset(r)
+	if err != nil {
+		return nil, core.ObjectType(0), err
+	}
+
+	refOffset, ok := memo[ref]
+	if !ok {
+		return nil, core.ObjectType(0), fmt.Errorf("ref %q unkown")
+	}
+
+	r.Seek(refOffset, os.SEEK_SET)
+
+	refObj, err := readObject(r, memo)
+	if err != nil {
+		return nil, core.ObjectType(0), err
+	}
+
+	r.Seek(delta, os.SEEK_SET)
+
+	diff := bytes.NewBuffer(nil)
+	if err = inflate(r, diff); err != nil {
+		return nil, core.ObjectType(0), err
+	}
+
+	patched := packfile.PatchDelta(refObj.Content(), diff.Bytes())
+	if patched == nil {
+		return nil, core.ObjectType(0), fmt.Errorf("paching error")
+	}
+
+	return patched, refObj.Type(), nil
 }
