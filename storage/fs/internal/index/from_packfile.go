@@ -9,7 +9,6 @@ import (
 
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
-	"gopkg.in/src-d/go-git.v3/storage/memory"
 )
 
 var (
@@ -64,42 +63,6 @@ func NewFromPackfile(r packfile.ByteReadReadSeeker) (Index, error) {
 
 func isValidCount(c uint32) bool {
 	return c <= DefaultMaxObjectsLimit
-}
-
-func readObject(r packfile.ByteReadReadSeeker,
-	memo map[core.Hash]int64) (core.Object, error) {
-
-	start, err := currentOffset(r)
-	if err != nil {
-		return nil, err
-	}
-	_ = start
-
-	var typ core.ObjectType
-	var sz int64
-	typ, sz, err = packfile.ReadObjectTypeAndLength(r)
-	if err != nil {
-		return nil, err
-	}
-
-	var cont []byte
-	switch typ {
-	case core.REFDeltaObject:
-		cont, typ, err = readContentREFDelta(r, memo)
-		sz = int64(len(cont))
-	case core.OFSDeltaObject:
-		cont, typ, err = readContentOFSDelta(r, start, memo)
-		sz = int64(len(cont))
-	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
-		cont, err = readContent(r)
-	default:
-		err = packfile.ErrInvalidObject.AddDetails("tag %q", typ)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return memory.NewObject(typ, sz, cont), nil
 }
 
 func readContent(r io.Reader) ([]byte, error) {
@@ -197,10 +160,6 @@ func readByte(r io.Reader) (byte, error) {
 	}
 
 	return buf[0], nil
-}
-
-func currentOffset(r io.Seeker) (int64, error) {
-	return r.Seek(0, os.SEEK_CUR)
 }
 
 func readContentREFDelta(r packfile.ByteReadReadSeeker, memo map[core.Hash]int64) (

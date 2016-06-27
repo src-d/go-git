@@ -2,10 +2,13 @@ package packfile
 
 import (
 	"bytes"
+	"compress/zlib"
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v3/storage/memory"
 )
 
 var (
@@ -200,4 +203,118 @@ func ReadNegativeOffset(r io.ByteReader) (int64, error) {
 	}
 
 	return -offset, nil
+}
+
+func ReadObject(r Reader) (core.Object, error) {
+	start, err := r.Offset()
+	if err != nil {
+		return nil, err
+	}
+
+	var typ core.ObjectType
+	var sz int64
+	typ, sz, err = ReadObjectTypeAndLength(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var cont []byte
+	switch typ {
+	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
+		cont, err = ReadNonDeltaObjectContent(r)
+	case core.REFDeltaObject:
+		cont, typ, err = ReadREFDeltaObjectContent(r)
+	case core.OFSDeltaObject:
+		cont, typ, err = readOFSDeltaObjectContent(r, start)
+	default:
+		err = ErrInvalidObject.AddDetails("tag %q", typ)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if int64(len(cont)) != sz {
+		return nil, fmt.Errorf("corrupt packfile: size missmatch")
+	}
+
+	return memory.NewObject(typ, int64(len(cont)), cont), nil
+}
+
+var ReadNonDeltaObjectContent = ReadZip
+
+func ReadZip(r Reader) ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	err := inflate(r, buf)
+
+	return buf.Bytes(), err
+}
+
+func inflate(r Reader, w io.Writer) (err error) {
+	zr, err := zlib.NewReader(r)
+	if err != nil {
+		if err != zlib.ErrHeader {
+			return fmt.Errorf("zlib reading error: %s", err)
+		}
+	}
+
+	defer func() {
+		closeErr := zr.Close()
+		if err == nil {
+			err = closeErr
+		}
+	}()
+
+	_, err = io.Copy(w, zr)
+
+	return err
+}
+
+func ReadREFDeltaObjectContent(r Reader) ([]byte, core.ObjectType, error) {
+	var refHash core.Hash
+	var err error
+	if _, err = io.ReadFull(r, refHash[:]); err != nil {
+		return nil, core.ObjectType(0), err
+	}
+
+	refObj, err := r.RecallByHash(refHash)
+	if err != nil {
+		return nil, core.ObjectType(0), fmt.Errorf("reference not found: %s", refHash)
+	}
+
+	content, err := ReadSolveDelta(r, refObj.Content())
+	if err != nil {
+		return nil, refObj.Type(), err
+	}
+
+	return content, refObj.Type(), nil
+}
+
+func ReadSolveDelta(r Reader, base []byte) ([]byte, error) {
+	diff, err := ReadZip(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return PatchDelta(base, diff), nil
+}
+
+func readOFSDeltaObjectContent(r Reader, start int64) (
+	[]byte, core.ObjectType, error) {
+
+	jump, err := ReadNegativeOffset(r)
+	if err != nil {
+		return nil, core.ObjectType(0), err
+	}
+
+	ref, err := r.RecallByOffset(start + jump)
+	if err != nil {
+		return nil, core.ObjectType(0), err
+	}
+
+	content, err := ReadSolveDelta(r, ref.Content())
+	if err != nil {
+		return nil, ref.Type(), err
+	}
+
+	return content, ref.Type(), nil
 }

@@ -148,12 +148,12 @@ func (d *Decoder) newObject() (core.Object, error) {
 }
 
 // ByHash returns an already seen object by its hash.
-func (d *Decoder) ByHash(hash core.Hash) (core.Object, error) {
+func (d *Decoder) RecallByHash(hash core.Hash) (core.Object, error) {
 	return d.s.Get(hash)
 }
 
 // ByOffset returns an already seen object by its offset in the packfile.
-func (d *Decoder) ByOffset(offset int64) (core.Object, error) {
+func (d *Decoder) RecallByOffset(offset int64) (core.Object, error) {
 	hash, ok := d.offsets[offset]
 	if !ok {
 		return nil, ErrPackEntryNotFound.AddDetails("offset %d", offset)

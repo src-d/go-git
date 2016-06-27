@@ -1,8 +1,6 @@
 package packfile
 
 import (
-	"bytes"
-	"compress/zlib"
 	"fmt"
 	"io"
 	"os"
@@ -60,86 +58,6 @@ func ObjectAt(packfile ByteReadReadSeeker,
 	}
 
 	return memory.NewObject(typ, length, cont), err
-}
-
-func readContent(packfile ByteReadReader) ([]byte, error) {
-	buf := bytes.NewBuffer(nil)
-	err := inflate(packfile, buf)
-
-	return buf.Bytes(), err
-}
-
-func readContentREFDelta(packfile ByteReadReader, remember AlreadySeener) (content []byte,
-	typ core.ObjectType, err error) {
-
-	var ref core.Hash
-	if _, err = io.ReadFull(packfile, ref[:]); err != nil {
-		return nil, core.ObjectType(0), err
-	}
-
-	diff := bytes.NewBuffer(nil)
-	if err = inflate(packfile, diff); err != nil {
-		return nil, core.ObjectType(0), err
-	}
-
-	referenced, err := remember.ByHash(ref)
-	if err != nil {
-		return nil, core.ObjectType(0), fmt.Errorf("reference not found: %s", ref)
-	}
-
-	content = PatchDelta(referenced.Content(), diff.Bytes())
-	if content == nil {
-		return nil, core.ObjectType(0), fmt.Errorf("patching error: %q", ref)
-	}
-
-	return content, referenced.Type(), nil
-}
-
-func inflate(r ByteReadReader, w io.Writer) (err error) {
-	zr, err := zlib.NewReader(r)
-	if err != nil {
-		if err != zlib.ErrHeader {
-			return fmt.Errorf("zlib reading error: %s", err)
-		}
-	}
-
-	defer func() {
-		closeErr := zr.Close()
-		if err == nil {
-			err = closeErr
-		}
-	}()
-
-	_, err = io.Copy(w, zr)
-
-	return err
-}
-
-func readContentOFSDelta(packfile ByteReadReader,
-	objectStart int64, remember AlreadySeener) (content []byte,
-	typ core.ObjectType, err error) {
-
-	offset, err := readNegativeOffset(packfile)
-	if err != nil {
-		return nil, core.ObjectType(0), err
-	}
-
-	diff := bytes.NewBuffer(nil)
-	if err = inflate(packfile, diff); err != nil {
-		return nil, core.ObjectType(0), err
-	}
-
-	referenced, err := remember.ByOffset(objectStart + offset)
-	if err != nil {
-		return nil, core.ObjectType(0), err
-	}
-
-	patched := PatchDelta(referenced.Content(), diff.Bytes())
-	if patched == nil {
-		return nil, core.ObjectType(0), fmt.Errorf("paching error")
-	}
-
-	return patched, referenced.Type(), nil
 }
 
 // Git VLQ is quite special:
