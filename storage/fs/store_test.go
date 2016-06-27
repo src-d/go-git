@@ -45,6 +45,9 @@ var initFixtures = [...]struct {
 	}, {
 		id:  "binary-relations",
 		tgz: "internal/gitdir/fixtures/alcortesm-binary-relations.tgz",
+	}, {
+		id:  "test",
+		tgz: "internal/gitdir/fixtures/ref-deltas-no-idx.tgz",
 	},
 }
 
