@@ -271,14 +271,10 @@ func ReadREFDeltaObjectContent(r Reader) ([]byte, core.ObjectType, error) {
 		return nil, core.ObjectType(0), err
 	}
 
-	fmt.Printf("ref-delta found, looking for %s\n", refHash)
-
 	refObj, err := r.RecallByHash(refHash)
 	if err != nil {
-		fmt.Printf("ERROR hash not found: %s\n", refHash)
 		return nil, core.ObjectType(0), err
 	}
-	fmt.Printf("hash was found: %s\n", refHash)
 
 	content, err := ReadSolveDelta(r, refObj.Content())
 	if err != nil {

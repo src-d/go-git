@@ -1,7 +1,6 @@
 package packfile
 
 import (
-	"fmt"
 	"io"
 	"os"
 
@@ -45,7 +44,6 @@ func (r *SeekableReader) Remember(o int64, obj core.Object) error {
 		return ErrDuplicatedObj.AddDetails("with hash %s", h)
 	}
 
-	fmt.Printf("adding hash = %s, len=%d\n", h, len(r.OffsetsByHash))
 	r.OffsetsByHash[h] = o
 
 	return nil
