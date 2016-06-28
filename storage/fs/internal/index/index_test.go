@@ -1,7 +1,6 @@
 package index
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -36,7 +35,6 @@ func (s *SuiteIndex) TestNewFromIdx(c *C) {
 
 		index, err := NewFromIdx(idx)
 		if test.errRegexp != "" {
-			fmt.Println(err)
 			c.Assert(err, ErrorMatches, test.errRegexp, com)
 		} else {
 			c.Assert(err, IsNil, com)

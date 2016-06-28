@@ -90,7 +90,6 @@ func (s *SuiteCommon) TestInstallProtocol(c *C) {
 
 	for i, t := range tests {
 		if t.panic {
-			fmt.Println(t.service == nil)
 			c.Assert(func() { InstallProtocol(t.scheme, t.service) }, PanicMatches, `nil service`)
 			continue
 		}
