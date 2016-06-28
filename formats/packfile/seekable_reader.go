@@ -77,5 +77,5 @@ func (r *SeekableReader) RecallByOffset(o int64) (obj core.Object, err error) {
 		return nil, err
 	}
 
-	return ReadObject(r)
+	return NewParser(r).ReadObject()
 }

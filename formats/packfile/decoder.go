@@ -50,7 +50,7 @@ type Decoder struct {
 	// repositories you can run out of memory.
 	MaxObjectsLimit uint32
 
-	r Reader
+	p *Parser
 	s core.ObjectStorage
 }
 
@@ -59,7 +59,7 @@ func NewDecoder(r Reader) *Decoder {
 	return &Decoder{
 		MaxObjectsLimit: DefaultMaxObjectsLimit,
 
-		r: r,
+		p: NewParser(r),
 	}
 }
 
@@ -67,7 +67,7 @@ func NewDecoder(r Reader) *Decoder {
 func (d *Decoder) Decode(s core.ObjectStorage) error {
 	d.s = s
 
-	count, err := ReadHeader(d.r)
+	count, err := d.p.ReadHeader()
 	if err != nil {
 		return err
 	}
@@ -87,12 +87,12 @@ func (d *Decoder) readObjects(count uint32) error {
 	// That's 1 sec for ~2450 objects, ~4.20 MB, or ~250 ms per MB,
 	// of which 12-20 % is _not_ zlib inflation (ie. is our code).
 	for i := 0; i < int(count); i++ {
-		start, err := d.r.Offset()
+		start, err := d.p.Offset()
 		if err != nil {
 			return err
 		}
 
-		obj, err := ReadObject(d.r)
+		obj, err := d.p.ReadObject()
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -101,7 +101,7 @@ func (d *Decoder) readObjects(count uint32) error {
 			return err
 		}
 
-		err = d.r.Remember(start, obj)
+		err = d.p.Remember(start, obj)
 		if err != nil {
 			return err
 		}

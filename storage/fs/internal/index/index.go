@@ -38,8 +38,9 @@ func NewFromPackfile(rs io.ReadSeeker) (Index, error) {
 	index := make(Index)
 
 	r := packfile.NewSeekableReader(rs)
+	p := packfile.NewParser(r)
 
-	count, err := packfile.ReadHeader(r)
+	count, err := p.ReadHeader()
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +51,7 @@ func NewFromPackfile(rs io.ReadSeeker) (Index, error) {
 			return nil, err
 		}
 
-		obj, err := packfile.ReadObject(r)
+		obj, err := p.ReadObject()
 		if err != nil {
 			return nil, err
 		}
