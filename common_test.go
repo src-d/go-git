@@ -66,18 +66,19 @@ func unpackFixtures(c *C, fixtures ...[]packedFixture) map[string]*Repository {
 			if _, existing := repos[fixture.url]; existing {
 				continue
 			}
+
+			comment := Commentf("fixture packfile: %q", fixture.packfile)
+
 			repos[fixture.url] = NewPlainRepository()
 
 			f, err := os.Open(fixture.packfile)
-			c.Assert(err, IsNil)
+			c.Assert(err, IsNil, comment)
+			r := packfile.NewSeekableReader(f)
+			d := packfile.NewDecoder(r)
+			err = d.Decode(repos[fixture.url].Storage)
+			c.Assert(err, IsNil, comment)
 
-			d := packfile.NewDecoder(f)
-			d.Format = packfile.OFSDeltaFormat // This is hardcoded because we don't have a good way to sniff the format
-
-			_, err = d.Decode(repos[fixture.url].Storage)
-			c.Assert(err, IsNil)
-
-			c.Assert(f.Close(), IsNil)
+			c.Assert(f.Close(), IsNil, comment)
 		}
 	}
 

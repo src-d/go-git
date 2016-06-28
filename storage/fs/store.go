@@ -69,20 +69,7 @@ func buildIndexFromPackfile(dir *gitdir.GitDir) (index.Index, error) {
 		}
 	}()
 
-	return index.NewFromPackfile(&fileByteReader{*f})
-}
-
-type fileByteReader struct {
-	os.File
-}
-
-func (f *fileByteReader) ReadByte() (byte, error) {
-	buf := [1]byte{}
-	if _, err := f.Read(buf[:]); err != nil {
-		return 0, err
-	}
-
-	return buf[0], nil
+	return index.NewFromPackfile(f)
 }
 
 func buildIndexFromIdxfile(path string) (index.Index, error) {
@@ -133,7 +120,15 @@ func (s *ObjectStorage) Get(h core.Hash) (core.Object, error) {
 		}
 	}()
 
-	return packfile.ObjectAt(&fileByteReader{*f}, offset, s)
+	_, err = f.Seek(offset, os.SEEK_SET)
+	if err != nil {
+		return nil, err
+	}
+
+	r := packfile.NewSeekableReader(f)
+	r.OffsetsByHash = map[core.Hash]int64(s.index)
+
+	return packfile.ReadObject(r)
 }
 
 // Iter returns an iterator for all the objects in the packfile with the
@@ -152,37 +147,4 @@ func (s *ObjectStorage) Iter(t core.ObjectType) (core.ObjectIter, error) {
 	}
 
 	return core.NewObjectSliceIter(objects), nil
-}
-
-// ByHash returns an already seen object given its hash.
-//
-// Given the nature of this storage, it also returns objects that
-// have not yet been seen.
-func (s *ObjectStorage) ByHash(hash core.Hash) (core.Object, error) {
-	return s.Get(hash)
-}
-
-// ByOffset returns an already seen object given its offset.
-//
-// Given the nature of this storage, it also returns objects that
-// have not yet been seen.
-func (s *ObjectStorage) ByOffset(offset int64) (core.Object, error) {
-	path, err := s.dir.Packfile()
-	if err != nil {
-		return nil, err
-	}
-
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		errClose := f.Close()
-		if err == nil {
-			err = errClose
-		}
-	}()
-
-	return packfile.ObjectAt(&fileByteReader{*f}, offset, s)
 }

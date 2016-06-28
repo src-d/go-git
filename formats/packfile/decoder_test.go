@@ -27,11 +27,11 @@ var packFileWithEmptyObjects = "UEFDSwAAAAIAAAALnw54nKXMQWoDMQxA0b1PoX2hSLIm44FS
 func (s *ReaderSuite) TestReadPackfile(c *C) {
 	data, _ := base64.StdEncoding.DecodeString(packFileWithEmptyObjects)
 	f := bytes.NewReader(data)
-
-	d := NewDecoder(f)
+	r := NewSeekableReader(f)
+	d := NewDecoder(r)
 
 	sto := memory.NewObjectStorage()
-	_, err := d.Decode(sto)
+	err := d.Decode(sto)
 	c.Assert(err, IsNil)
 
 	AssertObjects(c, sto, []string{
@@ -60,12 +60,11 @@ func (s *ReaderSuite) TestReadPackfileREFDelta(c *C) {
 func (s *ReaderSuite) testReadPackfileGitFixture(c *C, file string, format Format) {
 	f, err := os.Open(file)
 	c.Assert(err, IsNil)
-
-	d := NewDecoder(f)
-	d.Format = format
+	r := NewSeekableReader(f)
+	d := NewDecoder(r)
 
 	sto := memory.NewObjectStorage()
-	_, err = d.Decode(sto)
+	err = d.Decode(sto)
 	c.Assert(err, IsNil)
 
 	AssertObjects(c, sto, []string{
@@ -168,12 +167,11 @@ func (s *ReaderSuite) _TestMemoryREF(c *C) {
 func readFromFile(c *C, file string, format Format) *memory.ObjectStorage {
 	f, err := os.Open(file)
 	c.Assert(err, IsNil)
-
-	d := NewDecoder(f)
-	d.Format = format
+	r := NewSeekableReader(f)
+	d := NewDecoder(r)
 
 	sto := memory.NewObjectStorage()
-	_, err = d.Decode(sto)
+	err = d.Decode(sto)
 	c.Assert(err, IsNil)
 
 	return sto

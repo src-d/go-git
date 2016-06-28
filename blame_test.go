@@ -23,14 +23,10 @@ func (s *BlameCommon) SetUpSuite(c *C) {
 
 		f, err := os.Open(fixRepo.packfile)
 		c.Assert(err, IsNil)
+		reader := packfile.NewSeekableReader(f)
 
-		d := packfile.NewDecoder(f)
-		// TODO: how to know the format of a pack file ahead of time?
-		// Some info at:
-		// https://codewords.recurse.com/issues/three/unpacking-git-packfiles
-		d.Format = packfile.OFSDeltaFormat
-
-		_, err = d.Decode(r.Storage)
+		d := packfile.NewDecoder(reader)
+		err = d.Decode(r.Storage)
 		c.Assert(err, IsNil)
 
 		c.Assert(f.Close(), IsNil)

@@ -212,8 +212,7 @@ func ReadObject(r Reader) (core.Object, error) {
 	}
 
 	var typ core.ObjectType
-	var sz int64
-	typ, sz, err = ReadObjectTypeAndLength(r)
+	typ, _, err = ReadObjectTypeAndLength(r)
 	if err != nil {
 		return nil, err
 	}
@@ -231,10 +230,6 @@ func ReadObject(r Reader) (core.Object, error) {
 	}
 	if err != nil {
 		return nil, err
-	}
-
-	if int64(len(cont)) != sz {
-		return nil, fmt.Errorf("corrupt packfile: size missmatch")
 	}
 
 	return memory.NewObject(typ, int64(len(cont)), cont), nil
@@ -276,10 +271,14 @@ func ReadREFDeltaObjectContent(r Reader) ([]byte, core.ObjectType, error) {
 		return nil, core.ObjectType(0), err
 	}
 
+	fmt.Printf("ref-delta found, looking for %s\n", refHash)
+
 	refObj, err := r.RecallByHash(refHash)
 	if err != nil {
-		return nil, core.ObjectType(0), fmt.Errorf("reference not found: %s", refHash)
+		fmt.Printf("ERROR hash not found: %s\n", refHash)
+		return nil, core.ObjectType(0), err
 	}
+	fmt.Printf("hash was found: %s\n", refHash)
 
 	content, err := ReadSolveDelta(r, refObj.Content())
 	if err != nil {
