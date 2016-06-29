@@ -29,12 +29,12 @@ const (
 // A Parser is a collection of functions to read and process data form a packfile.
 // Values from this type are not zero-value safe. See the NewParser function bellow.
 type Parser struct {
-	Reader
+	ReadRecaller
 }
 
 // NewParser returns a new Parser that reads from the packfile represented by r.
-func NewParser(r Reader) *Parser {
-	return &Parser{Reader: r}
+func NewParser(r ReadRecaller) *Parser {
+	return &Parser{ReadRecaller: r}
 }
 
 // ReadInt32 reads 4 bytes and returns them as a Big Endian int32.

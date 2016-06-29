@@ -11,16 +11,26 @@ var (
 	ErrCannotRecall = NewError("cannot recall object")
 )
 
-// The Reader interface has all the functions needed by a packfile Parser to operate.
-// resons for ReadByte:
-// https://github.com/golang/go/commit/7ba54d45732219af86bde9a5b73c145db82b70c6
-// https://groups.google.com/forum/#!topic/golang-nuts/fWTRdHpt0QI
-// https://gowalker.org/compress/zlib#NewReader
-type Reader interface {
+// The Reader interface has all the functions needed by a packfile
+// Parser to operate. We provide two very different implementations:
+// SeekableReader and StreamReader.
+type ReadRecaller interface {
 	Read(p []byte) (int, error)
+	// ReadByte is needed because of these:
+	// - https://github.com/golang/go/commit/7ba54d45732219af86bde9a5b73c145db82b70c6
+	// - https://groups.google.com/forum/#!topic/golang-nuts/fWTRdHpt0QI
+	// - https://gowalker.org/compress/zlib#NewReader
 	ReadByte() (byte, error)
+	// Offset returns the number of bytes parsed so far from the
+	// packfile.
 	Offset() (int64, error)
+	// Remember ask the ReadRecaller to remember the offset and hash for
+	// an object, so you can later call RecallByOffset and RecallByHash.
 	Remember(int64, core.Object) error
+	// RecallByOffset returns the previously processed object found at a
+	// given offset.
 	RecallByOffset(int64) (core.Object, error)
+	// RecallByHash returns the previously processed object with the
+	// given hash.
 	RecallByHash(core.Hash) (core.Object, error)
 }

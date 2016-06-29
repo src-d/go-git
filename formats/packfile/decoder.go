@@ -55,7 +55,7 @@ type Decoder struct {
 }
 
 // NewDecoder returns a new Decoder that reads from r.
-func NewDecoder(r Reader) *Decoder {
+func NewDecoder(r ReadRecaller) *Decoder {
 	return &Decoder{
 		MaxObjectsLimit: DefaultMaxObjectsLimit,
 
