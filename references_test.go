@@ -26,7 +26,7 @@ func (s *ReferencesSuite) SetUpSuite(c *C) {
 		f, err := os.Open(fix.packfile)
 		defer f.Close()
 		c.Assert(err, IsNil)
-		r := packfile.NewSeekableReader(f)
+		r := packfile.NewSeekableReadRecaller(f)
 		d := packfile.NewDecoder(r)
 		err = d.Decode(s.repos[fix.url].Storage)
 		c.Assert(err, IsNil)
