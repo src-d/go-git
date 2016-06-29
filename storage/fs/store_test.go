@@ -37,14 +37,11 @@ var initFixtures = [...]struct {
 	tgz string
 }{
 	{
-		id:  "spinnaker",
-		tgz: "internal/gitdir/fixtures/spinnaker-gc.tgz",
-	}, {
-		id:  "spinnaker-no-idx",
-		tgz: "internal/gitdir/fixtures/spinnaker-no-idx.tgz",
-	}, {
 		id:  "binary-relations",
 		tgz: "internal/gitdir/fixtures/alcortesm-binary-relations.tgz",
+	}, {
+		id:  "binary-relations-no-idx",
+		tgz: "internal/gitdir/fixtures/alcortesm-binary-relations-no-idx.tgz",
 	}, {
 		id:  "ref-deltas-no-idx",
 		tgz: "internal/gitdir/fixtures/ref-deltas-no-idx.tgz",
@@ -72,8 +69,8 @@ func (s *FsSuite) TestNewErrorNotFound(c *C) {
 	c.Assert(err, Equals, gitdir.ErrNotFound)
 }
 
-func (s *FsSuite) TestGetHashNotFound(c *C) {
-	path := fixture("spinnaker", c)
+func (s *FsSuite) TestHashNotFound(c *C) {
+	path := fixture("binary-relations", c)
 
 	sto, err := fs.New(path)
 	c.Assert(err, IsNil)
@@ -84,9 +81,8 @@ func (s *FsSuite) TestGetHashNotFound(c *C) {
 
 func (s *FsSuite) TestGetCompareWithMemoryStorage(c *C) {
 	for i, fixId := range [...]string{
-		"spinnaker",
-		"spinnaker-no-idx",
 		"binary-relations",
+		"binary-relations-no-idx",
 		"ref-deltas-no-idx",
 	} {
 		path := fixture(fixId, c)
@@ -208,9 +204,8 @@ func equalsObjects(a, b core.Object) (bool, string, error) {
 
 func (s *FsSuite) TestIterCompareWithMemoryStorage(c *C) {
 	for i, fixId := range [...]string{
-		"spinnaker",
-		"spinnaker-no-idx",
 		"binary-relations",
+		"binary-relations-no-idx",
 		"ref-deltas-no-idx",
 	} {
 
@@ -307,7 +302,7 @@ func (a byHash) Less(i, j int) bool {
 }
 
 func (s *FsSuite) TestSet(c *C) {
-	path := fixture("spinnaker", c)
+	path := fixture("binary-relations", c)
 
 	sto, err := fs.New(path)
 	c.Assert(err, IsNil)
