@@ -38,12 +38,9 @@ func (r *StreamReader) Read(p []byte) (n int, err error) {
 func (r *StreamReader) ReadByte() (byte, error) {
 	var p [1]byte
 	_, err := r.Reader.Read(p[:])
-	if err != nil {
-		return 0, err
-	}
 	r.count++
 
-	return p[0], nil
+	return p[0], err
 }
 
 // Offset returns the number of bytes read.
@@ -57,12 +54,12 @@ func (r *StreamReader) Offset() (int64, error) {
 func (r *StreamReader) Remember(o int64, obj core.Object) error {
 	h := obj.Hash()
 	if _, ok := r.byHash[h]; ok {
-		return ErrDuplicatedObj.AddDetails("with hash: %s", h)
+		return ErrDuplicatedObj.AddDetails("with hash %s", h)
 	}
 	r.byHash[h] = obj
 
 	if _, ok := r.byOffset[o]; ok {
-		return ErrDuplicatedObj.AddDetails("at offset: %d", o)
+		return ErrDuplicatedObj.AddDetails("with offset %d", o)
 	}
 	r.byOffset[o] = obj
 
@@ -74,7 +71,7 @@ func (r *StreamReader) Remember(o int64, obj core.Object) error {
 func (r *StreamReader) RecallByHash(h core.Hash) (core.Object, error) {
 	obj, ok := r.byHash[h]
 	if !ok {
-		return nil, ErrCannotRecall.AddDetails("hash not found: %s", h)
+		return nil, ErrCannotRecall.AddDetails("by hash %s", h)
 	}
 
 	return obj, nil
