@@ -1,7 +1,9 @@
 package git
 
 import (
+	"bytes"
 	"io"
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -73,7 +75,13 @@ func unpackFixtures(c *C, fixtures ...[]packedFixture) map[string]*Repository {
 
 			f, err := os.Open(fixture.packfile)
 			c.Assert(err, IsNil, comment)
-			r := packfile.NewStreamReadRecaller(f)
+
+			// increase memory consumption to speed up tests
+			data, err := ioutil.ReadAll(f)
+			c.Assert(err, IsNil)
+			memStream := bytes.NewReader(data)
+			r := packfile.NewStreamReadRecaller(memStream)
+
 			d := packfile.NewDecoder(r)
 			err = d.Decode(repos[fixture.url].Storage)
 			c.Assert(err, IsNil, comment)
