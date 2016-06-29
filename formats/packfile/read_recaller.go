@@ -13,7 +13,7 @@ var (
 
 // The Reader interface has all the functions needed by a packfile
 // Parser to operate. We provide two very different implementations:
-// SeekableReader and StreamReader.
+// SeekableReadRecaller and StreamReadRecaller.
 type ReadRecaller interface {
 	// Read reads up to len(p) bytes into p.
 	Read(p []byte) (int, error)

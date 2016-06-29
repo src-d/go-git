@@ -10,11 +10,11 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-type StreamReaderSuite struct{}
+type StreamReadRecallerSuite struct{}
 
-var _ = Suite(&StreamReaderSuite{})
+var _ = Suite(&StreamReadRecallerSuite{})
 
-func (s *StreamReaderSuite) TestRead(c *C) {
+func (s *StreamReadRecallerSuite) TestRead(c *C) {
 	data := []byte{0, 1, 2, 3, 4, 5, 7, 8, 9, 10}
 	sr := initStreamReader(data)
 	all := make([]byte, 0, len(data))
@@ -28,15 +28,14 @@ func (s *StreamReaderSuite) TestRead(c *C) {
 	c.Assert(data, DeepEquals, all)
 }
 
-func initStreamReader(data []byte) *StreamReader {
+func initStreamReader(data []byte) *StreamReadRecaller {
 	buf := bytes.NewBuffer(data)
-	return NewStreamReader(buf)
+	return NewStreamReadRecaller(buf)
 }
 
-func (s *StreamReaderSuite) TestReadbyte(c *C) {
+func (s *StreamReadRecallerSuite) TestReadbyte(c *C) {
 	data := []byte{0, 1, 2, 3, 4, 5, 7, 8, 9, 10}
-	buf := bytes.NewBuffer(data)
-	sr := NewStreamReader(buf)
+	sr := initStreamReader(data)
 	all := make([]byte, 0, len(data))
 
 	for len(all) < len(data) {
@@ -47,10 +46,9 @@ func (s *StreamReaderSuite) TestReadbyte(c *C) {
 	c.Assert(data, DeepEquals, all)
 }
 
-func (s *StreamReaderSuite) TestOffsetWithRead(c *C) {
+func (s *StreamReadRecallerSuite) TestOffsetWithRead(c *C) {
 	data := []byte{0, 1, 2, 3, 4, 5, 7, 8, 9, 10}
-	buf := bytes.NewBuffer(data)
-	sr := NewStreamReader(buf)
+	sr := initStreamReader(data)
 	all := make([]byte, 0, len(data))
 
 	for len(all) < len(data) {
@@ -65,10 +63,9 @@ func (s *StreamReaderSuite) TestOffsetWithRead(c *C) {
 	}
 }
 
-func (s *StreamReaderSuite) TestOffsetWithReadByte(c *C) {
+func (s *StreamReadRecallerSuite) TestOffsetWithReadByte(c *C) {
 	data := []byte{0, 1, 2, 3, 4, 5, 7, 8, 9, 10}
-	buf := bytes.NewBuffer(data)
-	sr := NewStreamReader(buf)
+	sr := initStreamReader(data)
 	all := make([]byte, 0, len(data))
 
 	for len(all) < len(data) {
@@ -82,8 +79,8 @@ func (s *StreamReaderSuite) TestOffsetWithReadByte(c *C) {
 	}
 }
 
-func (s *StreamReaderSuite) TestRememberRecall(c *C) {
-	sr := NewStreamReader(bytes.NewBuffer([]byte{}))
+func (s *StreamReadRecallerSuite) TestRememberRecall(c *C) {
+	sr := NewStreamReadRecaller(bytes.NewBuffer([]byte{}))
 
 	for i, test := range [...]struct {
 		off int64
@@ -121,8 +118,8 @@ func newObj(typ int, cont []byte) core.Object {
 	return memory.NewObject(core.ObjectType(typ), int64(len(cont)), cont)
 }
 
-func (s *StreamReaderSuite) TestRecallErrors(c *C) {
-	sr := NewStreamReader(bytes.NewBuffer([]byte{}))
+func (s *StreamReadRecallerSuite) TestRecallErrors(c *C) {
+	sr := NewStreamReadRecaller(bytes.NewBuffer([]byte{}))
 	obj := newObj(0, []byte{})
 
 	_, err := sr.RecallByHash(obj.Hash())
@@ -141,7 +138,7 @@ func (s *StreamReaderSuite) TestRecallErrors(c *C) {
 
 }
 
-func rememberSomeObjects(sr *StreamReader) error {
+func rememberSomeObjects(sr *StreamReadRecaller) error {
 	for i, init := range [...]struct {
 		off int64
 		obj core.Object
