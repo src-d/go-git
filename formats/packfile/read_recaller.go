@@ -15,6 +15,7 @@ var (
 // Parser to operate. We provide two very different implementations:
 // SeekableReader and StreamReader.
 type ReadRecaller interface {
+	// Read reads up to len(p) bytes into p.
 	Read(p []byte) (int, error)
 	// ReadByte is needed because of these:
 	// - https://github.com/golang/go/commit/7ba54d45732219af86bde9a5b73c145db82b70c6
