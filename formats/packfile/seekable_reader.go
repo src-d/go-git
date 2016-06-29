@@ -52,7 +52,7 @@ func (r *SeekableReader) Remember(o int64, obj core.Object) error {
 func (r *SeekableReader) RecallByHash(h core.Hash) (core.Object, error) {
 	o, ok := r.OffsetsByHash[h]
 	if !ok {
-		return nil, ErrRecall.AddDetails("hash not found: %s", h)
+		return nil, ErrCannotRecall.AddDetails("hash not found: %s", h)
 	}
 
 	return r.RecallByOffset(o)

@@ -6,9 +6,9 @@ var (
 	// ErrDulicatedObject is returned by Remember if an object appears several
 	// times in a packfile.
 	ErrDuplicatedObj = NewError("duplicated object")
-	// ErrRecall is returned by RecallByOffset or RecallByHash if the object
+	// ErrCannotRecall is returned by RecallByOffset or RecallByHash if the object
 	// to recall cannot be returned.
-	ErrRecall = NewError("cannot recall object")
+	ErrCannotRecall = NewError("cannot recall object")
 )
 
 // The Reader interface has all the functions needed by a packfile Parser to operate.

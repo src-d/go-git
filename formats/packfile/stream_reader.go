@@ -51,7 +51,7 @@ func (r *StreamReader) Remember(o int64, obj core.Object) error {
 func (r *StreamReader) RecallByHash(h core.Hash) (core.Object, error) {
 	obj, ok := r.byHash[h]
 	if !ok {
-		return nil, ErrRecall.AddDetails("hash not found: %s", h)
+		return nil, ErrCannotRecall.AddDetails("hash not found: %s", h)
 	}
 
 	return obj, nil
@@ -60,7 +60,7 @@ func (r *StreamReader) RecallByHash(h core.Hash) (core.Object, error) {
 func (r *StreamReader) RecallByOffset(o int64) (core.Object, error) {
 	obj, ok := r.byOffset[o]
 	if !ok {
-		return nil, ErrRecall.AddDetails("no object found at offset %d", o)
+		return nil, ErrCannotRecall.AddDetails("no object found at offset %d", o)
 	}
 
 	return obj, nil
