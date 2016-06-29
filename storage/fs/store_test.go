@@ -84,9 +84,9 @@ func (s *FsSuite) TestGetHashNotFound(c *C) {
 
 func (s *FsSuite) TestGetCompareWithMemoryStorage(c *C) {
 	for i, fixId := range [...]string{
-		//"spinnaker",
-		//"spinnaker-no-idx",
-		//"binary-relations",
+		"spinnaker",
+		"spinnaker-no-idx",
+		"binary-relations",
 		"ref-deltas-no-idx",
 	} {
 		path := fixture(fixId, c)
@@ -147,7 +147,7 @@ func equalsStorages(a, b core.ObjectStorage) (bool, string, error) {
 	} {
 		iter, err := a.Iter(typ)
 		if err != nil {
-			return false, "", err
+			return false, "", fmt.Errorf("cannot get iterator: %s", err)
 		}
 
 		for {
@@ -159,12 +159,13 @@ func equalsStorages(a, b core.ObjectStorage) (bool, string, error) {
 
 			bo, err := b.Get(ao.Hash())
 			if err != nil {
-				return false, "", err
+				return false, "", fmt.Errorf("getting object with hash %s: %s",
+					ao.Hash(), err)
 			}
 
 			equal, reason, err := equalsObjects(ao, bo)
 			if !equal || err != nil {
-				return equal, reason, err
+				return equal, reason, fmt.Errorf("comparing objects: %s", err)
 			}
 		}
 	}

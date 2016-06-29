@@ -48,7 +48,10 @@ func (r *SeekableReadRecaller) Offset() (int64, error) {
 	return r.Seek(0, os.SEEK_CUR)
 }
 
-// Remember stores the offset of the object and its hash, but not the object itself.
+// Remember stores the offset of the object and its hash, but not the
+// object itself.  This implementation does not check for already stored
+// offsets, as it is too expensive to build this information from an
+// index every time a get operation is performed on the SeekableReadRecaller.
 func (r *SeekableReadRecaller) Remember(o int64, obj core.Object) error {
 	h := obj.Hash()
 	if _, ok := r.OffsetsByHash[h]; ok {
@@ -74,19 +77,21 @@ func (r *SeekableReadRecaller) RecallByHash(h core.Hash) (core.Object, error) {
 // RecallByOffset returns the object for a given offset by looking for it again in
 // the io.ReadeSeerker.
 func (r *SeekableReadRecaller) RecallByOffset(o int64) (obj core.Object, err error) {
+	// remember current offset
 	beforeJump, err := r.Offset()
 	if err != nil {
 		return nil, err
 	}
 
 	defer func() {
+		// jump back
 		_, seekErr := r.Seek(beforeJump, os.SEEK_SET)
 		if err == nil {
 			err = seekErr
 		}
 	}()
 
-	// jump to offset o
+	// jump to requested offset
 	_, err = r.Seek(o, os.SEEK_SET)
 	if err != nil {
 		return nil, err
