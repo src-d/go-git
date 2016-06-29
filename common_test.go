@@ -73,7 +73,7 @@ func unpackFixtures(c *C, fixtures ...[]packedFixture) map[string]*Repository {
 
 			f, err := os.Open(fixture.packfile)
 			c.Assert(err, IsNil, comment)
-			r := packfile.NewSeekableReader(f)
+			r := packfile.NewStreamReader(f)
 			d := packfile.NewDecoder(r)
 			err = d.Decode(repos[fixture.url].Storage)
 			c.Assert(err, IsNil, comment)
