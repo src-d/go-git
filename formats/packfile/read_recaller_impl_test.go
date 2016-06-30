@@ -245,9 +245,9 @@ func rememberSomeObjects(sr ReadRecaller) error {
 		off int64
 		obj core.Object
 	}{
-		{off: 0, obj: newObj(core.CommitObject, []byte{'a'})},
-		{off: 10, obj: newObj(core.CommitObject, []byte{'b'})},
-		{off: 20, obj: newObj(core.CommitObject, []byte{'c'})},
+		{off: 0, obj: newObj(core.CommitObject, []byte{'a'})},  // 93114cce67ec23976d15199514399203f69cc676
+		{off: 10, obj: newObj(core.CommitObject, []byte{'b'})}, // 2bb767097e479f668f0ebdabe88df11337bd8f19
+		{off: 20, obj: newObj(core.CommitObject, []byte{'c'})}, // 2f8096005677370e6446541a50e074299d43d468
 	} {
 		err := sr.Remember(init.off, init.obj)
 		if err != nil {
@@ -256,4 +256,37 @@ func rememberSomeObjects(sr ReadRecaller) error {
 	}
 
 	return nil
+}
+
+func (s *ReadRecallerImplSuite) TestForgetAll(c *C) {
+	for _, impl := range []struct {
+		id    string
+		newFn implFn
+	}{
+		{id: "stream", newFn: newStream},
+		{id: "seekable", newFn: newSeekable},
+	} {
+		com := Commentf("implementation %s", impl.id)
+		sr := impl.newFn([]byte{})
+
+		err := rememberSomeObjects(sr)
+		c.Assert(err, IsNil)
+
+		sr.ForgetAll()
+
+		if impl.id != "seekable" { // for efficiency, seekable always finds objects by offset
+			_, err = sr.RecallByOffset(0)
+			c.Assert(err, ErrorMatches, ErrCannotRecall.Error()+".*", com)
+			_, err = sr.RecallByOffset(10)
+			c.Assert(err, ErrorMatches, ErrCannotRecall.Error()+".*", com)
+			_, err = sr.RecallByOffset(20)
+			c.Assert(err, ErrorMatches, ErrCannotRecall.Error()+".*", com)
+		}
+		_, err = sr.RecallByHash(core.NewHash("93114cce67ec23976d15199514399203f69cc676"))
+		c.Assert(err, ErrorMatches, ErrCannotRecall.Error()+".*", com)
+		_, err = sr.RecallByHash(core.NewHash("2bb767097e479f668f0ebdabe88df11337bd8f19"))
+		c.Assert(err, ErrorMatches, ErrCannotRecall.Error()+".*", com)
+		_, err = sr.RecallByHash(core.NewHash("2f8096005677370e6446541a50e074299d43d468"))
+		c.Assert(err, ErrorMatches, ErrCannotRecall.Error()+".*", com)
+	}
 }
