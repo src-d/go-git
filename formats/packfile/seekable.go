@@ -62,7 +62,9 @@ func (r *Seekable) Remember(o int64, obj core.Object) error {
 	return nil
 }
 
-// ForgetAll forgets all previously remembered objects.
+// ForgetAll forgets all previously remembered objects.  For efficiency
+// reasons RecallByOffset always find objects, even if they have been
+// forgetted or were never remembered.
 func (r *Seekable) ForgetAll() {
 	r.OffsetsByHash = make(map[core.Hash]int64)
 }
@@ -79,7 +81,8 @@ func (r *Seekable) RecallByHash(h core.Hash) (core.Object, error) {
 }
 
 // RecallByOffset returns the object for a given offset by looking for it again in
-// the io.ReadeSeerker.
+// the io.ReadeSeerker. For efficiency reasons, this method always find objects by
+// offset, even if they have not been remembered or if they have been forgetted.
 func (r *Seekable) RecallByOffset(o int64) (obj core.Object, err error) {
 	// remember current offset
 	beforeJump, err := r.Offset()
