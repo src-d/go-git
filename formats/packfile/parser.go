@@ -47,22 +47,6 @@ func (p Parser) readInt32() (uint32, error) {
 	return v, nil
 }
 
-// ReadVersion reads and returns the version field of a packfile.
-func (p *Parser) ReadVersion() (uint32, error) {
-	return p.readInt32()
-}
-
-// ReadCount reads and returns the count of objects field of a packfile.
-func (p *Parser) ReadCount() (uint32, error) {
-	return p.readInt32()
-}
-
-// IsSupportedVersion returns whether version v is supported by the parser.
-// The current supported version is VersionSupported, defined above.
-func (p *Parser) IsSupportedVersion(v uint32) bool {
-	return v == VersionSupported
-}
-
 // ReadSignature reads an returns the signature field in the packfile.
 func (p *Parser) ReadSignature() ([]byte, error) {
 	var sig = make([]byte, 4)
@@ -76,6 +60,22 @@ func (p *Parser) ReadSignature() ([]byte, error) {
 // IsValidSignature returns if sig is a valid packfile signature.
 func (p Parser) IsValidSignature(sig []byte) bool {
 	return bytes.Equal(sig, []byte{'P', 'A', 'C', 'K'})
+}
+
+// ReadVersion reads and returns the version field of a packfile.
+func (p *Parser) ReadVersion() (uint32, error) {
+	return p.readInt32()
+}
+
+// IsSupportedVersion returns whether version v is supported by the parser.
+// The current supported version is VersionSupported, defined above.
+func (p *Parser) IsSupportedVersion(v uint32) bool {
+	return v == VersionSupported
+}
+
+// ReadCount reads and returns the count of objects field of a packfile.
+func (p *Parser) ReadCount() (uint32, error) {
+	return p.readInt32()
 }
 
 // ReadHeader reads the whole packfile header (signature, version and
