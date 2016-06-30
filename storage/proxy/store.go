@@ -1,4 +1,4 @@
-package fs
+package proxy
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
-	"gopkg.in/src-d/go-git.v3/storage/fs/internal/gitdir"
-	"gopkg.in/src-d/go-git.v3/storage/fs/internal/index"
+	"gopkg.in/src-d/go-git.v3/storage/proxy/internal/gitdir"
+	"gopkg.in/src-d/go-git.v3/storage/proxy/internal/index"
 )
 
 // ObjectStorage is an implementation of core.ObjectStorage that stores

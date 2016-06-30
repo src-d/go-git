@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v3/clients/http"
 	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/storage/fs"
+	"gopkg.in/src-d/go-git.v3/storage/proxy"
 	"gopkg.in/src-d/go-git.v3/utils/tgz"
 
 	. "gopkg.in/check.v1"
@@ -18,7 +18,7 @@ var dirFixtures = [...]struct {
 }{
 	{
 		name: "binrels",
-		tgz:  "storage/fs/internal/gitdir/fixtures/alcortesm-binary-relations.tgz",
+		tgz:  "storage/proxy/internal/gitdir/fixtures/alcortesm-binary-relations.tgz",
 	},
 }
 
@@ -74,7 +74,7 @@ func (s *SuiteRepository) TestNewRepositoryFromFS(c *C) {
 		c.Assert(err, ErrorMatches, `unable to find remote "origin"`)
 
 		c.Assert(repo.Storage, NotNil, com)
-		c.Assert(repo.Storage, FitsTypeOf, &fs.ObjectStorage{}, com)
+		c.Assert(repo.Storage, FitsTypeOf, &proxy.ObjectStorage{}, com)
 	}
 }
 

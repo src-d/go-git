@@ -1,4 +1,4 @@
-package fs_test
+package proxy_test
 
 import (
 	"fmt"
@@ -9,9 +9,9 @@ import (
 
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
-	"gopkg.in/src-d/go-git.v3/storage/fs"
-	"gopkg.in/src-d/go-git.v3/storage/fs/internal/gitdir"
 	"gopkg.in/src-d/go-git.v3/storage/memory"
+	"gopkg.in/src-d/go-git.v3/storage/proxy"
+	"gopkg.in/src-d/go-git.v3/storage/proxy/internal/gitdir"
 	"gopkg.in/src-d/go-git.v3/utils/tgz"
 
 	. "gopkg.in/check.v1"
@@ -65,14 +65,14 @@ func (s *FsSuite) TearDownSuite(c *C) {
 }
 
 func (s *FsSuite) TestNewErrorNotFound(c *C) {
-	_, err := fs.New("not_found/.git")
+	_, err := proxy.New("not_found/.git")
 	c.Assert(err, Equals, gitdir.ErrNotFound)
 }
 
 func (s *FsSuite) TestHashNotFound(c *C) {
 	path := fixture("binary-relations", c)
 
-	sto, err := fs.New(path)
+	sto, err := proxy.New(path)
 	c.Assert(err, IsNil)
 
 	_, err = sto.Get(core.ZeroHash)
@@ -92,10 +92,10 @@ func (s *FsSuite) TestGetCompareWithMemoryStorage(c *C) {
 		memSto, err := memStorageFromGitDir(path)
 		c.Assert(err, IsNil, com)
 
-		fsSto, err := fs.New(path)
+		proxySto, err := proxy.New(path)
 		c.Assert(err, IsNil, com)
 
-		equal, reason, err := equalsStorages(memSto, fsSto)
+		equal, reason, err := equalsStorages(memSto, proxySto)
 		c.Assert(err, IsNil, com)
 		c.Assert(equal, Equals, true,
 			Commentf("%s - %s\n", com.CheckCommentString(), reason))
@@ -216,7 +216,7 @@ func (s *FsSuite) TestIterCompareWithMemoryStorage(c *C) {
 		memSto, err := memStorageFromDirPath(path)
 		c.Assert(err, IsNil, com)
 
-		fsSto, err := fs.New(path)
+		proxySto, err := proxy.New(path)
 		c.Assert(err, IsNil, com)
 
 		for _, typ := range [...]core.ObjectType{
@@ -229,11 +229,11 @@ func (s *FsSuite) TestIterCompareWithMemoryStorage(c *C) {
 			memObjs, err := iterToSortedSlice(memSto, typ)
 			c.Assert(err, IsNil, com)
 
-			fsObjs, err := iterToSortedSlice(fsSto, typ)
+			proxyObjs, err := iterToSortedSlice(proxySto, typ)
 			c.Assert(err, IsNil, com)
 
 			for i, o := range memObjs {
-				c.Assert(fsObjs[i].Hash(), Equals, o.Hash(), com)
+				c.Assert(proxyObjs[i].Hash(), Equals, o.Hash(), com)
 			}
 		}
 	}
@@ -304,7 +304,7 @@ func (a byHash) Less(i, j int) bool {
 func (s *FsSuite) TestSet(c *C) {
 	path := fixture("binary-relations", c)
 
-	sto, err := fs.New(path)
+	sto, err := proxy.New(path)
 	c.Assert(err, IsNil)
 
 	_, err = sto.Set(&memory.Object{})
