@@ -224,7 +224,7 @@ func (s *ReadRecallerImplSuite) TestRecallByOffsetErrors(c *C) {
 		newFn implFn
 	}{
 		{id: "stream", newFn: newStream},
-		// seekalbeReadRecaller allways recall every object in the packfile
+		// seekalbe allways recall every object in the packfile
 	} {
 		com := Commentf("implementation %s", impl.id)
 		sr := impl.newFn([]byte{})
