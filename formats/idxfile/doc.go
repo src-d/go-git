@@ -1,3 +1,4 @@
+/*
 == Original (version 1) pack-*.idx files have the following format:
 
   - The header consists of 256 4-byte network byte order
@@ -125,3 +126,5 @@ Pack file entry: <+
 
 From:
 https://www.kernel.org/pub/software/scm/git/docs/v1.7.5/technical/pack-protocol.txt
+*/
+package idxfile
