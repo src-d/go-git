@@ -27,7 +27,7 @@ var packFileWithEmptyObjects = "UEFDSwAAAAIAAAALnw54nKXMQWoDMQxA0b1PoX2hSLIm44FS
 func (s *ReaderSuite) TestReadPackfile(c *C) {
 	data, _ := base64.StdEncoding.DecodeString(packFileWithEmptyObjects)
 	f := bytes.NewReader(data)
-	r := NewSeekable(f)
+	r := NewStream(f)
 	d := NewDecoder(r)
 
 	sto := memory.NewObjectStorage()
