@@ -7,6 +7,7 @@ import (
 	"gopkg.in/src-d/go-git.v3/clients/http"
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/storage/proxy"
+	"gopkg.in/src-d/go-git.v3/utils/fs"
 	"gopkg.in/src-d/go-git.v3/utils/tgz"
 
 	. "gopkg.in/check.v1"
@@ -67,7 +68,8 @@ func (s *SuiteRepository) TestNewRepositoryWithAuth(c *C) {
 func (s *SuiteRepository) TestNewRepositoryFromFS(c *C) {
 	for name, path := range s.dirFixturePaths {
 		com := Commentf("dir fixture %q → %q\n", name, path)
-		repo, err := NewRepositoryFromFS(path)
+		fs := fs.NewOS()
+		repo, err := NewRepositoryFromFS(fs, path)
 		c.Assert(err, IsNil, com)
 
 		err = repo.PullDefault()

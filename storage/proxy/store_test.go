@@ -12,6 +12,7 @@ import (
 	"gopkg.in/src-d/go-git.v3/storage/memory"
 	"gopkg.in/src-d/go-git.v3/storage/proxy"
 	"gopkg.in/src-d/go-git.v3/storage/proxy/internal/gitdir"
+	"gopkg.in/src-d/go-git.v3/utils/fs"
 	"gopkg.in/src-d/go-git.v3/utils/tgz"
 
 	. "gopkg.in/check.v1"
@@ -65,14 +66,16 @@ func (s *FsSuite) TearDownSuite(c *C) {
 }
 
 func (s *FsSuite) TestNewErrorNotFound(c *C) {
-	_, err := proxy.New("not_found/.git")
+	fs := fs.NewOS()
+	_, err := proxy.New(fs, "not_found/.git")
 	c.Assert(err, Equals, gitdir.ErrNotFound)
 }
 
 func (s *FsSuite) TestHashNotFound(c *C) {
 	path := fixture("binary-relations", c)
 
-	sto, err := proxy.New(path)
+	fs := fs.NewOS()
+	sto, err := proxy.New(fs, path)
 	c.Assert(err, IsNil)
 
 	_, err = sto.Get(core.ZeroHash)
@@ -92,7 +95,8 @@ func (s *FsSuite) TestGetCompareWithMemoryStorage(c *C) {
 		memSto, err := memStorageFromGitDir(path)
 		c.Assert(err, IsNil, com)
 
-		proxySto, err := proxy.New(path)
+		fs := fs.NewOS()
+		proxySto, err := proxy.New(fs, path)
 		c.Assert(err, IsNil, com)
 
 		equal, reason, err := equalsStorages(memSto, proxySto)
@@ -216,7 +220,8 @@ func (s *FsSuite) TestIterCompareWithMemoryStorage(c *C) {
 		memSto, err := memStorageFromDirPath(path)
 		c.Assert(err, IsNil, com)
 
-		proxySto, err := proxy.New(path)
+		fs := fs.NewOS()
+		proxySto, err := proxy.New(fs, path)
 		c.Assert(err, IsNil, com)
 
 		for _, typ := range [...]core.ObjectType{
@@ -304,7 +309,8 @@ func (a byHash) Less(i, j int) bool {
 func (s *FsSuite) TestSet(c *C) {
 	path := fixture("binary-relations", c)
 
-	sto, err := proxy.New(path)
+	fs := fs.NewOS()
+	sto, err := proxy.New(fs, path)
 	c.Assert(err, IsNil)
 
 	_, err = sto.Set(&memory.Object{})

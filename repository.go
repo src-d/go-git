@@ -9,6 +9,7 @@ import (
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
 	"gopkg.in/src-d/go-git.v3/storage/memory"
 	"gopkg.in/src-d/go-git.v3/storage/proxy"
+	"gopkg.in/src-d/go-git.v3/utils/fs"
 )
 
 var (
@@ -51,11 +52,11 @@ func NewRepository(url string, auth common.AuthMethod) (*Repository, error) {
 //
 // To be able to use git repositories this way, you must run "git gc" on
 // them beforehand.
-func NewRepositoryFromFS(path string) (*Repository, error) {
+func NewRepositoryFromFS(fs fs.FS, path string) (*Repository, error) {
 	repo := NewPlainRepository()
 
 	var err error
-	repo.Storage, err = proxy.New(path)
+	repo.Storage, err = proxy.New(fs, path)
 
 	return repo, err
 }

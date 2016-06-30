@@ -8,6 +8,7 @@ import (
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
 	"gopkg.in/src-d/go-git.v3/storage/proxy/internal/gitdir"
 	"gopkg.in/src-d/go-git.v3/storage/proxy/internal/index"
+	"gopkg.in/src-d/go-git.v3/utils/fs"
 )
 
 // ObjectStorage is an implementation of core.ObjectStorage that stores
@@ -25,7 +26,7 @@ type ObjectStorage struct {
 }
 
 // New returns a new ObjectStorage for the git directory at the specified path.
-func New(path string) (*ObjectStorage, error) {
+func New(fs fs.FS, path string) (*ObjectStorage, error) {
 	s := &ObjectStorage{}
 
 	var err error
