@@ -17,8 +17,8 @@ var dirFixtures = [...]struct {
 	tgz  string
 }{
 	{
-		name: "spinnaker",
-		tgz:  "storage/fs/internal/gitdir/fixtures/spinnaker-gc.tgz",
+		name: "binrels",
+		tgz:  "storage/fs/internal/gitdir/fixtures/alcortesm-binary-relations.tgz",
 	},
 }
 
