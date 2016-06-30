@@ -26,7 +26,7 @@ func NewObject(typ core.ObjectType, size int64, cont []byte) *Object {
 }
 
 // Hash return the object Hash, the hash is calculated on-the-fly the first
-// time is called, the subsequent calls the same Hash is returned even in the
+// time is called, the subsequent calls the same Hash is returned even if the
 // type or the content has changed. The Hash is only generated if the size of
 // the content is exactly the Object.Size
 func (o *Object) Hash() core.Hash {
