@@ -15,7 +15,7 @@ import (
 // (like a hard disk).
 type Seekable struct {
 	io.ReadSeeker
-	OffsetsByHash map[core.Hash]int64
+	HashToOffset map[core.Hash]int64
 }
 
 // NewSeekable returns a new Seekable that reads form r.
@@ -53,11 +53,11 @@ func (r *Seekable) Offset() (int64, error) {
 // index every time a get operation is performed on the SeekableReadRecaller.
 func (r *Seekable) Remember(o int64, obj core.Object) error {
 	h := obj.Hash()
-	if _, ok := r.OffsetsByHash[h]; ok {
+	if _, ok := r.HashToOffset[h]; ok {
 		return ErrDuplicatedObj.AddDetails("with hash %s", h)
 	}
 
-	r.OffsetsByHash[h] = o
+	r.HashToOffset[h] = o
 
 	return nil
 }
@@ -66,13 +66,13 @@ func (r *Seekable) Remember(o int64, obj core.Object) error {
 // reasons RecallByOffset always find objects, even if they have been
 // forgetted or were never remembered.
 func (r *Seekable) ForgetAll() {
-	r.OffsetsByHash = make(map[core.Hash]int64)
+	r.HashToOffset = make(map[core.Hash]int64)
 }
 
 // RecallByHash returns the object for a given hash by looking for it again in
 // the io.ReadeSeerker.
 func (r *Seekable) RecallByHash(h core.Hash) (core.Object, error) {
-	o, ok := r.OffsetsByHash[h]
+	o, ok := r.HashToOffset[h]
 	if !ok {
 		return nil, ErrCannotRecall.AddDetails("hash not found: %s", h)
 	}

@@ -11,18 +11,18 @@ import (
 // quick access.
 type Stream struct {
 	io.Reader
-	count    int64
-	byOffset map[int64]core.Object
-	byHash   map[core.Hash]core.Object
+	count          int64
+	offsetToObject map[int64]core.Object
+	hashToObject   map[core.Hash]core.Object
 }
 
 // NewStream returns a new Stream that reads form r.
 func NewStream(r io.Reader) *Stream {
 	return &Stream{
-		Reader:   r,
-		count:    0,
-		byHash:   make(map[core.Hash]core.Object, 0),
-		byOffset: make(map[int64]core.Object, 0),
+		Reader:         r,
+		count:          0,
+		hashToObject:   make(map[core.Hash]core.Object, 0),
+		offsetToObject: make(map[int64]core.Object, 0),
 	}
 }
 
@@ -53,29 +53,29 @@ func (r *Stream) Offset() (int64, error) {
 // of its object entry in the packfile.
 func (r *Stream) Remember(o int64, obj core.Object) error {
 	h := obj.Hash()
-	if _, ok := r.byHash[h]; ok {
+	if _, ok := r.hashToObject[h]; ok {
 		return ErrDuplicatedObj.AddDetails("with hash %s", h)
 	}
-	r.byHash[h] = obj
+	r.hashToObject[h] = obj
 
-	if _, ok := r.byOffset[o]; ok {
+	if _, ok := r.offsetToObject[o]; ok {
 		return ErrDuplicatedObj.AddDetails("with offset %d", o)
 	}
-	r.byOffset[o] = obj
+	r.offsetToObject[o] = obj
 
 	return nil
 }
 
 // ForgetAll forgets all previously remembered objects.
 func (r *Stream) ForgetAll() {
-	r.byHash = make(map[core.Hash]core.Object)
-	r.byOffset = make(map[int64]core.Object)
+	r.hashToObject = make(map[core.Hash]core.Object)
+	r.offsetToObject = make(map[int64]core.Object)
 }
 
 // RecallByHash returns an object that has been previously Remember-ed by
 // its hash.
 func (r *Stream) RecallByHash(h core.Hash) (core.Object, error) {
-	obj, ok := r.byHash[h]
+	obj, ok := r.hashToObject[h]
 	if !ok {
 		return nil, ErrCannotRecall.AddDetails("by hash %s", h)
 	}
@@ -86,7 +86,7 @@ func (r *Stream) RecallByHash(h core.Hash) (core.Object, error) {
 // RecallByHash returns an object that has been previously Remember-ed by
 // the offset of its object entry in the packfile.
 func (r *Stream) RecallByOffset(o int64) (core.Object, error) {
-	obj, ok := r.byOffset[o]
+	obj, ok := r.offsetToObject[o]
 	if !ok {
 		return nil, ErrCannotRecall.AddDetails("no object found at offset %d", o)
 	}
