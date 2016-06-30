@@ -54,7 +54,7 @@ func (r *Seekable) Offset() (int64, error) {
 func (r *Seekable) Remember(o int64, obj core.Object) error {
 	h := obj.Hash()
 	if _, ok := r.HashToOffset[h]; ok {
-		return ErrDuplicatedObj.AddDetails("with hash %s", h)
+		return ErrDuplicatedObject.AddDetails("with hash %s", h)
 	}
 
 	r.HashToOffset[h] = o

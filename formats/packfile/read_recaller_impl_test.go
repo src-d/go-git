@@ -128,7 +128,11 @@ func (s *ReadRecallerImplSuite) TestRememberRecall(c *C) {
 	packfile := "fixtures/spinnaker-spinnaker.pack"
 	f, err := os.Open(packfile)
 	c.Assert(err, IsNil)
-	defer f.Close()
+	defer func() {
+		err = f.Close()
+		c.Assert(err, IsNil)
+	}()
+
 	data, err := ioutil.ReadAll(f)
 	c.Assert(err, IsNil)
 

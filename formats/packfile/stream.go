@@ -54,12 +54,12 @@ func (r *Stream) Offset() (int64, error) {
 func (r *Stream) Remember(o int64, obj core.Object) error {
 	h := obj.Hash()
 	if _, ok := r.hashToObject[h]; ok {
-		return ErrDuplicatedObj.AddDetails("with hash %s", h)
+		return ErrDuplicatedObject.AddDetails("with hash %s", h)
 	}
 	r.hashToObject[h] = obj
 
 	if _, ok := r.offsetToObject[o]; ok {
-		return ErrDuplicatedObj.AddDetails("with offset %d", o)
+		return ErrDuplicatedObject.AddDetails("with offset %d", o)
 	}
 	r.offsetToObject[o] = obj
 
@@ -83,7 +83,7 @@ func (r *Stream) RecallByHash(h core.Hash) (core.Object, error) {
 	return obj, nil
 }
 
-// RecallByHash returns an object that has been previously Remember-ed by
+// RecallByOffset returns an object that has been previously Remember-ed by
 // the offset of its object entry in the packfile.
 func (r *Stream) RecallByOffset(o int64) (core.Object, error) {
 	obj, ok := r.offsetToObject[o]

@@ -3,15 +3,15 @@ package packfile
 import "gopkg.in/src-d/go-git.v3/core"
 
 var (
-	// ErrDulicatedObject is returned by Remember if an object appears several
+	// ErrDuplicatedObject is returned by Remember if an object appears several
 	// times in a packfile.
-	ErrDuplicatedObj = NewError("duplicated object")
+	ErrDuplicatedObject = NewError("duplicated object")
 	// ErrCannotRecall is returned by RecallByOffset or RecallByHash if the object
 	// to recall cannot be returned.
 	ErrCannotRecall = NewError("cannot recall object")
 )
 
-// The Reader interface has all the functions needed by a packfile
+// The ReadRecaller interface has all the functions needed by a packfile
 // Parser to operate. We provide two very different implementations:
 // SeekableReadRecaller and StreamReadRecaller.
 type ReadRecaller interface {

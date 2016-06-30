@@ -1,4 +1,6 @@
+// Package packfile documentation:
 /*
+
 GIT pack format
 ===============
 
