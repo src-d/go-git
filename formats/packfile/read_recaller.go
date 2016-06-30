@@ -28,6 +28,8 @@ type ReadRecaller interface {
 	// Remember ask the ReadRecaller to remember the offset and hash for
 	// an object, so you can later call RecallByOffset and RecallByHash.
 	Remember(int64, core.Object) error
+	// ForgetAll forgets all previously remembered objects.
+	ForgetAll()
 	// RecallByOffset returns the previously processed object found at a
 	// given offset.
 	RecallByOffset(int64) (core.Object, error)

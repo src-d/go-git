@@ -62,6 +62,11 @@ func (r *Seekable) Remember(o int64, obj core.Object) error {
 	return nil
 }
 
+// ForgetAll forgets all previously remembered objects.
+func (r *Seekable) ForgetAll() {
+	r.OffsetsByHash = make(map[core.Hash]int64)
+}
+
 // RecallByHash returns the object for a given hash by looking for it again in
 // the io.ReadeSeerker.
 func (r *Seekable) RecallByHash(h core.Hash) (core.Object, error) {

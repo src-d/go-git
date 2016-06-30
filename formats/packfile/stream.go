@@ -66,6 +66,12 @@ func (r *Stream) Remember(o int64, obj core.Object) error {
 	return nil
 }
 
+// ForgetAll forgets all previously remembered objects.
+func (r *Stream) ForgetAll() {
+	r.byHash = make(map[core.Hash]core.Object)
+	r.byOffset = make(map[int64]core.Object)
+}
+
 // RecallByHash returns an object that has been previously Remember-ed by
 // its hash.
 func (r *Stream) RecallByHash(h core.Hash) (core.Object, error) {

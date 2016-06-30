@@ -172,53 +172,6 @@ func moreBytesInLength(c byte) bool {
 	return c&maskContinue > 0
 }
 
-// ReadNegativeOffset reads and returns an offset from a OFS DELTA
-// object entry in a packfile. OFS DELTA offsets are specified in Git
-// VLQ special format:
-//
-// Ordinary VLQ has some redundancies, example:  the number 358 can be
-// encoded as the 2-octet VLQ 0x8166 or the 3-octet VLQ 0x808166 or the
-// 4-octet VLQ 0x80808166 and so forth.
-//
-// To avoid these redundancies, the VLQ format used in Git removes this
-// prepending redundancy and extends the representable range of shorter
-// VLQs by adding an offset to VLQs of 2 or more octets in such a way
-// that the lowest possible value for such an (N+1)-octet VLQ becomes
-// exactly one more than the maximum possible value for an N-octet VLQ.
-// In particular, since a 1-octet VLQ can store a maximum value of 127,
-// the minimum 2-octet VLQ (0x8000) is assigned the value 128 instead of
-// 0. Conversely, the maximum value of such a 2-octet VLQ (0xff7f) is
-// 16511 instead of just 16383. Similarly, the minimum 3-octet VLQ
-// (0x808000) has a value of 16512 instead of zero, which means
-// that the maximum 3-octet VLQ (0xffff7f) is 2113663 instead of
-// just 2097151.  And so forth.
-//
-// This is how the offset is saved in C:
-//
-//     dheader[pos] = ofs & 127;
-//     while (ofs >>= 7)
-//         dheader[--pos] = 128 | (--ofs & 127);
-//
-func (p Parser) ReadNegativeOffset() (int64, error) {
-	var c byte
-	var err error
-
-	if c, err = p.ReadByte(); err != nil {
-		return 0, err
-	}
-
-	var offset = int64(c & maskLength)
-	for moreBytesInLength(c) {
-		offset++
-		if c, err = p.ReadByte(); err != nil {
-			return 0, err
-		}
-		offset = (offset << lengthBits) + int64(c&maskLength)
-	}
-
-	return -offset, nil
-}
-
 // ReadObject reads and returns a git object from an object entry in the packfile.
 // Non-deltified and deltified objects are supported.
 func (p Parser) ReadObject() (core.Object, error) {
@@ -287,9 +240,8 @@ func (p Parser) inflate(w io.Writer) (err error) {
 // ReadREFDeltaObjectContent reads and returns an object specified by a
 // REF-Delta entry in the packfile, form the hash onwards.
 func (p Parser) ReadREFDeltaObjectContent() ([]byte, core.ObjectType, error) {
-	var refHash core.Hash
-	var err error
-	if _, err = io.ReadFull(p, refHash[:]); err != nil {
+	refHash, err := p.ReadHash()
+	if err != nil {
 		return nil, core.ObjectType(0), err
 	}
 
@@ -304,6 +256,16 @@ func (p Parser) ReadREFDeltaObjectContent() ([]byte, core.ObjectType, error) {
 	}
 
 	return content, refObj.Type(), nil
+}
+
+// ReadHash reads a hash.
+func (p Parser) ReadHash() (core.Hash, error) {
+	var h core.Hash
+	if _, err := io.ReadFull(p, h[:]); err != nil {
+		return core.ZeroHash, err
+	}
+
+	return h, nil
 }
 
 // ReadSolveDelta reads and returns the base patched with the contents
@@ -341,4 +303,51 @@ func (p Parser) ReadOFSDeltaObjectContent(start int64) (
 	}
 
 	return content, ref.Type(), nil
+}
+
+// ReadNegativeOffset reads and returns an offset from a OFS DELTA
+// object entry in a packfile. OFS DELTA offsets are specified in Git
+// VLQ special format:
+//
+// Ordinary VLQ has some redundancies, example:  the number 358 can be
+// encoded as the 2-octet VLQ 0x8166 or the 3-octet VLQ 0x808166 or the
+// 4-octet VLQ 0x80808166 and so forth.
+//
+// To avoid these redundancies, the VLQ format used in Git removes this
+// prepending redundancy and extends the representable range of shorter
+// VLQs by adding an offset to VLQs of 2 or more octets in such a way
+// that the lowest possible value for such an (N+1)-octet VLQ becomes
+// exactly one more than the maximum possible value for an N-octet VLQ.
+// In particular, since a 1-octet VLQ can store a maximum value of 127,
+// the minimum 2-octet VLQ (0x8000) is assigned the value 128 instead of
+// 0. Conversely, the maximum value of such a 2-octet VLQ (0xff7f) is
+// 16511 instead of just 16383. Similarly, the minimum 3-octet VLQ
+// (0x808000) has a value of 16512 instead of zero, which means
+// that the maximum 3-octet VLQ (0xffff7f) is 2113663 instead of
+// just 2097151.  And so forth.
+//
+// This is how the offset is saved in C:
+//
+//     dheader[pos] = ofs & 127;
+//     while (ofs >>= 7)
+//         dheader[--pos] = 128 | (--ofs & 127);
+//
+func (p Parser) ReadNegativeOffset() (int64, error) {
+	var c byte
+	var err error
+
+	if c, err = p.ReadByte(); err != nil {
+		return 0, err
+	}
+
+	var offset = int64(c & maskLength)
+	for moreBytesInLength(c) {
+		offset++
+		if c, err = p.ReadByte(); err != nil {
+			return 0, err
+		}
+		offset = (offset << lengthBits) + int64(c&maskLength)
+	}
+
+	return -offset, nil
 }
