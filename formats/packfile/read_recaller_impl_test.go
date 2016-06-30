@@ -20,12 +20,12 @@ type implFn func([]byte) ReadRecaller
 
 func newStream(data []byte) ReadRecaller {
 	buf := bytes.NewBuffer(data)
-	return NewStreamReadRecaller(buf)
+	return NewStream(buf)
 }
 
 func newSeekable(data []byte) ReadRecaller {
 	buf := bytes.NewReader(data)
-	return NewSeekableReadRecaller(buf)
+	return NewSeekable(buf)
 }
 
 func (s *ReadRecallerImplSuite) TestRead(c *C) {

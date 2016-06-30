@@ -27,7 +27,7 @@ var packFileWithEmptyObjects = "UEFDSwAAAAIAAAALnw54nKXMQWoDMQxA0b1PoX2hSLIm44FS
 func (s *ReaderSuite) TestReadPackfile(c *C) {
 	data, _ := base64.StdEncoding.DecodeString(packFileWithEmptyObjects)
 	f := bytes.NewReader(data)
-	r := NewSeekableReadRecaller(f)
+	r := NewSeekable(f)
 	d := NewDecoder(r)
 
 	sto := memory.NewObjectStorage()
@@ -60,7 +60,7 @@ func (s *ReaderSuite) TestReadPackfileREFDelta(c *C) {
 func (s *ReaderSuite) testReadPackfileGitFixture(c *C, file string, format Format) {
 	f, err := os.Open(file)
 	c.Assert(err, IsNil)
-	r := NewSeekableReadRecaller(f)
+	r := NewSeekable(f)
 	d := NewDecoder(r)
 
 	sto := memory.NewObjectStorage()
@@ -167,7 +167,7 @@ func (s *ReaderSuite) _TestMemoryREF(c *C) {
 func readFromFile(c *C, file string, format Format) *memory.ObjectStorage {
 	f, err := os.Open(file)
 	c.Assert(err, IsNil)
-	r := NewSeekableReadRecaller(f)
+	r := NewSeekable(f)
 	d := NewDecoder(r)
 
 	sto := memory.NewObjectStorage()

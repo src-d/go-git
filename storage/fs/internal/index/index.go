@@ -37,7 +37,7 @@ func NewFromIdx(r io.Reader) (Index, error) {
 func NewFromPackfile(rs io.ReadSeeker) (Index, error) {
 	index := make(Index)
 
-	r := packfile.NewSeekableReadRecaller(rs)
+	r := packfile.NewSeekable(rs)
 	p := packfile.NewParser(r)
 
 	count, err := p.ReadHeader()

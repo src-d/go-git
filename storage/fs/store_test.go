@@ -119,7 +119,7 @@ func memStorageFromGitDir(path string) (*memory.ObjectStorage, error) {
 	}
 
 	sto := memory.NewObjectStorage()
-	r := packfile.NewStreamReadRecaller(f)
+	r := packfile.NewStream(f)
 	d := packfile.NewDecoder(r)
 	err = d.Decode(sto)
 	if err != nil {
@@ -256,7 +256,7 @@ func memStorageFromDirPath(path string) (*memory.ObjectStorage, error) {
 		return nil, err
 	}
 
-	r := packfile.NewStreamReadRecaller(f)
+	r := packfile.NewStream(f)
 	d := packfile.NewDecoder(r)
 	err = d.Decode(sto)
 	if err != nil {

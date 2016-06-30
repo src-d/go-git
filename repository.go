@@ -100,7 +100,7 @@ func (r *Repository) Pull(remoteName, branch string) (err error) {
 		return err
 	}
 	defer checkClose(reader, &err)
-	stream := packfile.NewStreamReadRecaller(reader)
+	stream := packfile.NewStream(reader)
 
 	d := packfile.NewDecoder(stream)
 	err = d.Decode(r.Storage)

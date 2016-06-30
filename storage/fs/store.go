@@ -125,7 +125,7 @@ func (s *ObjectStorage) Get(h core.Hash) (core.Object, error) {
 		return nil, err
 	}
 
-	r := packfile.NewSeekableReadRecaller(f)
+	r := packfile.NewSeekable(f)
 	r.OffsetsByHash = map[core.Hash]int64(s.index)
 	p := packfile.NewParser(r)
 

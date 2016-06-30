@@ -23,7 +23,7 @@ func (s *BlameCommon) SetUpSuite(c *C) {
 
 		f, err := os.Open(fixRepo.packfile)
 		c.Assert(err, IsNil)
-		reader := packfile.NewSeekableReadRecaller(f)
+		reader := packfile.NewSeekable(f)
 
 		d := packfile.NewDecoder(reader)
 		err = d.Decode(r.Storage)
