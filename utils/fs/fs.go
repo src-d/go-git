@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+// FS interface represent an abstracted filesystem, so you can
+// use NewRepositoryFromFS from any medium.
 type FS interface {
 	Stat(path string) (os.FileInfo, error)
 	Open(path string) (ReadSeekCloser, error)
@@ -12,6 +14,7 @@ type FS interface {
 	Join(elem ...string) string
 }
 
+// ReadSeekCloser is a Reader, Seeker and Closer.
 type ReadSeekCloser interface {
 	io.ReadCloser
 	io.Seeker
