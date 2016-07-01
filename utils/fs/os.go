@@ -6,10 +6,9 @@ import (
 	"path/filepath"
 )
 
-type OS struct {
-}
+type OS struct{}
 
-func NewOS() *OS {
+func NewOS() FS {
 	return &OS{}
 }
 
