@@ -3,7 +3,6 @@ package git
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"gopkg.in/src-d/go-git.v3/clients/http"
 	"gopkg.in/src-d/go-git.v3/core"
@@ -68,9 +67,10 @@ func (s *SuiteRepository) TestNewRepositoryWithAuth(c *C) {
 
 func (s *SuiteRepository) TestNewRepositoryFromFS(c *C) {
 	for name, path := range s.dirFixturePaths {
-		gitPath := filepath.Join(path, ".git/")
+		fs := fs.NewOS()
+		gitPath := fs.Join(path, ".git/")
 		com := Commentf("dir fixture %q → %q\n", name, gitPath)
-		repo, err := NewRepositoryFromFS(fs.NewOS(), gitPath)
+		repo, err := NewRepositoryFromFS(fs, gitPath)
 		c.Assert(err, IsNil, com)
 
 		err = repo.PullDefault()

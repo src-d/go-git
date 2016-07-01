@@ -3,6 +3,7 @@ package gitdir
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
@@ -30,14 +31,18 @@ var initFixtures = [...]struct {
 		},
 		packfile: "objects/pack/pack-584416f86235cac0d54bfabbdc399fb2b09a5269.pack",
 		idxfile:  "objects/pack/pack-584416f86235cac0d54bfabbdc399fb2b09a5269.idx",
-	},
-	{
-		name: "no-packfile",
-		tgz:  "fixtures/no-packfile.tgz",
+	}, {
+		name: "no-packfile-no-idx",
+		tgz:  "fixtures/no-packfile-no-idx.tgz",
+	}, {
+		name: "empty",
+		tgz:  "fixtures/empty-gitdir.tgz",
 	},
 }
 
 type fixture struct {
+	installDir   string
+	fs           fs.FS
 	path         string               // repo names to paths of the extracted tgz
 	capabilities *common.Capabilities // expected capabilities
 	packfile     string               // path of the packfile
@@ -61,7 +66,9 @@ func (s *SuiteGitDir) SetUpSuite(c *C) {
 
 		f := fixture{}
 
-		f.path = filepath.Join(path, ".git")
+		f.installDir = path
+		f.fs = fs.NewOS()
+		f.path = f.fs.Join(path, ".git")
 
 		f.capabilities = common.NewCapabilities()
 		for _, pair := range init.capabilities {
@@ -77,10 +84,9 @@ func (s *SuiteGitDir) SetUpSuite(c *C) {
 
 func (s *SuiteGitDir) TearDownSuite(c *C) {
 	for n, f := range s.fixtures {
-		d := filepath.Dir(f.path)
-		err := os.RemoveAll(d)
+		err := os.RemoveAll(f.installDir)
 		c.Assert(err, IsNil, Commentf("cannot delete tmp dir for fixture %s: %s\n",
-			n, d))
+			n, f.installDir))
 	}
 }
 
@@ -216,28 +222,35 @@ func (s *SuiteGitDir) TestPackfile(c *C) {
 			fixture: "spinnaker",
 			fn:      idxfile,
 		}, {
-			fixture: "no-packfile",
+			fixture: "empty",
+			fn:      packfile,
+			err:     ".* no such file or directory",
+		}, {
+			fixture: "empty",
+			fn:      idxfile,
+			err:     ".* no such file or directory",
+		}, {
+			fixture: "no-packfile-no-idx",
 			fn:      packfile,
 			err:     "packfile not found",
 		}, {
-			fixture: "no-packfile",
+			fixture: "no-packfile-no-idx",
 			fn:      idxfile,
 			err:     "idx file not found",
 		},
 	} {
+		com := Commentf("fixture = %s", test.fixture)
+
 		fix, dir := s.newFixtureDir(c, test.fixture)
 
-		fs, path, err := test.fn(dir)
+		_, path, err := test.fn(dir)
 
 		if test.err != "" {
-			c.Assert(err, ErrorMatches, test.err)
+			c.Assert(err, ErrorMatches, test.err, com)
 		} else {
-			c.Assert(err, IsNil)
-
-			rel, err := fs.Rel(dir.path, path)
-			c.Assert(err, IsNil)
-
-			c.Assert(noExt(rel), Equals, noExt(fix.packfile))
+			c.Assert(err, IsNil, com)
+			c.Assert(strings.HasSuffix(noExt(path), noExt(fix.packfile)),
+				Equals, true, com)
 		}
 	}
 }

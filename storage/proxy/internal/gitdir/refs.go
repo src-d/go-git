@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"gopkg.in/src-d/go-git.v3/core"
@@ -30,8 +29,8 @@ const (
 )
 
 func (d *GitDir) addRefsFromPackedRefs() (err error) {
-	path := filepath.Join(d.path, packedRefsPath)
-	f, err := os.Open(path)
+	path := d.fs.Join(d.path, packedRefsPath)
+	f, err := d.fs.Open(path)
 	if err != nil {
 		if err == os.ErrNotExist {
 			return nil
@@ -84,20 +83,20 @@ func (d *GitDir) addRefsFromRefDir() error {
 }
 
 func (d *GitDir) walkTree(relPath string) error {
-	fs, err := ioutil.ReadDir(filepath.Join(d.path, relPath))
+	files, err := d.fs.ReadDir(d.fs.Join(d.path, relPath))
 	if err != nil {
 		return err
 	}
 
-	for _, f := range fs {
-		newRelPath := filepath.Join(relPath, f.Name())
+	for _, f := range files {
+		newRelPath := d.fs.Join(relPath, f.Name())
 
 		if f.IsDir() {
 			if err = d.walkTree(newRelPath); err != nil {
 				return err
 			}
 		} else {
-			filePath := filepath.Join(d.path, newRelPath)
+			filePath := d.fs.Join(d.path, newRelPath)
 			h, err := d.readHashFile(filePath)
 			if err != nil {
 				return err
@@ -112,8 +111,19 @@ func (d *GitDir) walkTree(relPath string) error {
 // ReadHashFile reads a single hash from a file.  If a symbolic
 // reference is found instead of a hash, the reference is resolved and
 // the proper hash is returned.
-func (d *GitDir) readHashFile(path string) (core.Hash, error) {
-	b, err := ioutil.ReadFile(path)
+func (d *GitDir) readHashFile(path string) (h core.Hash, err error) {
+	f, err := d.fs.Open(path)
+	if err != nil {
+		return core.ZeroHash, err
+	}
+	defer func() {
+		errClose := f.Close()
+		if err == nil {
+			err = errClose
+		}
+	}()
+
+	b, err := ioutil.ReadAll(f)
 	if err != nil {
 		return core.ZeroHash, err
 	}

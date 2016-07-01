@@ -2,7 +2,6 @@ package gitdir
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -23,23 +22,18 @@ var (
 	// ErrIdxNotFound is returned by Idxfile when the idx file is not found on the
 	// repository.
 	ErrIdxNotFound = errors.New("idx file not found")
-	// ErrMoreThanOnePackfile is returned by Packfile when more than one packfile
-	// is found in the repository
-	ErrMoreThanOnePackfile = errors.New("more than one packfile found")
 	// ErrPackfileNotFound is returned by Packfile when the packfile is not found
 	// on the repository.
 	ErrPackfileNotFound = errors.New("packfile not found")
-	// ErrMoreThanOneIdxfile is returned by Idxfile when more than one idxfile
-	// is found in the repository
-	ErrMoreThanOneIdxfile = errors.New("more than one idxfile found")
 )
 
 // The GitDir type represents a local git repository on disk. This
 // type is not zero-value-safe, use the New function to initialize it.
 type GitDir struct {
-	fs   fs.FS
-	path string
-	refs map[string]core.Hash
+	fs      fs.FS
+	path    string
+	refs    map[string]core.Hash
+	packDir string
 }
 
 // New returns a GitDir value ready to be used. The path argument must
@@ -49,6 +43,7 @@ func New(fs fs.FS, path string) (*GitDir, error) {
 	d := &GitDir{}
 	d.fs = fs
 	d.path = path
+	d.packDir = d.fs.Join(d.path, "objects", "pack")
 
 	if _, err := fs.Stat(path); err != nil {
 		if os.IsNotExist(err) {
@@ -113,63 +108,38 @@ func (d *GitDir) addSymRefCapability(cap *common.Capabilities) (err error) {
 	return nil
 }
 
-// Packfile returns the path of the packfile in the repository.
+// Packfile returns the path of the packfile (really, it returns the
+// path of the first file in the "objects/pack/" directory with a
+// ".pack" extension.
 func (d *GitDir) Packfile() (fs.FS, string, error) {
-	p := d.pattern(true)
-
-	list, err := d.fs.Glob(p)
+	files, err := d.fs.ReadDir(d.packDir)
 	if err != nil {
 		return nil, "", err
 	}
 
-	if len(list) == 0 {
-		fmt.Println(p)
-		return nil, "", ErrPackfileNotFound
+	for _, f := range files {
+		if strings.HasSuffix(f.Name(), ".pack") {
+			return d.fs, d.fs.Join(d.packDir, f.Name()), nil
+		}
 	}
 
-	if len(list) > 1 {
-		return nil, "", ErrMoreThanOnePackfile
-	}
-
-	return d.fs, list[0], nil
+	return nil, "", ErrPackfileNotFound
 }
 
-func (d *GitDir) pattern(isPackfile bool) string {
-	// packfile pattern: d.path + /objects/pack/pack-40hexs.pack
-	//      idx pattern: d.path + /objects/pack/pack-40hexs.idx
-	base := d.fs.Join(d.path, "objects")
-	base = d.fs.Join(base, "pack")
-	file := filePattern + extension(isPackfile)
-	return d.fs.Join(base, file)
-}
-
-func extension(isPackfile bool) string {
-	if isPackfile {
-		return ".pack"
-	}
-
-	return ".idx"
-}
-
-// "pack-" followed by 40 chars representing hexadecimal numbers
-const filePattern = "pack-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]"
-
-// Idxfile returns the path of the idx file in the repository.
+// Packfile returns the path of the idx file (really, it returns the
+// path of the first file in the "objects/pack/" directory with an
+// ".idx" extension.
 func (d *GitDir) Idxfile() (fs.FS, string, error) {
-	p := d.pattern(false)
-
-	list, err := d.fs.Glob(p)
+	files, err := d.fs.ReadDir(d.packDir)
 	if err != nil {
 		return nil, "", err
 	}
 
-	if len(list) == 0 {
-		return nil, "", ErrIdxNotFound
+	for _, f := range files {
+		if strings.HasSuffix(f.Name(), ".idx") {
+			return d.fs, d.fs.Join(d.packDir, f.Name()), nil
+		}
 	}
 
-	if len(list) > 1 {
-		return nil, "", ErrMoreThanOneIdxfile
-	}
-
-	return d.fs, list[0], nil
+	return nil, "", ErrIdxNotFound
 }
