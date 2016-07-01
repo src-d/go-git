@@ -30,10 +30,10 @@ func (s *SuiteTGZ) TestExtract(c *C) {
 
 			sort.Strings(test.tree)
 			c.Assert(obt, DeepEquals, test.tree, com)
-
-			err = os.RemoveAll(path)
-			c.Assert(err, IsNil, com)
 		}
+
+		err = os.RemoveAll(path)
+		c.Assert(err, IsNil, com)
 	}
 }
 
