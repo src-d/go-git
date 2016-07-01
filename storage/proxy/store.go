@@ -30,7 +30,7 @@ func New(fs fs.FS, path string) (*ObjectStorage, error) {
 	s := &ObjectStorage{}
 
 	var err error
-	s.dir, err = gitdir.New(path)
+	s.dir, err = gitdir.New(fs, path)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func New(fs fs.FS, path string) (*ObjectStorage, error) {
 }
 
 func buildIndex(dir *gitdir.GitDir) (index.Index, error) {
-	idxfile, err := dir.Idxfile()
+	fs, idxfile, err := dir.Idxfile()
 	if err != nil {
 		if err == gitdir.ErrIdxNotFound {
 			return buildIndexFromPackfile(dir)
@@ -49,16 +49,16 @@ func buildIndex(dir *gitdir.GitDir) (index.Index, error) {
 		return nil, err
 	}
 
-	return buildIndexFromIdxfile(idxfile)
+	return buildIndexFromIdxfile(fs, idxfile)
 }
 
 func buildIndexFromPackfile(dir *gitdir.GitDir) (index.Index, error) {
-	packfile, err := dir.Packfile()
+	fs, packfile, err := dir.Packfile()
 	if err != nil {
 		return nil, err
 	}
 
-	f, err := os.Open(packfile)
+	f, err := fs.Open(packfile)
 	if err != nil {
 		return nil, err
 	}
@@ -73,8 +73,8 @@ func buildIndexFromPackfile(dir *gitdir.GitDir) (index.Index, error) {
 	return index.NewFromPackfile(f)
 }
 
-func buildIndexFromIdxfile(path string) (index.Index, error) {
-	f, err := os.Open(path)
+func buildIndexFromIdxfile(fs fs.FS, path string) (index.Index, error) {
+	f, err := fs.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -104,12 +104,12 @@ func (s *ObjectStorage) Get(h core.Hash) (core.Object, error) {
 		return nil, err
 	}
 
-	path, err := s.dir.Packfile()
+	fs, path, err := s.dir.Packfile()
 	if err != nil {
 		return nil, err
 	}
 
-	f, err := os.Open(path)
+	f, err := fs.Open(path)
 	if err != nil {
 		return nil, err
 	}

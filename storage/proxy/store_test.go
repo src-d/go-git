@@ -75,7 +75,9 @@ func (s *FsSuite) TestHashNotFound(c *C) {
 	path := fixture("binary-relations", c)
 
 	fs := fs.NewOS()
-	sto, err := proxy.New(fs, path)
+	gitPath := fs.Join(path, ".git/")
+
+	sto, err := proxy.New(fs, gitPath)
 	c.Assert(err, IsNil)
 
 	_, err = sto.Get(core.ZeroHash)
@@ -92,11 +94,13 @@ func (s *FsSuite) TestGetCompareWithMemoryStorage(c *C) {
 		com := Commentf("at subtest %d, (fixture id = %q, extracted to %q)",
 			i, fixId, path)
 
-		memSto, err := memStorageFromGitDir(path)
+		fs := fs.NewOS()
+		gitPath := fs.Join(path, ".git/")
+
+		memSto, err := memStorageFromGitDir(fs, gitPath)
 		c.Assert(err, IsNil, com)
 
-		fs := fs.NewOS()
-		proxySto, err := proxy.New(fs, path)
+		proxySto, err := proxy.New(fs, gitPath)
 		c.Assert(err, IsNil, com)
 
 		equal, reason, err := equalsStorages(memSto, proxySto)
@@ -106,18 +110,18 @@ func (s *FsSuite) TestGetCompareWithMemoryStorage(c *C) {
 	}
 }
 
-func memStorageFromGitDir(path string) (*memory.ObjectStorage, error) {
-	dir, err := gitdir.New(path)
+func memStorageFromGitDir(fs fs.FS, path string) (*memory.ObjectStorage, error) {
+	dir, err := gitdir.New(fs, path)
 	if err != nil {
 		return nil, err
 	}
 
-	packfilePath, err := dir.Packfile()
+	fs, packfilePath, err := dir.Packfile()
 	if err != nil {
 		return nil, err
 	}
 
-	f, err := os.Open(packfilePath)
+	f, err := fs.Open(packfilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -217,11 +221,13 @@ func (s *FsSuite) TestIterCompareWithMemoryStorage(c *C) {
 		com := Commentf("at subtest %d, (fixture id = %q, extracted to %q)",
 			i, fixId, path)
 
-		memSto, err := memStorageFromDirPath(path)
+		fs := fs.NewOS()
+		gitPath := fs.Join(path, ".git/")
+
+		memSto, err := memStorageFromDirPath(fs, gitPath)
 		c.Assert(err, IsNil, com)
 
-		fs := fs.NewOS()
-		proxySto, err := proxy.New(fs, path)
+		proxySto, err := proxy.New(fs, gitPath)
 		c.Assert(err, IsNil, com)
 
 		for _, typ := range [...]core.ObjectType{
@@ -244,19 +250,19 @@ func (s *FsSuite) TestIterCompareWithMemoryStorage(c *C) {
 	}
 }
 
-func memStorageFromDirPath(path string) (*memory.ObjectStorage, error) {
-	dir, err := gitdir.New(path)
+func memStorageFromDirPath(fs fs.FS, path string) (*memory.ObjectStorage, error) {
+	dir, err := gitdir.New(fs, path)
 	if err != nil {
 		return nil, err
 	}
 
-	packfilePath, err := dir.Packfile()
+	fs, packfilePath, err := dir.Packfile()
 	if err != nil {
 		return nil, err
 	}
 
 	sto := memory.NewObjectStorage()
-	f, err := os.Open(packfilePath)
+	f, err := fs.Open(packfilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +316,9 @@ func (s *FsSuite) TestSet(c *C) {
 	path := fixture("binary-relations", c)
 
 	fs := fs.NewOS()
-	sto, err := proxy.New(fs, path)
+	gitPath := fs.Join(path, ".git/")
+
+	sto, err := proxy.New(fs, gitPath)
 	c.Assert(err, IsNil)
 
 	_, err = sto.Set(&memory.Object{})

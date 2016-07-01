@@ -7,6 +7,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v3/clients/common"
 	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v3/utils/fs"
 	"gopkg.in/src-d/go-git.v3/utils/tgz"
 
 	. "gopkg.in/check.v1"
@@ -98,7 +99,7 @@ func (s *SuiteGitDir) TestNewErrors(c *C) {
 	} {
 		com := Commentf("subtest %d", i)
 
-		_, err := New(test.input)
+		_, err := New(fs.NewOS(), test.input)
 		c.Assert(err, Equals, test.err, com)
 	}
 }
@@ -172,7 +173,7 @@ func (s *SuiteGitDir) newFixtureDir(c *C, fixName string) (*fixture, *GitDir) {
 	f, ok := s.fixtures[fixName]
 	c.Assert(ok, Equals, true)
 
-	d, err := New(f.path)
+	d, err := New(fs.NewOS(), f.path)
 	c.Assert(err, IsNil)
 
 	return &f, d
@@ -197,10 +198,10 @@ func (s *SuiteGitDir) TestCapabilities(c *C) {
 }
 
 func (s *SuiteGitDir) TestPackfile(c *C) {
-	packfile := func(d *GitDir) (string, error) {
+	packfile := func(d *GitDir) (fs.FS, string, error) {
 		return d.Packfile()
 	}
-	idxfile := func(d *GitDir) (string, error) {
+	idxfile := func(d *GitDir) (fs.FS, string, error) {
 		return d.Idxfile()
 	}
 	for _, test := range [...]struct {
@@ -226,14 +227,14 @@ func (s *SuiteGitDir) TestPackfile(c *C) {
 	} {
 		fix, dir := s.newFixtureDir(c, test.fixture)
 
-		path, err := test.fn(dir)
+		fs, path, err := test.fn(dir)
 
 		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err)
 		} else {
 			c.Assert(err, IsNil)
 
-			rel, err := filepath.Rel(dir.path, path)
+			rel, err := fs.Rel(dir.path, path)
 			c.Assert(err, IsNil)
 
 			c.Assert(noExt(rel), Equals, noExt(fix.packfile))
@@ -241,9 +242,9 @@ func (s *SuiteGitDir) TestPackfile(c *C) {
 	}
 }
 
+type getPathFn func(*GitDir) (fs.FS, string, error)
+
 func noExt(path string) string {
 	ext := filepath.Ext(path)
 	return path[0 : len(path)-len(ext)]
 }
-
-type getPathFn func(*GitDir) (string, error)
