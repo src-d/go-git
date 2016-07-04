@@ -90,46 +90,6 @@ Date:   2015-12-11 17:57:10 +0100 +0100
 ...
 ```
 
-Bare and non-bare local repositories are also supported using the
-`NewRepositoryFromFS` constructor. To be able to use this functionality the
-local repository has to be prepared beforehand by running `git gc` on it.
-
-When accessing local repositories this way, no remote is created and there is no
-need to pull as all operations are resolved by directly accessing the directory
-and its packfile; this is much slower than having all the repository contents in
-memory, but uses very little memory.
-
-```go
-// Prepare the repository as follows
-// git clone https://github.com/src-d/go-git /tmp/go-git
-// pushd /tmp/go-git ; git gc ; popd
-
-r, err := git.NewRepositoryFromFS("/tmp/go-git")
-if err != nil {
-	panic(err)
-}
-
-iter, err := r.Commits()
-if err != nil {
-	panic(err)
-}
-defer iter.Close()
-
-for {
-	//the commits are not shorted in any special order
-	commit, err := iter.Next()
-	if err != nil {
-		if err == io.EOF {
-			break
-		}
-
-		panic(err)
-	}
-
-	fmt.Println(commit)
-}
-```
-
 Retrieving the latest commit for a given repository:
 
 ```go
@@ -153,6 +113,160 @@ if err != nil {
 }
 
 fmt.Println(commit)
+```
+
+Creating a repository from an ordinary local git directory (that has been
+previously prepared by running `git gc` on it).
+
+```go
+// Download any git repository and prepare it as as follows:
+//
+//   $ git clone https://github.com/src-d/go-git /tmp/go-git
+//   $ pushd /tmp/go-git ; git gc ; popd
+//
+// Then, create a go-git repository from the local content
+// and print its commits as follows:
+
+package main
+
+import (
+	"fmt"
+	"io"
+
+	"gopkg.in/src-d/go-git.v3"
+	"gopkg.in/src-d/go-git.v3/utils/fs"
+)
+
+func main() {
+	fs := fs.NewOS() // a simple proxy for the local host filesystem
+	localRepo := "/tmp/go-git/.git"
+
+	repo, err := git.NewRepositoryFromFS(fs, localRepo)
+	if err != nil {
+		panic(err)
+	}
+
+	iter, err := repo.Commits()
+	if err != nil {
+		panic(err)
+	}
+	defer iter.Close()
+
+	for {
+		commit, err := iter.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			panic(err)
+		}
+
+		fmt.Println(commit)
+	}
+}
+```
+
+Implementing your own filesystem will let you access repositories stored on
+remote services (e.g. amazon S3):
+
+```go
+package main
+
+import (
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"gopkg.in/src-d/go-git.v3"
+	"gopkg.in/src-d/go-git.v3/utils/fs"
+)
+
+func main() {
+	// use an add-hoc filesystem implementation, see bellow
+	funnyFS := newFunnyFS("/tmp")
+
+	// local git dir path for the funny filesystem
+	// (equivalent to /tmp/go-git/.git in the local filesystem)
+	funnyPath := "go-git--.git"
+
+	repo, err := git.NewRepositoryFromFS(funnyFS, funnyPath)
+	if err != nil {
+		panic(err)
+	}
+
+	iter, err := repo.Commits()
+	if err != nil {
+		panic(err)
+	}
+	defer iter.Close()
+
+	for {
+		commit, err := iter.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			panic(err)
+		}
+
+		fmt.Println(commit)
+	}
+}
+
+// A simple proxy filesystem example: It mimics local filesystems, using
+// 'base' as its root and a funny path separator ("--").
+//
+// Example: when constructed with 'newFunnyFS("tmp")', a path like 'foo--bar'
+// will represent the local path "/tmp/foo/bar".
+type funnyFS struct {
+	base string
+}
+
+const separator = "--"
+
+func newFunnyFS(path string) *funnyFS {
+	return &funnyFS{
+		base: path,
+	}
+}
+
+func (funnyFS *funnyFS) Stat(path string) (info os.FileInfo, err error) {
+	f, err := os.Open(funnyFS.ToReal(path))
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		errClose := f.Close()
+		if err == nil {
+			err = errClose
+		}
+	}()
+
+	return f.Stat()
+}
+
+func (funnyFS *funnyFS) ToReal(path string) string {
+	parts := strings.Split(path, separator)
+	return filepath.Join(funnyFS.base, filepath.Join(parts...))
+}
+
+func (funnyFS *funnyFS) Open(path string) (fs.ReadSeekCloser, error) {
+	return os.Open(funnyFS.ToReal(path))
+}
+
+func (funnyFS *funnyFS) ReadDir(path string) ([]os.FileInfo, error) {
+	return ioutil.ReadDir(funnyFS.ToReal(path))
+}
+
+func (funnyFS *funnyFS) Join(elem ...string) string {
+	return strings.Join(elem, separator)
+}
+
 ```
 
 Wrapping
