@@ -13,8 +13,8 @@ import (
 	"gopkg.in/src-d/go-git.v3/storage/proxy"
 	"gopkg.in/src-d/go-git.v3/storage/proxy/internal/gitdir"
 	"gopkg.in/src-d/go-git.v3/utils/fs"
-	"gopkg.in/src-d/go-git.v3/utils/tgz"
 
+	"github.com/alcortesm/tgz"
 	. "gopkg.in/check.v1"
 )
 

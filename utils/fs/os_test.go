@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/alcortesm/tgz"
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-git.v3/utils/tgz"
 )
 
 func Test(t *testing.T) { TestingT(t) }
