@@ -8,7 +8,7 @@ import (
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
 	"gopkg.in/src-d/go-git.v3/storage/memory"
-	"gopkg.in/src-d/go-git.v3/storage/proxy"
+	"gopkg.in/src-d/go-git.v3/storage/seekable"
 	"gopkg.in/src-d/go-git.v3/utils/fs"
 )
 
@@ -56,7 +56,7 @@ func NewRepositoryFromFS(fs fs.FS, path string) (*Repository, error) {
 	repo := NewPlainRepository()
 
 	var err error
-	repo.Storage, err = proxy.New(fs, path)
+	repo.Storage, err = seekable.New(fs, path)
 
 	return repo, err
 }

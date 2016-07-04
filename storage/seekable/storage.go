@@ -1,4 +1,4 @@
-package proxy
+package seekable
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 
 	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v3/formats/packfile"
-	"gopkg.in/src-d/go-git.v3/storage/proxy/internal/gitdir"
-	"gopkg.in/src-d/go-git.v3/storage/proxy/internal/index"
+	"gopkg.in/src-d/go-git.v3/storage/seekable/internal/gitdir"
+	"gopkg.in/src-d/go-git.v3/storage/seekable/internal/index"
 	"gopkg.in/src-d/go-git.v3/utils/fs"
 )
 
