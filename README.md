@@ -139,9 +139,9 @@ import (
 
 func main() {
 	fs := fs.NewOS() // a simple proxy for the local host filesystem
-	localRepo := "/tmp/go-git/.git"
+	path := "/tmp/go-git/.git"
 
-	repo, err := git.NewRepositoryFromFS(fs, localRepo)
+	repo, err := git.NewRepositoryFromFS(fs, path)
 	if err != nil {
 		panic(err)
 	}
@@ -235,7 +235,7 @@ func newFunnyFS(path string) *funnyFS {
 }
 
 func (funnyFS *funnyFS) Stat(path string) (info os.FileInfo, err error) {
-	f, err := os.Open(funnyFS.ToReal(path))
+	f, err := os.Open(funnyFS.toReal(path))
 	if err != nil {
 		return nil, err
 	}
@@ -250,23 +250,22 @@ func (funnyFS *funnyFS) Stat(path string) (info os.FileInfo, err error) {
 	return f.Stat()
 }
 
-func (funnyFS *funnyFS) ToReal(path string) string {
+func (funnyFS *funnyFS) toReal(path string) string {
 	parts := strings.Split(path, separator)
 	return filepath.Join(funnyFS.base, filepath.Join(parts...))
 }
 
 func (funnyFS *funnyFS) Open(path string) (fs.ReadSeekCloser, error) {
-	return os.Open(funnyFS.ToReal(path))
+	return os.Open(funnyFS.toReal(path))
 }
 
 func (funnyFS *funnyFS) ReadDir(path string) ([]os.FileInfo, error) {
-	return ioutil.ReadDir(funnyFS.ToReal(path))
+	return ioutil.ReadDir(funnyFS.toReal(path))
 }
 
 func (funnyFS *funnyFS) Join(elem ...string) string {
 	return strings.Join(elem, separator)
 }
-
 ```
 
 Wrapping
