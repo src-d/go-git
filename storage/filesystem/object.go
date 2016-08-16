@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/formats/objfile"
 	"gopkg.in/src-d/go-git.v4/formats/packfile"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem/internal/dotgit"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem/internal/index"
@@ -36,9 +37,67 @@ func (s *ObjectStorage) Set(core.Object) (core.Hash, error) {
 	return core.ZeroHash, fmt.Errorf("not implemented yet")
 }
 
+func (s *ObjectStorage) Get(t core.ObjectType, h core.Hash) (core.Object, error) {
+	var obj core.Object
+	var err error
+
+	obj, err = s.getFromObject(h)
+	if err == nil {
+		return obj, nil
+	}
+
+	obj, err = s.getFromPackfile(t, h)
+	if err == nil {
+		return obj, nil
+	}
+
+	return nil, err
+}
+
+// Get returns the object with the given hash, by searching for it in
+// the git object directories.
+func (s *ObjectStorage) getFromObject(h core.Hash) (core.Object, error) {
+	fs, path, err := s.dir.Objectfile(h)
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := fs.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		errClose := f.Close()
+		if err == nil {
+			err = errClose
+		}
+	}()
+
+	obj := s.NewObject()
+	objReader, err := objfile.NewReader(f)
+	if err != nil {
+		return nil, err
+	}
+	err = objReader.FillObject(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	err = objReader.Close()
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
 // Get returns the object with the given hash, by searching for it in
 // the packfile.
-func (s *ObjectStorage) Get(t core.ObjectType, h core.Hash) (core.Object, error) {
+func (s *ObjectStorage) getFromPackfile(t core.ObjectType, h core.Hash) (core.Object, error) {
+	if s.index == nil {
+		return nil, dotgit.ErrIdxNotFound
+	}
+
 	offset, err := s.index.Get(h)
 	if err != nil {
 		return nil, err

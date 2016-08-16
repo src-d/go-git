@@ -121,3 +121,12 @@ func (r *Reader) Close() (err error) {
 
 	return
 }
+
+func (r *Reader) FillObject(obj core.Object) error {
+	obj.SetType(r.header.t)
+	obj.SetSize(r.header.size)
+	w, _ := obj.Writer()
+	_, err := io.Copy(w, r.r)
+	return err
+
+}

@@ -52,9 +52,7 @@ func New(fs fs.FS, path string) (*DotGit, error) {
 // Symbolic references are resolved and included in the output.
 func (d *DotGit) Refs() ([]*core.Reference, error) {
 	var refs []*core.Reference
-	if err := d.addRefsFromPackedRefs(&refs); err != nil {
-		return nil, err
-	}
+	_ = d.addRefsFromPackedRefs(&refs)
 
 	if err := d.addRefsFromRefDir(&refs); err != nil {
 		return nil, err
@@ -117,4 +115,17 @@ func (d *DotGit) Config() (fs.FS, string, error) {
 	}
 
 	return d.fs, configFile, nil
+}
+
+func (d *DotGit) Objectfile(h core.Hash) (fs.FS, string, error) {
+	hash := h.String()
+	objFile := d.fs.Join(d.path, "objects", hash[0:2], hash[2:40])
+
+	if _, err := d.fs.Stat(objFile); err != nil {
+		if os.IsNotExist(err) {
+			return nil, "", ErrNotFound
+		}
+		return nil, "", err
+	}
+	return d.fs, objFile, nil
 }
