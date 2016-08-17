@@ -145,8 +145,23 @@ func (s *ObjectStorage) getFromPackfile(t core.ObjectType, h core.Hash) (core.Ob
 func (s *ObjectStorage) Iter(t core.ObjectType) (core.ObjectIter, error) {
 	var objects []core.Object
 
+	_, hashes, err := s.dir.Objectfiles()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, hash := range hashes {
+		object, err := s.getFromObject(hash)
+		if err != nil {
+			return nil, err
+		}
+		if object.Type() == t {
+			objects = append(objects, object)
+		}
+	}
+
 	for hash := range s.index {
-		object, err := s.Get(core.AnyObject, hash)
+		object, err := s.getFromPackfile(core.AnyObject, hash)
 		if err != nil {
 			return nil, err
 		}

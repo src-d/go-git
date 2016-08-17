@@ -2,7 +2,9 @@ package dotgit
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/core"
@@ -115,6 +117,42 @@ func (d *DotGit) Config() (fs.FS, string, error) {
 	}
 
 	return d.fs, configFile, nil
+}
+
+func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
+	dotGitobjcts := d.fs.Join(d.path, "objects")
+	files, err := d.fs.ReadDir(dotGitobjcts)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var objDirs []string
+	reDir, _ := regexp.Compile("[a-z0-9]{2}")
+	for _, f := range files {
+		if f.IsDir() && reDir.MatchString(f.Name()) {
+			objDirs = append(objDirs, f.Name())
+		}
+	}
+
+	var objects []core.Hash
+	reObj, _ := regexp.Compile("[a-z0-9]{38}")
+	for _, dir := range objDirs {
+		objs, err := d.fs.ReadDir(d.fs.Join(dotGitobjcts, dir))
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for _, obj := range objs {
+			if reObj.MatchString(obj.Name()) {
+				name := dir + obj.Name()
+				fmt.Println(name)
+				objects = append(objects, core.NewHash(name))
+			}
+		}
+	}
+
+	return d.fs, objects, nil
 }
 
 func (d *DotGit) Objectfile(h core.Hash) (fs.FS, string, error) {
