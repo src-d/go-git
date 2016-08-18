@@ -144,7 +144,7 @@ func (t *Tag) Blob() (*Blob, error) {
 
 // Object returns the object pointed to by the tag.
 func (t *Tag) Object() (Object, error) {
-	return t.r.Object(t.Target)
+	return t.r.Object(t.Target, t.TargetType)
 }
 
 // String returns the meta information contained in the tag as a formatted
