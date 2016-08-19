@@ -134,24 +134,19 @@ func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 		return nil, nil, err
 	}
 
-	var objDirs []string
+	var objects []core.Hash
 	for _, f := range files {
 		if f.IsDir() && objDirRegExp.MatchString(f.Name()) {
-			objDirs = append(objDirs, f.Name())
-		}
-	}
+			objDir := f.Name()
+			objs, err := d.fs.ReadDir(d.fs.Join(objsDir, objDir))
+			if err != nil {
+				return nil, nil, err
+			}
 
-	var objects []core.Hash
-	for _, dir := range objDirs {
-		objs, err := d.fs.ReadDir(d.fs.Join(objsDir, dir))
-		if err != nil {
-			return nil, nil, err
-		}
-
-		for _, obj := range objs {
-			if objFileRegExp.MatchString(obj.Name()) {
-				name := dir + obj.Name()
-				objects = append(objects, core.NewHash(name))
+			for _, obj := range objs {
+				if objFileRegExp.MatchString(obj.Name()) {
+					objects = append(objects, core.NewHash(objDir+obj.Name()))
+				}
 			}
 		}
 	}
