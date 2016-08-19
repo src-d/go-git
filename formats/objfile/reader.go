@@ -130,6 +130,6 @@ func (r *Reader) FillObject(obj core.Object) error {
 		return err
 	}
 	_, err = io.Copy(w, r.r)
-	return err
 
+	return err
 }
