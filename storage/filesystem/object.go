@@ -37,11 +37,10 @@ func (s *ObjectStorage) Set(core.Object) (core.Hash, error) {
 	return core.ZeroHash, fmt.Errorf("not implemented yet")
 }
 
+// Get returns the object with the given hash, by searching for it in
+// the packfile and the git object directories.
 func (s *ObjectStorage) Get(t core.ObjectType, h core.Hash) (core.Object, error) {
-	var obj core.Object
-	var err error
-
-	obj, err = s.getFromObject(h)
+	obj, err := s.getFromObject(h)
 	if err == nil {
 		return obj, nil
 	}
@@ -54,8 +53,6 @@ func (s *ObjectStorage) Get(t core.ObjectType, h core.Hash) (core.Object, error)
 	return nil, err
 }
 
-// Get returns the object with the given hash, by searching for it in
-// the git object directories.
 func (s *ObjectStorage) getFromObject(h core.Hash) (core.Object, error) {
 	fs, path, err := s.dir.Objectfile(h)
 	if err != nil {
