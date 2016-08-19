@@ -120,6 +120,7 @@ func (d *DotGit) Config() (fs.FS, string, error) {
 	return d.fs, configFile, nil
 }
 
+// Objectfiles returns the hash slice of the objects files in the "objects/"
 func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 	dotGitobjcts := d.fs.Join(d.path, "objects")
 	files, err := d.fs.ReadDir(dotGitobjcts)
