@@ -130,7 +130,7 @@ func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 	}
 
 	var objDirs []string
-	reDir, _ := regexp.Compile("[a-z0-9]{2}")
+	reDir := regexp.MustCompile("[a-z0-9]{2}")
 	for _, f := range files {
 		if f.IsDir() && reDir.MatchString(f.Name()) {
 			objDirs = append(objDirs, f.Name())
@@ -138,7 +138,7 @@ func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 	}
 
 	var objects []core.Hash
-	reObj, _ := regexp.Compile("[a-z0-9]{38}")
+	reObj := regexp.MustCompile("[a-z0-9]{38}")
 	for _, dir := range objDirs {
 		objs, err := d.fs.ReadDir(d.fs.Join(objsDir, dir))
 
