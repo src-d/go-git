@@ -166,7 +166,9 @@ func (d *DotGit) Objectfile(h core.Hash) (fs.FS, string, error) {
 		if os.IsNotExist(err) {
 			return nil, "", ErrNotFound
 		}
+
 		return nil, "", err
 	}
+
 	return d.fs, objFile, nil
 }
