@@ -122,6 +122,7 @@ func (r *Reader) Close() (err error) {
 	return
 }
 
+// FillObject fills the given object from an object entry
 func (r *Reader) FillObject(obj core.Object) error {
 	obj.SetType(r.header.t)
 	obj.SetSize(r.header.size)
