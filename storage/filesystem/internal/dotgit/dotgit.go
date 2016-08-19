@@ -17,6 +17,11 @@ const (
 )
 
 var (
+	reDir = regexp.MustCompile("[a-z0-9]{2}")
+	reObj = regexp.MustCompile("[a-z0-9]{38}")
+)
+
+var (
 	// ErrNotFound is returned by New when the path is not found.
 	ErrNotFound = errors.New("path not found")
 	// ErrIdxNotFound is returned by Idxfile when the idx file is not found
@@ -130,7 +135,6 @@ func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 	}
 
 	var objDirs []string
-	reDir := regexp.MustCompile("[a-z0-9]{2}")
 	for _, f := range files {
 		if f.IsDir() && reDir.MatchString(f.Name()) {
 			objDirs = append(objDirs, f.Name())
@@ -138,10 +142,8 @@ func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 	}
 
 	var objects []core.Hash
-	reObj := regexp.MustCompile("[a-z0-9]{38}")
 	for _, dir := range objDirs {
 		objs, err := d.fs.ReadDir(d.fs.Join(objsDir, dir))
-
 		if err != nil {
 			return nil, nil, err
 		}
