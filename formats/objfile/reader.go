@@ -125,8 +125,11 @@ func (r *Reader) Close() (err error) {
 func (r *Reader) FillObject(obj core.Object) error {
 	obj.SetType(r.header.t)
 	obj.SetSize(r.header.size)
-	w, _ := obj.Writer()
-	_, err := io.Copy(w, r.r)
+	w, err := obj.Writer()
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(w, r.r)
 	return err
 
 }
