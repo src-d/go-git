@@ -53,7 +53,7 @@ func (s *ObjectStorage) Get(t core.ObjectType, h core.Hash) (core.Object, error)
 	return nil, err
 }
 
-func (s *ObjectStorage) getFromObject(h core.Hash) (core.Object, error) {
+func (s *ObjectStorage) getFromObject(h core.Hash) (obj core.Object, err error) {
 	fs, path, err := s.dir.Objectfile(h)
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func (s *ObjectStorage) getFromObject(h core.Hash) (core.Object, error) {
 		}
 	}()
 
-	obj := s.NewObject()
+	obj = s.NewObject()
 	objReader, err := objfile.NewReader(f)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func (s *ObjectStorage) getFromObject(h core.Hash) (core.Object, error) {
 
 // Get returns the object with the given hash, by searching for it in
 // the packfile.
-func (s *ObjectStorage) getFromPackfile(t core.ObjectType, h core.Hash) (core.Object, error) {
+func (s *ObjectStorage) getFromPackfile(t core.ObjectType, h core.Hash) (obj core.Object, err error) {
 	if s.index == nil {
 		return nil, dotgit.ErrIdxNotFound
 	}
@@ -126,7 +126,7 @@ func (s *ObjectStorage) getFromPackfile(t core.ObjectType, h core.Hash) (core.Ob
 	r.HashToOffset = map[core.Hash]int64(s.index)
 	p := packfile.NewParser(r)
 
-	obj := s.NewObject()
+	obj = s.NewObject()
 	err = p.FillObject(obj)
 	if err != nil {
 		return nil, err
