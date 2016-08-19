@@ -17,8 +17,8 @@ const (
 )
 
 var (
-	objDirRegExp  = regexp.MustCompile("[a-z0-9]{2}")
-	objFileRegExp = regexp.MustCompile("[a-z0-9]{38}")
+	objDirRegExp  = regexp.MustCompile("^[a-f0-9]{2}$")
+	objFileRegExp = regexp.MustCompile("^[a-f0-9]{38}$")
 )
 
 var (
