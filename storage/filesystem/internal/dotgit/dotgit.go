@@ -54,7 +54,9 @@ func New(fs fs.FS, path string) (*DotGit, error) {
 // Symbolic references are resolved and included in the output.
 func (d *DotGit) Refs() ([]*core.Reference, error) {
 	var refs []*core.Reference
-	_ = d.addRefsFromPackedRefs(&refs)
+	if err := d.addRefsFromPackedRefs(&refs); err != nil {
+		return nil, err
+	}
 
 	if err := d.addRefsFromRefDir(&refs); err != nil {
 		return nil, err
