@@ -40,7 +40,7 @@ func (s *ObjectStorage) Set(core.Object) (core.Hash, error) {
 // Get returns the object with the given hash, by searching for it in
 // the packfile and the git object directories.
 func (s *ObjectStorage) Get(t core.ObjectType, h core.Hash) (core.Object, error) {
-	obj, err := s.getFromObject(h)
+	obj, err := s.getFromUnpacked(h)
 	if err == nil {
 		return obj, nil
 	}
@@ -53,7 +53,7 @@ func (s *ObjectStorage) Get(t core.ObjectType, h core.Hash) (core.Object, error)
 	return nil, err
 }
 
-func (s *ObjectStorage) getFromObject(h core.Hash) (obj core.Object, err error) {
+func (s *ObjectStorage) getFromUnpacked(h core.Hash) (obj core.Object, err error) {
 	fs, path, err := s.dir.Objectfile(h)
 	if err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func (s *ObjectStorage) Iter(t core.ObjectType) (core.ObjectIter, error) {
 	}
 
 	for _, hash := range hashes {
-		object, err := s.getFromObject(hash)
+		object, err := s.getFromUnpacked(hash)
 		if err != nil {
 			return nil, err
 		}
