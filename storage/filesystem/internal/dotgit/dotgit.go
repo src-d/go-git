@@ -2,7 +2,6 @@ package dotgit
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -148,7 +147,6 @@ func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 		for _, obj := range objs {
 			if reObj.MatchString(obj.Name()) {
 				name := dir + obj.Name()
-				fmt.Println(name)
 				objects = append(objects, core.NewHash(name))
 			}
 		}
