@@ -28,6 +28,9 @@ var (
 	ErrIdxNotFound = errors.New("idx file not found")
 	// ErrPackfileNotFound is returned by Packfile when the packfile is not found
 	ErrPackfileNotFound = errors.New("packfile not found")
+	// ErrObjfileNotFound is returned by Objectfile when the objectffile is not found
+	// on the repository.
+	ErrObjfileNotFound = errors.New("object file not found")
 	// ErrConfigNotFound is returned by Config when the config is not found
 	ErrConfigNotFound = errors.New("config file not found")
 )
@@ -162,7 +165,7 @@ func (d *DotGit) Objectfile(h core.Hash) (fs.FS, string, error) {
 
 	if _, err := d.fs.Stat(objFile); err != nil {
 		if os.IsNotExist(err) {
-			return nil, "", ErrNotFound
+			return nil, "", ErrObjfileNotFound
 		}
 
 		return nil, "", err

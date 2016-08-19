@@ -44,6 +44,9 @@ func (s *ObjectStorage) Get(t core.ObjectType, h core.Hash) (core.Object, error)
 	if err == nil {
 		return obj, nil
 	}
+	if err != dotgit.ErrObjfileNotFound {
+		return nil, err
+	}
 
 	obj, err = s.getFromPackfile(t, h)
 	if err == nil {
