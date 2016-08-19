@@ -76,15 +76,18 @@ func (s *ObjectStorage) getFromObject(h core.Hash) (obj core.Object, err error) 
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		errClose := objReader.Close()
+		if err == nil {
+			err = errClose
+		}
+	}()
+
 	err = objReader.FillObject(obj)
 	if err != nil {
 		return nil, err
 	}
 
-	err = objReader.Close()
-	if err != nil {
-		return nil, err
-	}
 	return obj, nil
 }
 
