@@ -122,8 +122,9 @@ func (d *DotGit) Config() (fs.FS, string, error) {
 
 // Objectfiles returns the hash slice of the objects files in the "objects/"
 func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
-	dotGitobjcts := d.fs.Join(d.path, "objects")
-	files, err := d.fs.ReadDir(dotGitobjcts)
+	objsDir := d.fs.Join(d.path, "objects")
+
+	files, err := d.fs.ReadDir(objsDir)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -139,7 +140,7 @@ func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 	var objects []core.Hash
 	reObj, _ := regexp.Compile("[a-z0-9]{38}")
 	for _, dir := range objDirs {
-		objs, err := d.fs.ReadDir(d.fs.Join(dotGitobjcts, dir))
+		objs, err := d.fs.ReadDir(d.fs.Join(objsDir, dir))
 
 		if err != nil {
 			return nil, nil, err
