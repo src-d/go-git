@@ -56,6 +56,24 @@ var initFixtures = [...]struct {
 			},
 		},
 	},
+	{
+		name: "unpacked-dummy",
+		tgz:  "fixtures/unpacked-objects-exist-one-dummy-object-no-packfile-no-idx.tgz",
+		objectfiles: []fixtureObject{
+			fixtureObject{
+				path: "objects/1e/0304e3cb54d0ad612ad70f1f15a285a65a4b8e",
+				hash: "1e0304e3cb54d0ad612ad70f1f15a285a65a4b8e",
+			},
+			fixtureObject{
+				path: "objects/5e/fb9bc29c482e023e40e0a2b3b7e49cec842034",
+				hash: "5efb9bc29c482e023e40e0a2b3b7e49cec842034",
+			},
+			fixtureObject{
+				path: "objects/e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+				hash: "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+			},
+		},
+	},
 }
 
 type fixtureObject struct {
@@ -250,6 +268,49 @@ func (s *SuiteDotGit) TestPackfile(c *C) {
 	}
 }
 
+func (s *SuiteDotGit) TestObjectfiles(c *C) {
+	objectfiles := func(d *DotGit) (fs.FS, []core.Hash, error) {
+		return d.Objectfiles()
+	}
+	for _, test := range [...]struct {
+		fixture string
+		fn      getObjectsHashesFn
+		err     string // error regexp
+	}{
+		{
+			fixture: "unpacked",
+			fn:      objectfiles,
+		},
+		{
+			fixture: "unpacked-dummy",
+			fn:      objectfiles,
+		}, {
+			fixture: "empty",
+			fn:      objectfiles,
+			err:     ".* no such file or directory",
+		}, {
+			fixture: "no-packfile-no-idx",
+			fn:      objectfiles,
+		},
+	} {
+		com := Commentf("fixture = %s", test.fixture)
+
+		fix, dir := s.newFixtureDir(c, test.fixture)
+
+		_, hashes, err := test.fn(dir)
+
+		if test.err != "" {
+			c.Assert(err, ErrorMatches, test.err, com)
+		} else {
+			c.Assert(err, IsNil, com)
+			c.Assert(len(hashes), Equals, len(fix.objectfiles), com)
+			for i, hash := range hashes {
+				c.Assert(hash.String(), Matches, fix.objectfiles[i].hash, com)
+			}
+		}
+	}
+}
+
 func (s *SuiteDotGit) TestObjectfile(c *C) {
 	objectfile := func(d *DotGit, h core.Hash) (fs.FS, string, error) {
 		return d.Objectfile(h)
@@ -292,6 +353,7 @@ func (s *SuiteDotGit) TestObjectfile(c *C) {
 
 type getPathFn func(*DotGit) (fs.FS, string, error)
 type getObjectPathFn func(*DotGit, core.Hash) (fs.FS, string, error)
+type getObjectsHashesFn func(d *DotGit) (fs.FS, []core.Hash, error)
 
 func noExt(path string) string {
 	ext := filepath.Ext(path)
