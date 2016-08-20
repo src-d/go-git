@@ -22,6 +22,7 @@ var initFixtures = [...]struct {
 	capabilities [][2]string
 	packfile     string
 	idxfile      string
+	objectfiles  []fixtureObject
 }{
 	{
 		name: "spinnaker",
@@ -37,7 +38,29 @@ var initFixtures = [...]struct {
 	}, {
 		name: "empty",
 		tgz:  "fixtures/empty-gitdir.tgz",
+	}, {
+		name: "unpacked",
+		tgz:  "fixtures/unpacked-objects-no-packfile-no-idx.tgz",
+		objectfiles: []fixtureObject{
+			fixtureObject{
+				path: "objects/1e/0304e3cb54d0ad612ad70f1f15a285a65a4b8e",
+				hash: "1e0304e3cb54d0ad612ad70f1f15a285a65a4b8e",
+			},
+			fixtureObject{
+				path: "objects/5e/fb9bc29c482e023e40e0a2b3b7e49cec842034",
+				hash: "5efb9bc29c482e023e40e0a2b3b7e49cec842034",
+			},
+			fixtureObject{
+				path: "objects/e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+				hash: "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+			},
+		},
 	},
+}
+
+type fixtureObject struct {
+	path string
+	hash string
 }
 
 type fixture struct {
@@ -47,6 +70,7 @@ type fixture struct {
 	capabilities *common.Capabilities // expected capabilities
 	packfile     string               // path of the packfile
 	idxfile      string               // path of the idxfile
+	objectfiles  []fixtureObject      // path and hash of the object files
 }
 
 type SuiteDotGit struct {
@@ -77,6 +101,8 @@ func (s *SuiteDotGit) SetUpSuite(c *C) {
 
 		f.packfile = init.packfile
 		f.idxfile = init.idxfile
+		f.objectfiles = make([]fixtureObject, len(init.objectfiles))
+		copy(f.objectfiles, init.objectfiles)
 
 		s.fixtures[init.name] = f
 	}
@@ -224,7 +250,48 @@ func (s *SuiteDotGit) TestPackfile(c *C) {
 	}
 }
 
+func (s *SuiteDotGit) TestObjectfile(c *C) {
+	objectfile := func(d *DotGit, h core.Hash) (fs.FS, string, error) {
+		return d.Objectfile(h)
+	}
+	for _, test := range [...]struct {
+		fixture string
+		fn      getObjectPathFn
+		err     string // error regexp
+	}{
+		{
+			fixture: "unpacked",
+			fn:      objectfile,
+		}, {
+			fixture: "empty",
+			fn:      objectfile,
+			err:     "object file not found",
+		}, {
+			fixture: "no-packfile-no-idx",
+			fn:      objectfile,
+			err:     "object file not found",
+		},
+	} {
+		com := Commentf("fixture = %s", test.fixture)
+
+		fix, dir := s.newFixtureDir(c, test.fixture)
+
+		for _, fixobj := range fix.objectfiles {
+			_, path, err := test.fn(dir, core.NewHash(fixobj.hash))
+
+			if test.err != "" {
+				c.Assert(err, ErrorMatches, test.err, com)
+			} else {
+				c.Assert(err, IsNil, com)
+				c.Assert(strings.HasSuffix(path, fixobj.path),
+					Equals, true, com)
+			}
+		}
+	}
+}
+
 type getPathFn func(*DotGit) (fs.FS, string, error)
+type getObjectPathFn func(*DotGit, core.Hash) (fs.FS, string, error)
 
 func noExt(path string) string {
 	ext := filepath.Ext(path)
