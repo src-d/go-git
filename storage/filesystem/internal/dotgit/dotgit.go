@@ -3,7 +3,6 @@ package dotgit
 import (
 	"errors"
 	"os"
-	"regexp"
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/core"
@@ -14,11 +13,6 @@ const (
 	suffix         = ".git"
 	packedRefsPath = "packed-refs"
 	configPath     = "config"
-)
-
-var (
-	objDirRegExp  = regexp.MustCompile("^[a-f0-9]{2}$")
-	objFileRegExp = regexp.MustCompile("^[a-f0-9]{38}$")
 )
 
 var (
@@ -139,7 +133,7 @@ func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 
 	var objects []core.Hash
 	for _, f := range files {
-		if f.IsDir() && objDirRegExp.MatchString(f.Name()) {
+		if f.IsDir() && len(f.Name()) == 2 && isHex(f.Name()) {
 			objDir := f.Name()
 			objs, err := d.fs.ReadDir(d.fs.Join(objsDir, objDir))
 			if err != nil {
@@ -147,14 +141,35 @@ func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 			}
 
 			for _, obj := range objs {
-				if objFileRegExp.MatchString(obj.Name()) {
-					objects = append(objects, core.NewHash(objDir+obj.Name()))
-				}
+				objects = append(objects, core.NewHash(objDir+obj.Name()))
 			}
 		}
 	}
 
 	return d.fs, objects, nil
+}
+
+func isHex(s string) bool {
+	for _, b := range []byte(s) {
+		if isNum(b) {
+			continue
+		}
+		if isHexAlpha(b) {
+			continue
+		}
+
+		return false
+	}
+
+	return true
+}
+
+func isNum(b byte) bool {
+	return b >= '0' && b <= '9'
+}
+
+func isHexAlpha(b byte) bool {
+	return b >= 'a' && b <= 'f' || b >= 'A' && b <= 'F'
 }
 
 // Objectfile returns the path of the object file (really, it returns the
