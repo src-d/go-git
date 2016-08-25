@@ -122,7 +122,8 @@ func (d *DotGit) Config() (fs.FS, string, error) {
 	return d.fs, configFile, nil
 }
 
-// Objectfiles returns the hash slice of the objects files in the "objects/"
+// Objectfiles returns a slice with the hashes of objects found under the
+// .git/objects/ directory.
 func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 	objsDir := d.fs.Join(d.path, "objects")
 
