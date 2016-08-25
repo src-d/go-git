@@ -119,8 +119,7 @@ func (s *SuiteDotGit) SetUpSuite(c *C) {
 
 		f.packfile = init.packfile
 		f.idxfile = init.idxfile
-		f.objectfiles = make([]fixtureObject, len(init.objectfiles))
-		copy(f.objectfiles, init.objectfiles)
+		f.objectfiles = init.objectfiles
 
 		s.fixtures[init.name] = f
 	}
