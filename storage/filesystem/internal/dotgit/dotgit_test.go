@@ -321,14 +321,14 @@ func (s *SuiteDotGit) TestObjectfile(c *C) {
 
 		fix, dir := s.newFixtureDir(c, test.fixture)
 
-		for _, fixobj := range fix.objectfiles {
-			_, path, err := dir.Objectfile(core.NewHash(fixobj.hash))
+		for _, fixObj := range fix.objectfiles {
+			_, path, err := dir.Objectfile(core.NewHash(fixObj.hash))
 
 			if test.err != "" {
 				c.Assert(err, ErrorMatches, test.err, com)
 			} else {
 				c.Assert(err, IsNil, com)
-				c.Assert(strings.HasSuffix(path, fixobj.path),
+				c.Assert(strings.HasSuffix(path, fixObj.path),
 					Equals, true, com)
 			}
 		}
