@@ -77,12 +77,7 @@ func (s *ObjectStorage) getFromUnpacked(h core.Hash) (obj core.Object, err error
 		}
 	}()
 
-	err = objReader.FillObject(obj)
-	if err != nil {
-		return nil, err
-	}
-
-	return obj, nil
+	return obj, objReader.FillObject(obj)
 }
 
 // Get returns the object with the given hash, by searching for it in
