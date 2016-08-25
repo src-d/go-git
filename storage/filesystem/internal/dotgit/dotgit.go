@@ -124,10 +124,10 @@ func (d *DotGit) Config() (fs.FS, string, error) {
 
 // Objectfiles returns a slice with the hashes of objects found under the
 // .git/objects/ directory.
-func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
-	objsDir := d.fs.Join(d.path, "objects")
+func (dg *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
+	objsDir := dg.fs.Join(dg.path, "objects")
 
-	files, err := d.fs.ReadDir(objsDir)
+	files, err := dg.fs.ReadDir(objsDir)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -136,18 +136,18 @@ func (d *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 	for _, f := range files {
 		if f.IsDir() && len(f.Name()) == 2 && isHex(f.Name()) {
 			objDir := f.Name()
-			objs, err := d.fs.ReadDir(d.fs.Join(objsDir, objDir))
+			d, err := dg.fs.ReadDir(dg.fs.Join(objsDir, objDir))
 			if err != nil {
 				return nil, nil, err
 			}
 
-			for _, obj := range objs {
-				objects = append(objects, core.NewHash(objDir+obj.Name()))
+			for _, o := range d {
+				objects = append(objects, core.NewHash(objDir+o.Name()))
 			}
 		}
 	}
 
-	return d.fs, objects, nil
+	return dg.fs, objects, nil
 }
 
 func isHex(s string) bool {
