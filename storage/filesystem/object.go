@@ -41,21 +41,12 @@ func (s *ObjectStorage) Set(core.Object) (core.Hash, error) {
 // the packfile and the git object directories.
 func (s *ObjectStorage) Get(t core.ObjectType, h core.Hash) (core.Object, error) {
 	obj, err := s.getFromUnpacked(h)
-	if err == nil {
-		return obj, nil
-	}
-	if err != dotgit.ErrObjfileNotFound {
-		return nil, err
+	if err == dotgit.ErrObjfileNotFound {
+		return s.getFromPackfile(t, h)
 	}
 
-	obj, err = s.getFromPackfile(t, h)
-	if err == nil {
-		return obj, nil
-	}
-
-	return nil, err
+	return obj, err
 }
-
 func (s *ObjectStorage) getFromUnpacked(h core.Hash) (obj core.Object, err error) {
 	fs, path, err := s.dir.Objectfile(h)
 	if err != nil {
