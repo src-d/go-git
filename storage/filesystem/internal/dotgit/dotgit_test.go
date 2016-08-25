@@ -268,35 +268,27 @@ func (s *SuiteDotGit) TestPackfile(c *C) {
 }
 
 func (s *SuiteDotGit) TestObjectfiles(c *C) {
-	objectfiles := func(d *DotGit) (fs.FS, []core.Hash, error) {
-		return d.Objectfiles()
-	}
 	for _, test := range [...]struct {
 		fixture string
-		fn      getObjectsHashesFn
 		err     string // error regexp
 	}{
 		{
 			fixture: "unpacked",
-			fn:      objectfiles,
 		},
 		{
 			fixture: "unpacked-dummy",
-			fn:      objectfiles,
 		}, {
 			fixture: "empty",
-			fn:      objectfiles,
 			err:     ".* no such file or directory",
 		}, {
 			fixture: "no-packfile-no-idx",
-			fn:      objectfiles,
 		},
 	} {
 		com := Commentf("fixture = %s", test.fixture)
 
 		fix, dir := s.newFixtureDir(c, test.fixture)
 
-		_, hashes, err := test.fn(dir)
+		_, hashes, err := dir.Objectfiles()
 
 		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err, com)
@@ -311,24 +303,17 @@ func (s *SuiteDotGit) TestObjectfiles(c *C) {
 }
 
 func (s *SuiteDotGit) TestObjectfile(c *C) {
-	objectfile := func(d *DotGit, h core.Hash) (fs.FS, string, error) {
-		return d.Objectfile(h)
-	}
 	for _, test := range [...]struct {
 		fixture string
-		fn      getObjectPathFn
 		err     string // error regexp
 	}{
 		{
 			fixture: "unpacked",
-			fn:      objectfile,
 		}, {
 			fixture: "empty",
-			fn:      objectfile,
 			err:     "object file not found",
 		}, {
 			fixture: "no-packfile-no-idx",
-			fn:      objectfile,
 			err:     "object file not found",
 		},
 	} {
@@ -337,7 +322,7 @@ func (s *SuiteDotGit) TestObjectfile(c *C) {
 		fix, dir := s.newFixtureDir(c, test.fixture)
 
 		for _, fixobj := range fix.objectfiles {
-			_, path, err := test.fn(dir, core.NewHash(fixobj.hash))
+			_, path, err := dir.Objectfile(core.NewHash(fixobj.hash))
 
 			if test.err != "" {
 				c.Assert(err, ErrorMatches, test.err, com)
@@ -351,8 +336,6 @@ func (s *SuiteDotGit) TestObjectfile(c *C) {
 }
 
 type getPathFn func(*DotGit) (fs.FS, string, error)
-type getObjectPathFn func(*DotGit, core.Hash) (fs.FS, string, error)
-type getObjectsHashesFn func(d *DotGit) (fs.FS, []core.Hash, error)
 
 func noExt(path string) string {
 	ext := filepath.Ext(path)
