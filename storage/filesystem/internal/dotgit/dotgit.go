@@ -173,8 +173,8 @@ func isHexAlpha(b byte) bool {
 	return b >= 'a' && b <= 'f' || b >= 'A' && b <= 'F'
 }
 
-// Objectfile returns the path of the object file (really, it returns the
-// path of the first file in the "objects/hash[0:2]/"
+// Objectfile returns the path of the object file for a given hash
+// *if the file exists*, otherwise returns an ErrObjfileNotFound error.
 func (d *DotGit) Objectfile(h core.Hash) (fs.FS, string, error) {
 	hash := h.String()
 	objFile := d.fs.Join(d.path, "objects", hash[0:2], hash[2:40])
