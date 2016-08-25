@@ -270,7 +270,7 @@ func (s *SuiteDotGit) TestPackfile(c *C) {
 func (s *SuiteDotGit) TestObjectfiles(c *C) {
 	for _, test := range [...]struct {
 		fixture string
-		err     string // error regexp
+		err     error
 	}{
 		{
 			fixture: "unpacked",
@@ -279,7 +279,7 @@ func (s *SuiteDotGit) TestObjectfiles(c *C) {
 			fixture: "unpacked-dummy",
 		}, {
 			fixture: "empty",
-			err:     ".* no such file or directory",
+			err:     ErrObjfileNotFound,
 		}, {
 			fixture: "no-packfile-no-idx",
 		},
@@ -290,8 +290,8 @@ func (s *SuiteDotGit) TestObjectfiles(c *C) {
 
 		_, hashes, err := dir.Objectfiles()
 
-		if test.err != "" {
-			c.Assert(err, ErrorMatches, test.err, com)
+		if test.err != nil {
+			c.Assert(err == test.err, Equals, true, com)
 		} else {
 			c.Assert(err, IsNil, com)
 			c.Assert(len(hashes), Equals, len(fix.objectfiles), com)
@@ -305,16 +305,16 @@ func (s *SuiteDotGit) TestObjectfiles(c *C) {
 func (s *SuiteDotGit) TestObjectfile(c *C) {
 	for _, test := range [...]struct {
 		fixture string
-		err     string // error regexp
+		err     error
 	}{
 		{
 			fixture: "unpacked",
 		}, {
 			fixture: "empty",
-			err:     "object file not found",
+			err:     ErrObjfileNotFound,
 		}, {
 			fixture: "no-packfile-no-idx",
-			err:     "object file not found",
+			err:     ErrObjfileNotFound,
 		},
 	} {
 		com := Commentf("fixture = %s", test.fixture)
@@ -324,8 +324,8 @@ func (s *SuiteDotGit) TestObjectfile(c *C) {
 		for _, fixObj := range fix.objectfiles {
 			_, path, err := dir.Objectfile(core.NewHash(fixObj.hash))
 
-			if test.err != "" {
-				c.Assert(err, ErrorMatches, test.err, com)
+			if test.err != nil {
+				c.Assert(err == test.err, Equals, true, com)
 			} else {
 				c.Assert(err, IsNil, com)
 				c.Assert(strings.HasSuffix(path, fixObj.path),
