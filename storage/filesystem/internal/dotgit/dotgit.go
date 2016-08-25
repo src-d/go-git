@@ -23,7 +23,6 @@ var (
 	// ErrPackfileNotFound is returned by Packfile when the packfile is not found
 	ErrPackfileNotFound = errors.New("packfile not found")
 	// ErrObjfileNotFound is returned by Objectfile when the objectffile is not found
-	// on the repository.
 	ErrObjfileNotFound = errors.New("object file not found")
 	// ErrConfigNotFound is returned by Config when the config is not found
 	ErrConfigNotFound = errors.New("config file not found")
