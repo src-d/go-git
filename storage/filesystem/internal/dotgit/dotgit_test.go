@@ -291,12 +291,13 @@ func (s *SuiteDotGit) TestObjectfiles(c *C) {
 		_, hashes, err := dir.Objectfiles()
 
 		if test.err != nil {
-			c.Assert(err == test.err, Equals, true, com)
+			c.Assert(err, Equals, test.err, com)
 		} else {
 			c.Assert(err, IsNil, com)
 			c.Assert(len(hashes), Equals, len(fix.objectfiles), com)
-			for i, hash := range hashes {
-				c.Assert(hash.String(), Matches, fix.objectfiles[i].hash, com)
+
+			for _, hash := range hashes {
+				c.Assert(containsObject(fix.objectfiles, hash), Equals, true, com)
 			}
 		}
 	}
@@ -325,7 +326,7 @@ func (s *SuiteDotGit) TestObjectfile(c *C) {
 			_, path, err := dir.Objectfile(core.NewHash(fixObj.hash))
 
 			if test.err != nil {
-				c.Assert(err == test.err, Equals, true, com)
+				c.Assert(err, Equals, test.err, com)
 			} else {
 				c.Assert(err, IsNil, com)
 				c.Assert(strings.HasSuffix(path, fixObj.path),
@@ -340,4 +341,13 @@ type getPathFn func(*DotGit) (fs.FS, string, error)
 func noExt(path string) string {
 	ext := filepath.Ext(path)
 	return path[0 : len(path)-len(ext)]
+}
+
+func containsObject(objs []fixtureObject, hash core.Hash) bool {
+	for _, o := range objs {
+		if strings.ToLower(o.hash) == strings.ToLower(hash.String()) {
+			return true
+		}
+	}
+	return false
 }
