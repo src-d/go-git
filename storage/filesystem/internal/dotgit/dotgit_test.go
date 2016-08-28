@@ -236,11 +236,11 @@ func (s *SuiteDotGit) TestPackfile(c *C) {
 		}, {
 			fixture: "empty",
 			fn:      packfile,
-			err:     ".* no such file or directory",
+			err:     "packfile not found",
 		}, {
 			fixture: "empty",
 			fn:      idxfile,
-			err:     ".* no such file or directory",
+			err:     "idx file not found",
 		}, {
 			fixture: "no-packfile-no-idx",
 			fn:      packfile,

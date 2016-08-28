@@ -76,6 +76,10 @@ func (d *DotGit) Packfile() (fs.FS, string, error) {
 	packDir := d.fs.Join(d.path, "objects", "pack")
 	files, err := d.fs.ReadDir(packDir)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, "", ErrPackfileNotFound
+		}
+
 		return nil, "", err
 	}
 
@@ -95,6 +99,10 @@ func (d *DotGit) Idxfile() (fs.FS, string, error) {
 	packDir := d.fs.Join(d.path, "objects", "pack")
 	files, err := d.fs.ReadDir(packDir)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, "", ErrIdxNotFound
+		}
+
 		return nil, "", err
 	}
 
@@ -128,6 +136,10 @@ func (dg *DotGit) Objectfiles() (fs.FS, []core.Hash, error) {
 
 	files, err := dg.fs.ReadDir(objsDir)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil, ErrObjfileNotFound
+		}
+
 		return nil, nil, err
 	}
 
