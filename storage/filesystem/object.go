@@ -50,6 +50,7 @@ func (s *ObjectStorage) Get(t core.ObjectType, h core.Hash) (core.Object, error)
 
 	return obj, err
 }
+
 func (s *ObjectStorage) getFromUnpacked(h core.Hash) (obj core.Object, err error) {
 	fs, path, err := s.dir.Objectfile(h)
 	if err != nil {
