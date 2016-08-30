@@ -40,7 +40,7 @@ func (s *ObjectStorage) Set(core.Object) (core.Hash, error) {
 // Get returns the object with the given hash, by searching for it in
 // the packfile and the git object directories.
 func (s *ObjectStorage) Get(t core.ObjectType, h core.Hash) (core.Object, error) {
-	obj, err := s.getFromUnpacked(h)
+	obj, err := s.getFromUnpacked(t, h)
 	if err == dotgit.ErrObjfileNotFound {
 		if s.index == nil {
 			return nil, core.ErrObjectNotFound
@@ -51,7 +51,7 @@ func (s *ObjectStorage) Get(t core.ObjectType, h core.Hash) (core.Object, error)
 	return obj, err
 }
 
-func (s *ObjectStorage) getFromUnpacked(h core.Hash) (obj core.Object, err error) {
+func (s *ObjectStorage) getFromUnpacked(t core.ObjectType, h core.Hash) (obj core.Object, err error) {
 	fs, path, err := s.dir.Objectfile(h)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,14 @@ func (s *ObjectStorage) getFromUnpacked(h core.Hash) (obj core.Object, err error
 		}
 	}()
 
-	return obj, objReader.FillObject(obj)
+	err = objReader.FillObject(obj)
+	if err != nil {
+		return nil, err
+	}
+	if core.AnyObject != t && obj.Type() != t {
+		return nil, core.ErrObjectNotFound
+	}
+	return obj, nil
 }
 
 // Get returns the object with the given hash, by searching for it in
@@ -140,7 +147,7 @@ func (s *ObjectStorage) Iter(t core.ObjectType) (core.ObjectIter, error) {
 	}
 
 	for _, hash := range hashes {
-		object, err := s.getFromUnpacked(hash)
+		object, err := s.getFromUnpacked(core.AnyObject, hash)
 		if err != nil {
 			return nil, err
 		}
