@@ -62,15 +62,6 @@ func (c *Change) Files() (from *File, to *File, err error) {
 	return
 }
 
-func newFileFromTreeEntry(t *Tree, e *TreeEntry) (*File, error) {
-	blob, err := t.r.Blob(e.Hash)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewFile(e.Name, e.Mode, blob), nil
-}
-
 func (c *Change) String() string {
 	return fmt.Sprintf("<Action: %s, Path: %s>", c.Action, c.name())
 }
