@@ -349,7 +349,7 @@ func (r *GitUploadPackRequest) Reader() *strings.Reader {
 	}
 
 	if r.Depth != 0 {
-		payloads = append(payloads, fmt.Sprintf("deepen %s\n", r.Depth))
+		payloads = append(payloads, fmt.Sprintf("deepen %d\n", r.Depth))
 	}
 
 	payloads = append(payloads, "")
