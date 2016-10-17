@@ -54,7 +54,7 @@ func add(dst *[]io.Reader, e []byte) error {
 	}
 
 	n := len(e) + 4
-	*dst = append(*dst, bytes.NewReader(Int16ToHex(n)))
+	*dst = append(*dst, bytes.NewReader(int16ToHex(n)))
 	*dst = append(*dst, bytes.NewReader(e))
 
 	return nil
@@ -62,7 +62,7 @@ func add(dst *[]io.Reader, e []byte) error {
 
 // susbtitutes fmt.Sprintf("%04x", n) to avoid memory garbage
 // generation.
-func Int16ToHex(n int) []byte {
+func int16ToHex(n int) []byte {
 	var ret [4]byte
 	ret[0] = int2ToHex(n & 0xf000 >> 12)
 	ret[1] = int2ToHex(n & 0x0f00 >> 8)
@@ -105,7 +105,7 @@ func addString(dst *[]io.Reader, s string) error {
 	}
 
 	n := len(s) + 4
-	*dst = append(*dst, bytes.NewReader(Int16ToHex(n)))
+	*dst = append(*dst, bytes.NewReader(int16ToHex(n)))
 	*dst = append(*dst, strings.NewReader(s))
 
 	return nil
