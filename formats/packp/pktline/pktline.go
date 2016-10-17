@@ -5,7 +5,6 @@ package pktline
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"strings"
 )
@@ -55,10 +54,30 @@ func add(dst *[]io.Reader, e []byte) error {
 	}
 
 	n := len(e) + 4
-	*dst = append(*dst, strings.NewReader(fmt.Sprintf("%04x", n)))
+	*dst = append(*dst, bytes.NewReader(Int16ToHex(n)))
 	*dst = append(*dst, bytes.NewReader(e))
 
 	return nil
+}
+
+// susbtitutes fmt.Sprintf("%04x", n) to avoid memory garbage
+// generation.
+func Int16ToHex(n int) []byte {
+	var ret [4]byte
+	ret[0] = int2ToHex(n & 0xf000 >> 12)
+	ret[1] = int2ToHex(n & 0x0f00 >> 8)
+	ret[2] = int2ToHex(n & 0x00f0 >> 4)
+	ret[3] = int2ToHex(n & 0x000f)
+
+	return ret[:]
+}
+
+func int2ToHex(n int) byte {
+	if n < 10 {
+		return byte('0' + n)
+	}
+
+	return byte('a' - 10 + n)
 }
 
 // NewFromStrings returns the concatenation of several pkt-lines, each
@@ -86,7 +105,7 @@ func addString(dst *[]io.Reader, s string) error {
 	}
 
 	n := len(s) + 4
-	*dst = append(*dst, strings.NewReader(fmt.Sprintf("%04x", n)))
+	*dst = append(*dst, bytes.NewReader(Int16ToHex(n)))
 	*dst = append(*dst, strings.NewReader(s))
 
 	return nil

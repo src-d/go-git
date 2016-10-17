@@ -1,6 +1,8 @@
 package pktline_test
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -155,6 +157,18 @@ func (s *SuitePktLine) TestNewFromStringsErrPayloadTooLong(c *C) {
 
 		c.Assert(err, Equals, pktline.ErrPayloadTooLong,
 			Commentf("%v\n", input))
+	}
+}
+
+func (s *SuitePktLine) TestInt16ToHex(c *C) {
+	for n := 0; n < 0xffff; n++ {
+		obtained := pktline.Int16ToHex(n)
+
+		expected := []byte(fmt.Sprintf("%04x", n))
+
+		c.Assert(bytes.Equal(obtained, expected), Equals, true,
+			Commentf("\nn = %d\nobtained = %v\nexpected = %v\n",
+				n, obtained, expected))
 	}
 }
 
