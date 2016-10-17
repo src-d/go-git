@@ -13,11 +13,10 @@ import (
 const (
 	// MaxPayloadSize is the maximum payload size of a pkt-line in bytes.
 	MaxPayloadSize = 65516
-	flushStr       = "0000"
 )
 
 var (
-	flush = []byte(flushStr)
+	flush = []byte{'0', '0', '0', '0'}
 )
 
 // PktLine values represent a succession of pkt-lines.
@@ -68,10 +67,27 @@ func add(dst *[]io.Reader, e []byte) error {
 func NewFromStrings(payloads ...string) (PktLine, error) {
 	ret := []io.Reader{}
 	for _, p := range payloads {
-		if err := add(&ret, []byte(p)); err != nil {
+		if err := addString(&ret, p); err != nil {
 			return PktLine{}, err
 		}
 	}
 
 	return PktLine{io.MultiReader(ret...)}, nil
+}
+
+func addString(dst *[]io.Reader, s string) error {
+	if len(s) > MaxPayloadSize {
+		return ErrPayloadTooLong
+	}
+
+	if len(s) == 0 {
+		*dst = append(*dst, bytes.NewReader(flush))
+		return nil
+	}
+
+	n := len(s) + 4
+	*dst = append(*dst, strings.NewReader(fmt.Sprintf("%04x", n)))
+	*dst = append(*dst, strings.NewReader(s))
+
+	return nil
 }

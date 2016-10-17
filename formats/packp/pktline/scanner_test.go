@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v3/formats/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 
 	. "gopkg.in/check.v1"
 )
@@ -47,6 +47,15 @@ func (s *SuiteScanner) TestFlush(c *C) {
 	c.Assert(sc.Scan(), Equals, true)
 	payload := sc.Bytes()
 	c.Assert(len(payload), Equals, 0)
+}
+
+func (s *SuiteScanner) TestPktLineTooShort(c *C) {
+	r := strings.NewReader("010cfoobar")
+
+	sc := pktline.NewScanner(r)
+
+	c.Assert(sc.Scan(), Equals, false)
+	c.Assert(sc.Err(), ErrorMatches, "unexpected EOF")
 }
 
 func (s *SuiteScanner) TestScanAndPayload(c *C) {
