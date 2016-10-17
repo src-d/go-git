@@ -8,9 +8,7 @@ import (
 	"io/ioutil"
 
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-git.v3/core"
-
-	"github.com/klauspost/compress/zlib"
+	"gopkg.in/src-d/go-git.v4/core"
 )
 
 type SuiteReader struct{}
@@ -28,44 +26,42 @@ func (s *SuiteReader) TestReadObjfile(c *C) {
 	}
 }
 
-func testReader(c *C, source io.Reader, hash core.Hash, typ core.ObjectType, content []byte, com string) {
+func testReader(c *C, source io.Reader, hash core.Hash, t core.ObjectType, content []byte, com string) {
 	r, err := NewReader(source)
 	c.Assert(err, IsNil)
-	c.Assert(r.Type(), Equals, typ)
+
+	typ, size, err := r.Header()
+	c.Assert(err, IsNil)
+	c.Assert(typ, Equals, t)
+	c.Assert(content, HasLen, int(size))
+
 	rc, err := ioutil.ReadAll(r)
 	c.Assert(err, IsNil)
 	c.Assert(rc, DeepEquals, content, Commentf("%scontent=%s, expected=%s", base64.StdEncoding.EncodeToString(rc), base64.StdEncoding.EncodeToString(content)))
-	c.Assert(r.Size(), Equals, int64(len(content)))
+
 	c.Assert(r.Hash(), Equals, hash) // Test Hash() before close
 	c.Assert(r.Close(), IsNil)
-	c.Assert(r.Hash(), Equals, hash) // Test Hash() after close
-	_, err = r.Read(make([]byte, 0, 1))
-	c.Assert(err, Equals, ErrClosed)
+
 }
 
 func (s *SuiteReader) TestReadEmptyObjfile(c *C) {
 	source := bytes.NewReader([]byte{})
 	_, err := NewReader(source)
-	c.Assert(err, Equals, ErrZLib)
-}
-
-func (s *SuiteReader) TestReadEmptyContent(c *C) {
-	b := new(bytes.Buffer)
-	w := zlib.NewWriter(b)
-	c.Assert(w.Close(), IsNil)
-	_, err := NewReader(b)
-	c.Assert(err, Equals, ErrHeader)
+	c.Assert(err, NotNil)
 }
 
 func (s *SuiteReader) TestReadGarbage(c *C) {
 	source := bytes.NewReader([]byte("!@#$RO!@NROSADfinq@o#irn@oirfn"))
 	_, err := NewReader(source)
-	c.Assert(err, Equals, ErrZLib)
+	c.Assert(err, NotNil)
 }
 
 func (s *SuiteReader) TestReadCorruptZLib(c *C) {
 	data, _ := base64.StdEncoding.DecodeString("eAFLysaalPUjBgAAAJsAHw")
 	source := bytes.NewReader(data)
-	_, err := NewReader(source)
+	r, err := NewReader(source)
+	c.Assert(err, IsNil)
+
+	_, _, err = r.Header()
 	c.Assert(err, NotNil)
 }

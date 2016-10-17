@@ -1,4 +1,4 @@
-# go-git [![GoDoc](https://godoc.org/gopkg.in/src-d/go-git.v3?status.svg)](https://godoc.org/gopkg.in/src-d/go-git.v3) [![Build Status](https://travis-ci.org/src-d/go-git.svg?branch=master)](https://travis-ci.org/src-d/go-git) [![codecov.io](https://codecov.io/github/src-d/go-git/coverage.svg)](https://codecov.io/github/src-d/go-git) [![codebeat badge](https://codebeat.co/badges/b6cb2f73-9e54-483d-89f9-4b95a911f40c)](https://codebeat.co/projects/github-com-src-d-go-git)
+# go-git [![GoDoc](https://godoc.org/gopkg.in/src-d/go-git.v3?status.svg)](https://godoc.org/gopkg.in/src-d/go-git.v4) [![Build Status](https://travis-ci.org/src-d/go-git.svg)](https://travis-ci.org/src-d/go-git) [![codecov.io](https://codecov.io/github/src-d/go-git/coverage.svg)](https://codecov.io/github/src-d/go-git) [![codebeat badge](https://codebeat.co/badges/b6cb2f73-9e54-483d-89f9-4b95a911f40c)](https://codebeat.co/projects/github-com-src-d-go-git)
 
 A low level and highly extensible git client library for **reading** repositories from git servers.  It is written in Go from scratch, without any C dependencies.
 
@@ -56,7 +56,7 @@ if err != nil {
 defer iter.Close()
 
 for {
-	//the commits are not shorted in any special order
+	//the commits are not sorted in any special order
 	commit, err := iter.Next()
 	if err != nil {
 		if err == io.EOF {
@@ -133,8 +133,8 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/src-d/go-git.v3"
-	"gopkg.in/src-d/go-git.v3/utils/fs"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/utils/fs"
 )
 
 func main() {
@@ -182,7 +182,7 @@ with `go build -o libgogit.so -buildmode=c-shared github.com/src-d/go-git/cshare
 Acknowledgements
 ----------------
 
-The earlier versions of the [packfile reader](https://godoc.org/gopkg.in/src-d/go-git.v3/formats/packfile) are based on [git-chain](https://github.com/gitchain/gitchain/blob/master/git/pack.go), project done by [@yrashk](https://github.com/yrashk)
+The earlier versions of the [packfile reader](https://godoc.org/gopkg.in/src-d/go-git.v4/formats/packfile) are based on [git-chain](https://github.com/gitchain/gitchain/blob/master/git/pack.go), project done by [@yrashk](https://github.com/yrashk)
 
 
 License

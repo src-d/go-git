@@ -6,7 +6,7 @@ import (
 	"errors"
 	"io"
 
-	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v4/core"
 )
 
 var (
@@ -95,7 +95,6 @@ func readFanout(idx *Idxfile, r io.Reader) error {
 	}
 
 	idx.ObjectCount, err = readInt32(r)
-
 	return err
 }
 
@@ -116,7 +115,7 @@ func readObjectNames(idx *Idxfile, r io.Reader) error {
 func readCRC32(idx *Idxfile, r io.Reader) error {
 	c := int(idx.ObjectCount)
 	for i := 0; i < c; i++ {
-		if _, err := r.Read(idx.Entries[i].CRC32[:]); err != nil {
+		if err := binary.Read(r, binary.BigEndian, &idx.Entries[i].CRC32); err != nil {
 			return err
 		}
 	}

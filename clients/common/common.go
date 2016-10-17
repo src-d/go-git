@@ -1,4 +1,4 @@
-// Package common contains utils used by the clients
+// Package common contains interfaces and non-specific protocol entities
 package common
 
 import (
@@ -6,26 +6,30 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
+	"regexp"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/formats/pktline"
-
-	"gopkg.in/sourcegraph/go-vcsurl.v1"
+	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/formats/pktline"
+	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
 var (
-	NotFoundErr           = errors.New("repository not found")
-	EmptyGitUploadPackErr = errors.New("empty git-upload-pack given")
+	ErrRepositoryNotFound    = errors.New("repository not found")
+	ErrAuthorizationRequired = errors.New("authorization required")
+	ErrEmptyGitUploadPack    = errors.New("empty git-upload-pack given")
+	ErrInvalidAuthMethod     = errors.New("invalid auth method")
 )
 
 const GitUploadPackServiceName = "git-upload-pack"
 
 type GitUploadPackService interface {
-	Connect(url Endpoint) error
-	ConnectWithAuth(url Endpoint, auth AuthMethod) error
+	Connect() error
+	SetAuth(AuthMethod) error
 	Info() (*GitUploadPackInfo, error)
-	Fetch(r *GitUploadPackRequest) (io.ReadCloser, error)
+	Fetch(*GitUploadPackRequest) (io.ReadCloser, error)
+	Disconnect() error
 }
 
 type AuthMethod interface {
@@ -33,24 +37,42 @@ type AuthMethod interface {
 	String() string
 }
 
-type Endpoint string
+type Endpoint url.URL
 
-func NewEndpoint(url string) (Endpoint, error) {
-	vcs, err := vcsurl.Parse(url)
+var (
+	isSchemeRegExp   = regexp.MustCompile("^[^:]+://")
+	scpLikeUrlRegExp = regexp.MustCompile("^(?P<user>[^@]+@)?(?P<host>[^:]+):/?(?P<path>.+)$")
+)
+
+func NewEndpoint(endpoint string) (Endpoint, error) {
+	endpoint = transformSCPLikeIfNeeded(endpoint)
+
+	u, err := url.Parse(endpoint)
 	if err != nil {
-		return "", core.NewPermanentError(err)
+		return Endpoint{}, core.NewPermanentError(err)
 	}
 
-	link := vcs.Link()
-	if !strings.HasSuffix(link, ".git") {
-		link += ".git"
+	if !u.IsAbs() {
+		return Endpoint{}, core.NewPermanentError(fmt.Errorf(
+			"invalid endpoint: %s", endpoint,
+		))
 	}
 
-	return Endpoint(link), nil
+	return Endpoint(*u), nil
 }
 
-func (e Endpoint) Service(name string) string {
-	return fmt.Sprintf("%s/info/refs?service=%s", e, name)
+func transformSCPLikeIfNeeded(endpoint string) string {
+	if !isSchemeRegExp.MatchString(endpoint) && scpLikeUrlRegExp.MatchString(endpoint) {
+		m := scpLikeUrlRegExp.FindStringSubmatch(endpoint)
+		return fmt.Sprintf("ssh://%s%s/%s", m[1], m[2], m[3])
+	}
+
+	return endpoint
+}
+
+func (e *Endpoint) String() string {
+	u := url.URL(*e)
+	return u.String()
 }
 
 // Capabilities contains all the server capabilities
@@ -75,11 +97,6 @@ func NewCapabilities() *Capabilities {
 
 // Decode decodes a string
 func (c *Capabilities) Decode(raw string) {
-	parts := strings.SplitN(raw, "HEAD", 2)
-	if len(parts) == 2 {
-		raw = parts[1]
-	}
-
 	params := strings.Split(raw, " ")
 	for _, p := range params {
 		s := strings.SplitN(p, "=", 2)
@@ -180,8 +197,7 @@ func (c *Capabilities) String() string {
 
 type GitUploadPackInfo struct {
 	Capabilities *Capabilities
-	Head         core.Hash
-	Refs         map[string]core.Hash
+	Refs         memory.ReferenceStorage
 }
 
 func NewGitUploadPackInfo() *GitUploadPackInfo {
@@ -190,7 +206,7 @@ func NewGitUploadPackInfo() *GitUploadPackInfo {
 
 func (r *GitUploadPackInfo) Decode(d *pktline.Decoder) error {
 	if err := r.read(d); err != nil {
-		if err == EmptyGitUploadPackErr {
+		if err == ErrEmptyGitUploadPack {
 			return core.NewPermanentError(err)
 		}
 
@@ -207,45 +223,56 @@ func (r *GitUploadPackInfo) read(d *pktline.Decoder) error {
 	}
 
 	isEmpty := true
-	r.Refs = map[string]core.Hash{}
+	r.Refs = make(memory.ReferenceStorage, 0)
 	for _, line := range lines {
 		if !r.isValidLine(line) {
 			continue
 		}
 
-		if len(r.Capabilities.o) == 0 {
-			r.decodeHeaderLine(line)
-			continue
+		if err := r.readLine(line); err != nil {
+			return err
 		}
 
-		r.readLine(line)
 		isEmpty = false
 	}
 
 	if isEmpty {
-		return EmptyGitUploadPackErr
+		return ErrEmptyGitUploadPack
 	}
 
 	return nil
-}
-
-func (r *GitUploadPackInfo) decodeHeaderLine(line string) {
-	parts := strings.SplitN(line, " HEAD", 2)
-	r.Head = core.NewHash(parts[0])
-	r.Capabilities.Decode(line)
 }
 
 func (r *GitUploadPackInfo) isValidLine(line string) bool {
 	return line[0] != '#'
 }
 
-func (r *GitUploadPackInfo) readLine(line string) {
-	parts := strings.Split(strings.Trim(line, " \n"), " ")
-	if len(parts) != 2 {
-		return
+func (r *GitUploadPackInfo) readLine(line string) error {
+	hashEnd := strings.Index(line, " ")
+	hash := line[:hashEnd]
+
+	zeroID := strings.Index(line, string([]byte{0}))
+	if zeroID == -1 {
+		name := line[hashEnd+1 : len(line)-1]
+		ref := core.NewReferenceFromStrings(name, hash)
+		return r.Refs.Set(ref)
 	}
 
-	r.Refs[parts[1]] = core.NewHash(parts[0])
+	name := line[hashEnd+1 : zeroID]
+	r.Capabilities.Decode(line[zeroID+1 : len(line)-1])
+	if !r.Capabilities.Supports("symref") {
+		ref := core.NewReferenceFromStrings(name, hash)
+		return r.Refs.Set(ref)
+	}
+
+	target := r.Capabilities.SymbolicReference(name)
+	ref := core.NewSymbolicReference(core.ReferenceName(name), core.ReferenceName(target))
+	return r.Refs.Set(ref)
+}
+
+func (r *GitUploadPackInfo) Head() *core.Reference {
+	ref, _ := core.ResolveReference(r.Refs, core.HEAD)
+	return ref
 }
 
 func (r *GitUploadPackInfo) String() string {
@@ -256,10 +283,14 @@ func (r *GitUploadPackInfo) Bytes() []byte {
 	e := pktline.NewEncoder()
 	e.AddLine("# service=git-upload-pack")
 	e.AddFlush()
-	e.AddLine(fmt.Sprintf("%s HEAD\x00%s", r.Head, r.Capabilities.String()))
+	e.AddLine(fmt.Sprintf("%s HEAD\x00%s", r.Head().Hash(), r.Capabilities.String()))
 
-	for name, id := range r.Refs {
-		e.AddLine(fmt.Sprintf("%s %s", id, name))
+	for _, ref := range r.Refs {
+		if ref.Type() != core.HashReference {
+			continue
+		}
+
+		e.AddLine(fmt.Sprintf("%s %s", ref.Hash(), ref.Name()))
 	}
 
 	e.AddFlush()
@@ -270,6 +301,7 @@ func (r *GitUploadPackInfo) Bytes() []byte {
 type GitUploadPackRequest struct {
 	Wants []core.Hash
 	Haves []core.Hash
+	Depth int
 }
 
 func (r *GitUploadPackRequest) Want(h ...core.Hash) {
@@ -293,6 +325,10 @@ func (r *GitUploadPackRequest) Reader() *strings.Reader {
 
 	for _, have := range r.Haves {
 		e.AddLine(fmt.Sprintf("have %s", have))
+	}
+
+	if r.Depth != 0 {
+		e.AddLine(fmt.Sprintf("deepen %d", r.Depth))
 	}
 
 	e.AddFlush()

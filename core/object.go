@@ -34,28 +34,26 @@ type Object interface {
 	SetType(ObjectType)
 	Size() int64
 	SetSize(int64)
-	Content() []byte
 	Reader() (ObjectReader, error)
 	Writer() (ObjectWriter, error)
 }
 
-// ObjectStorage generic storage of objects
-type ObjectStorage interface {
-	Set(Object) (Hash, error)
-	Get(Hash) (Object, error)
-	Iter(ObjectType) (ObjectIter, error)
-}
-
-// ObjectType internal object type's
+// ObjectType internal object type
+// Integer values from 0 to 7 map to those exposed by git.
+// AnyObject is used to represent any from 0 to 7.
 type ObjectType int8
 
 const (
-	CommitObject   ObjectType = 1
-	TreeObject     ObjectType = 2
-	BlobObject     ObjectType = 3
-	TagObject      ObjectType = 4
+	InvalidObject ObjectType = 0
+	CommitObject  ObjectType = 1
+	TreeObject    ObjectType = 2
+	BlobObject    ObjectType = 3
+	TagObject     ObjectType = 4
+	// 5 reserved for future expansion
 	OFSDeltaObject ObjectType = 6
 	REFDeltaObject ObjectType = 7
+
+	AnyObject ObjectType = -127
 )
 
 func (t ObjectType) String() string {
@@ -72,6 +70,8 @@ func (t ObjectType) String() string {
 		return "ofs-delta"
 	case REFDeltaObject:
 		return "ref-delta"
+	case AnyObject:
+		return "any"
 	default:
 		return "unknown"
 	}
@@ -108,12 +108,6 @@ func ParseObjectType(value string) (typ ObjectType, err error) {
 	return
 }
 
-// ObjectIter is a generic closable interface for iterating over objects.
-type ObjectIter interface {
-	Next() (Object, error)
-	Close()
-}
-
 // ObjectLookupIter implements ObjectIter. It iterates over a series of object
 // hashes and yields their associated objects by retrieving each one from
 // object storage. The retrievals are lazy and only occur when the iterator
@@ -124,15 +118,17 @@ type ObjectIter interface {
 type ObjectLookupIter struct {
 	storage ObjectStorage
 	series  []Hash
+	t       ObjectType
 	pos     int
 }
 
 // NewObjectLookupIter returns an object iterator given an object storage and
 // a slice of object hashes.
-func NewObjectLookupIter(storage ObjectStorage, series []Hash) *ObjectLookupIter {
+func NewObjectLookupIter(storage ObjectStorage, t ObjectType, series []Hash) *ObjectLookupIter {
 	return &ObjectLookupIter{
 		storage: storage,
 		series:  series,
+		t:       t,
 	}
 }
 
@@ -144,12 +140,21 @@ func (iter *ObjectLookupIter) Next() (Object, error) {
 	if iter.pos >= len(iter.series) {
 		return nil, io.EOF
 	}
+
 	hash := iter.series[iter.pos]
-	obj, err := iter.storage.Get(hash)
+	obj, err := iter.storage.Get(iter.t, hash)
 	if err == nil {
 		iter.pos++
 	}
+
 	return obj, err
+}
+
+// ForEach call the cb function for each object contained on this iter until
+// an error happends or the end of the iter is reached. If ErrStop is sent
+// the iteration is stop but no error is returned. The iterator is closed.
+func (iter *ObjectLookupIter) ForEach(cb func(Object) error) error {
+	return ForEachIterator(iter, cb)
 }
 
 // Close releases any resources used by the iterator.
@@ -178,15 +183,98 @@ func NewObjectSliceIter(series []Object) *ObjectSliceIter {
 // the end it will return io.EOF as an error. If the object is retreieved
 // successfully error will be nil.
 func (iter *ObjectSliceIter) Next() (Object, error) {
-	if iter.pos >= len(iter.series) {
+	if len(iter.series) == 0 {
 		return nil, io.EOF
 	}
-	obj := iter.series[iter.pos]
-	iter.pos++
+
+	obj := iter.series[0]
+	iter.series = iter.series[1:]
+
 	return obj, nil
+}
+
+// ForEach call the cb function for each object contained on this iter until
+// an error happends or the end of the iter is reached. If ErrStop is sent
+// the iteration is stop but no error is returned. The iterator is closed.
+func (iter *ObjectSliceIter) ForEach(cb func(Object) error) error {
+	return ForEachIterator(iter, cb)
 }
 
 // Close releases any resources used by the iterator.
 func (iter *ObjectSliceIter) Close() {
-	iter.pos = len(iter.series)
+	iter.series = []Object{}
+}
+
+// MultiObjectIter implements ObjectIter. It iterates over several ObjectIter,
+//
+// The MultiObjectIter must be closed with a call to Close() when it is no
+// longer needed.
+type MultiObjectIter struct {
+	iters []ObjectIter
+	pos   int
+}
+
+// NewMultiObjectIter returns an object iterator for the given slice of objects.
+func NewMultiObjectIter(iters []ObjectIter) ObjectIter {
+	return &MultiObjectIter{iters: iters}
+}
+
+// Next returns the next object from the iterator, if one iterator reach io.EOF
+// is removed and the next one is used.
+func (iter *MultiObjectIter) Next() (Object, error) {
+	if len(iter.iters) == 0 {
+		return nil, io.EOF
+	}
+
+	obj, err := iter.iters[0].Next()
+	if err == io.EOF {
+		iter.iters[0].Close()
+		iter.iters = iter.iters[1:]
+		return iter.Next()
+	}
+
+	return obj, err
+}
+
+// ForEach call the cb function for each object contained on this iter until
+// an error happends or the end of the iter is reached. If ErrStop is sent
+// the iteration is stop but no error is returned. The iterator is closed.
+func (iter *MultiObjectIter) ForEach(cb func(Object) error) error {
+	return ForEachIterator(iter, cb)
+}
+
+// Close releases any resources used by the iterator.
+func (iter *MultiObjectIter) Close() {
+	for _, i := range iter.iters {
+		i.Close()
+	}
+}
+
+type bareIterator interface {
+	Next() (Object, error)
+	Close()
+}
+
+// ForEachIterator is a helper function to build iterators without need to
+// rewrite the same ForEach function each time.
+func ForEachIterator(iter bareIterator, cb func(Object) error) error {
+	defer iter.Close()
+	for {
+		obj, err := iter.Next()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+
+			return err
+		}
+
+		if err := cb(obj); err != nil {
+			if err == ErrStop {
+				return nil
+			}
+
+			return err
+		}
+	}
 }

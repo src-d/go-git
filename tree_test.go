@@ -2,276 +2,74 @@ package git
 
 import (
 	"io"
-	"sort"
+	"os"
 
-	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v4/core"
 
 	. "gopkg.in/check.v1"
 )
 
-type SuiteTree struct {
-	repos map[string]*Repository
+type TreeSuite struct {
+	BaseSuite
+	Tree *Tree
 }
 
-var _ = Suite(&SuiteTree{})
+var _ = Suite(&TreeSuite{})
 
-// create the repositories of the fixtures
-func (s *SuiteTree) SetUpSuite(c *C) {
-	treeFixtures := []packedFixture{
-		{"https://github.com/tyba/git-fixture.git", "formats/packfile/fixtures/git-fixture.ofs-delta"},
-		{"https://github.com/cpcs499/Final_Pres_P.git", "formats/packfile/fixtures/Final_Pres_P.ofs-delta"},
-		{"https://github.com/jamesob/desk.git", "formats/packfile/fixtures/jamesob-desk.pack"},
-		{"https://github.com/spinnaker/spinnaker.git", "formats/packfile/fixtures/spinnaker-spinnaker.pack"},
-		{"https://github.com/alcortesm/binary-relations.git", "formats/packfile/fixtures/alcortesm-binary-relations.pack"},
-		{"https://github.com/Tribler/dispersy.git", "formats/packfile/fixtures/tribler-dispersy.pack"},
-	}
-	s.repos = unpackFixtures(c, treeFixtures)
+func (s *TreeSuite) SetUpSuite(c *C) {
+	s.BaseSuite.SetUpSuite(c)
+	hash := core.NewHash("a8d315b2b1c615d43042c3a62402b8a54288cf5c")
+
+	var err error
+	s.Tree, err = s.Repository.Tree(hash)
+	c.Assert(err, IsNil)
 }
 
-func (s *SuiteTree) TestFile(c *C) {
-	for i, t := range []struct {
-		repo     string // the repo name as in localRepos
-		commit   string // the commit to search for the file
-		path     string // the path of the file to find
-		blobHash string // expected hash of the returned file
-		size     int64  // expected size of the returned file
-		found    bool   // expected found value
-	}{
-		// use git ls-tree commit to get the hash of the blobs
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"b029517f6300c2da0f4b651b8642506cd6aaf45d", "not-found",
-			"", 0, false,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"b029517f6300c2da0f4b651b8642506cd6aaf45d", ".gitignore",
-			"32858aad3c383ed1ff0a0f9bdf231d54a00c9e88", 189, true,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"b029517f6300c2da0f4b651b8642506cd6aaf45d", "LICENSE",
-			"c192bd6a24ea1ab01d78686e417c8bdc7c3d197f", 1072, true,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"6ecf0ef2c2dffb796033e5a02219af86ec6584e5", "not-found",
-			"", 0, false,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"6ecf0ef2c2dffb796033e5a02219af86ec6584e5", ".gitignore",
-			"32858aad3c383ed1ff0a0f9bdf231d54a00c9e88", 189, true,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"6ecf0ef2c2dffb796033e5a02219af86ec6584e5", "binary.jpg",
-			"d5c0f4ab811897cadf03aec358ae60d21f91c50d", 76110, true,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"6ecf0ef2c2dffb796033e5a02219af86ec6584e5", "LICENSE",
-			"c192bd6a24ea1ab01d78686e417c8bdc7c3d197f", 1072, true,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"35e85108805c84807bc66a02d91535e1e24b38b9", "binary.jpg",
-			"d5c0f4ab811897cadf03aec358ae60d21f91c50d", 76110, true,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"b029517f6300c2da0f4b651b8642506cd6aaf45d", "binary.jpg",
-			"", 0, false,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"6ecf0ef2c2dffb796033e5a02219af86ec6584e5", "CHANGELOG",
-			"d3ff53e0564a9f87d8e84b6e28e5060e517008aa", 18, true,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"1669dce138d9b841a518c64b10914d88f5e488ea", "CHANGELOG",
-			"d3ff53e0564a9f87d8e84b6e28e5060e517008aa", 18, true,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69", "CHANGELOG",
-			"d3ff53e0564a9f87d8e84b6e28e5060e517008aa", 18, true,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"35e85108805c84807bc66a02d91535e1e24b38b9", "CHANGELOG",
-			"d3ff53e0564a9f87d8e84b6e28e5060e517008aa", 0, false,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"b8e471f58bcbca63b07bda20e428190409c2db47", "CHANGELOG",
-			"d3ff53e0564a9f87d8e84b6e28e5060e517008aa", 18, true,
-		},
-		{
-			"https://github.com/tyba/git-fixture.git",
-			"b029517f6300c2da0f4b651b8642506cd6aaf45d", "CHANGELOG",
-			"d3ff53e0564a9f87d8e84b6e28e5060e517008aa", 0, false,
-		},
-		// git submodule
-		{
-			"https://github.com/cpcs499/Final_Pres_P.git",
-			"70bade703ce556c2c7391a8065c45c943e8b6bc3", "Final",
-			"", 0, false,
-		},
-		{
-			"https://github.com/cpcs499/Final_Pres_P.git",
-			"70bade703ce556c2c7391a8065c45c943e8b6bc3", "Final/not-found",
-			"", 0, false,
-		},
-		{
-			"https://github.com/jamesob/desk.git",
-			"d4edaf0e8101fcea437ebd982d899fe2cc0f9f7b", "LICENSE",
-			"49c45e6cc893d6f5ebd5c9343fe4492360f339bf", 1058, true,
-		},
-		{
-			"https://github.com/jamesob/desk.git",
-			"d4edaf0e8101fcea437ebd982d899fe2cc0f9f7b", "examples",
-			"", 0, false,
-		},
-		{
-			"https://github.com/jamesob/desk.git",
-			"d4edaf0e8101fcea437ebd982d899fe2cc0f9f7b", "examples/desk.sh",
-			"d9c7751138824cd2d539c23d5afe3f9d29836854", 265, true,
-		},
-		{
-			"https://github.com/jamesob/desk.git",
-			"d4edaf0e8101fcea437ebd982d899fe2cc0f9f7b", "examples/not-found",
-			"", 0, false,
-		},
-		{
-			"https://github.com/jamesob/desk.git",
-			"d4edaf0e8101fcea437ebd982d899fe2cc0f9f7b", "test/bashrc",
-			"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391", 0, true,
-		},
-		{
-			"https://github.com/jamesob/desk.git",
-			"d4edaf0e8101fcea437ebd982d899fe2cc0f9f7b", "test/not-found",
-			"", 0, false,
-		},
-		{
-			"https://github.com/spinnaker/spinnaker.git",
-			"b32b2aecae2cfca4840dd480f8082da206a538da", "etc/apache2/sites-available/spinnaker.conf",
-			"1d452c616be4fb16d2cc6b8a7e7a2208a6e64d2d", 67, true,
-		},
-		{
-			"https://github.com/alcortesm/binary-relations.git",
-			"c44b5176e99085c8fe36fa27b045590a7b9d34c9", "Makefile",
-			"2dd2ad8c14de6612ed15813679a6554bad99330b", 1254, true,
-		},
-		{
-			"https://github.com/alcortesm/binary-relations.git",
-			"c44b5176e99085c8fe36fa27b045590a7b9d34c9", "src/binrels",
-			"", 0, false,
-		},
-		{
-			"https://github.com/alcortesm/binary-relations.git",
-			"c44b5176e99085c8fe36fa27b045590a7b9d34c9", "src/map-slice",
-			"", 0, false,
-		},
-		{
-			"https://github.com/alcortesm/binary-relations.git",
-			"c44b5176e99085c8fe36fa27b045590a7b9d34c9", "src/map-slice/map-slice.go",
-			"12431e98381dd5097e1a19fe53429c72ef1f328e", 179, true,
-		},
-		{
-			"https://github.com/alcortesm/binary-relations.git",
-			"c44b5176e99085c8fe36fa27b045590a7b9d34c9", "src/map-slice/map-slice.go/not-found",
-			"", 0, false,
-		},
-	} {
-		commit, err := s.repos[t.repo].Commit(core.NewHash(t.commit))
-		c.Assert(err, IsNil, Commentf("subtest %d: %v (%s)", i, err, t.commit))
-
-		tree := commit.Tree()
-		file, err := tree.File(t.path)
-		found := err == nil
-
-		com := Commentf("subtest %d, path=%s, commit=%s", i, t.path, t.commit)
-		c.Assert(found, Equals, t.found, com)
-		if !found {
-			continue
-		}
-
-		c.Assert(file.Size, Equals, t.size, com)
-		c.Assert(file.Hash.IsZero(), Equals, false, com)
-		c.Assert(file.Hash, Equals, file.ID(), com)
-		c.Assert(file.Hash.String(), Equals, t.blobHash, com)
-	}
+func (s *TreeSuite) TestDecode(c *C) {
+	c.Assert(s.Tree.Entries, HasLen, 8)
+	c.Assert(s.Tree.Entries[0].Name, Equals, ".gitignore")
+	c.Assert(s.Tree.Entries[0].Hash.String(), Equals, "32858aad3c383ed1ff0a0f9bdf231d54a00c9e88")
+	c.Assert(s.Tree.Entries[0].Mode.String(), Equals, "-rw-r--r--")
+	c.Assert(s.Tree.Entries[4].Name, Equals, "go")
+	c.Assert(s.Tree.Entries[4].Hash.String(), Equals, "a39771a7651f97faf5c72e08224d857fc35133db")
+	c.Assert(s.Tree.Entries[4].Mode.String(), Equals, "d---------")
 }
 
-func (s *SuiteTree) TestFiles(c *C) {
-	for i, t := range []struct {
-		repo   string   // the repo name as in localRepos
-		commit string   // the commit to search for the file
-		files  []string // the expected files in the commit
-	}{
-		{"https://github.com/alcortesm/binary-relations.git", "b373f85fa2594d7dcd9989f4a5858a81647fb8ea", []string{
-			"binary-relations.tex",
-			".gitignore",
-			"imgs-gen/simple-graph/fig.fig",
-			"imgs-gen/simple-graph/Makefile",
-			"Makefile",
-			"src/map-slice/map-slice.go",
-			"src/simple-arrays/simple-arrays.go",
-		}},
-		{"https://github.com/Tribler/dispersy.git", "f5a1fca709f760bf75a7adaa480bf0f0e1a547ee", []string{
-			"authentication.py",
-			"bloomfilter.py",
-			"bootstrap.py",
-			"cache.py",
-			"callback.py",
-			"candidate.py",
-			"community.py",
-			"conversion.py",
-			"crypto.py",
-			"database.py",
-			"debugcommunity.py",
-			"debug.py",
-			"decorator.py",
-			"destination.py",
-			"dispersydatabase.py",
-			"dispersy.py",
-			"distribution.py",
-			"dprint.py",
-			"encoding.py",
-			"endpoint.py",
-			"__init__.py",
-			"member.py",
-			"message.py",
-			"meta.py",
-			"payload.py",
-			"requestcache.py",
-			"resolution.py",
-			"script.py",
-			"singleton.py",
-			"timeline.py",
-			"tool/callbackscript.py",
-			"tool/__init__.py",
-			"tool/scenarioscript.py",
-		}},
-		{"https://github.com/Tribler/dispersy.git", "9d38ff85ca03adcf68dc14f5b68b8994f15229f4", []string(nil)},
-	} {
-		commit, err := s.repos[t.repo].Commit(core.NewHash(t.commit))
-		c.Assert(err, IsNil, Commentf("subtest %d: %v (%s)", i, err, t.commit))
+func (s *TreeSuite) TestDecodeNonTree(c *C) {
+	hash := core.NewHash("9a48f23120e880dfbe41f7c9b7b708e9ee62a492")
+	blob, err := s.Repository.s.ObjectStorage().Get(core.BlobObject, hash)
+	c.Assert(err, IsNil)
 
-		tree := commit.Tree()
-		var output []string
-		iter := tree.Files()
-		defer iter.Close()
-		for file, err := iter.Next(); err == nil; file, err = iter.Next() {
-			c.Assert(file.Mode.String(), Equals, "-rw-r--r--")
-			output = append(output, file.Name)
-		}
-		sort.Strings(output)
-		sort.Strings(t.files)
-		c.Assert(output, DeepEquals, t.files, Commentf("subtest %d, repo=%s, commit=%s", i, t.repo, t.commit))
-	}
+	tree := &Tree{}
+	err = tree.Decode(blob)
+	c.Assert(err, Equals, ErrUnsupportedObject)
+}
+
+func (s *TreeSuite) TestType(c *C) {
+	c.Assert(s.Tree.Type(), Equals, core.TreeObject)
+}
+
+func (s *TreeSuite) TestFile(c *C) {
+	f, err := s.Tree.File("LICENSE")
+	c.Assert(err, IsNil)
+	c.Assert(f.Name, Equals, "LICENSE")
+}
+
+func (s *TreeSuite) TestFileNotFound(c *C) {
+	f, err := s.Tree.File("not-found")
+	c.Assert(f, IsNil)
+	c.Assert(err, Equals, ErrFileNotFound)
+}
+
+func (s *TreeSuite) TestFiles(c *C) {
+	var count int
+	err := s.Tree.Files().ForEach(func(f *File) error {
+		count++
+		return nil
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(count, Equals, 9)
 }
 
 // This core.Object implementation has a reader that only returns 6
@@ -326,6 +124,146 @@ func (o *SortReadCloser) Read(p []byte) (int, error) {
 	return nw, nil
 }
 
+func (s *TreeSuite) TestTreeDecodeEncodeIdempotent(c *C) {
+	trees := []*Tree{
+		&Tree{
+			Entries: []TreeEntry{
+				TreeEntry{"foo", os.FileMode(0), core.NewHash("b029517f6300c2da0f4b651b8642506cd6aaf45d")},
+				TreeEntry{"bar", os.FileMode(0), core.NewHash("c029517f6300c2da0f4b651b8642506cd6aaf45d")},
+				TreeEntry{"baz", os.FileMode(0), core.NewHash("d029517f6300c2da0f4b651b8642506cd6aaf45d")},
+			},
+		},
+	}
+	for _, tree := range trees {
+		obj := &core.MemoryObject{}
+		err := tree.Encode(obj)
+		c.Assert(err, IsNil)
+		newTree := &Tree{}
+		err = newTree.Decode(obj)
+		c.Assert(err, IsNil)
+		tree.Hash = obj.Hash()
+		c.Assert(newTree, DeepEquals, tree)
+	}
+}
+
+func (s *TreeSuite) TestTreeIterNext(c *C) {
+	r := s.Repository
+	commit, err := r.Commit(core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	c.Assert(err, IsNil)
+
+	tree, err := commit.Tree()
+	c.Assert(err, IsNil)
+
+	walker := NewTreeIter(r, tree, true)
+	for _, e := range treeWalkerExpects {
+		name, entry, err := walker.Next()
+		if err == io.EOF {
+			break
+		}
+
+		c.Assert(err, IsNil)
+		c.Assert(name, Equals, e.Path)
+		c.Assert(entry.Name, Equals, e.Name)
+		c.Assert(entry.Mode.String(), Equals, e.Mode)
+		c.Assert(entry.Hash.String(), Equals, e.Hash)
+
+		c.Assert(walker.Tree().ID().String(), Equals, e.Tree)
+	}
+}
+
+func (s *TreeSuite) TestTreeIterNextNonRecursive(c *C) {
+	r := s.Repository
+	commit, err := r.Commit(core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	c.Assert(err, IsNil)
+
+	tree, err := commit.Tree()
+	c.Assert(err, IsNil)
+
+	var count int
+	walker := NewTreeIter(r, tree, false)
+	for {
+		name, entry, err := walker.Next()
+		if err == io.EOF {
+			break
+		}
+
+		c.Assert(err, IsNil)
+		c.Assert(name, Not(Equals), "")
+		c.Assert(entry, NotNil)
+
+		c.Assert(walker.Tree().ID().String(), Equals, "a8d315b2b1c615d43042c3a62402b8a54288cf5c")
+
+		count++
+	}
+
+	c.Assert(count, Equals, 8)
+}
+
+var treeWalkerExpects = []struct {
+	Path, Mode, Name, Hash, Tree string
+}{{
+	Path: ".gitignore", Mode: "-rw-r--r--", Name: ".gitignore",
+	Hash: "32858aad3c383ed1ff0a0f9bdf231d54a00c9e88", Tree: "a8d315b2b1c615d43042c3a62402b8a54288cf5c",
+}, {
+	Path: "CHANGELOG", Mode: "-rw-r--r--", Name: "CHANGELOG",
+	Hash: "d3ff53e0564a9f87d8e84b6e28e5060e517008aa", Tree: "a8d315b2b1c615d43042c3a62402b8a54288cf5c",
+}, {
+	Path: "LICENSE", Mode: "-rw-r--r--", Name: "LICENSE",
+	Hash: "c192bd6a24ea1ab01d78686e417c8bdc7c3d197f", Tree: "a8d315b2b1c615d43042c3a62402b8a54288cf5c",
+}, {
+	Path: "binary.jpg", Mode: "-rw-r--r--", Name: "binary.jpg",
+	Hash: "d5c0f4ab811897cadf03aec358ae60d21f91c50d", Tree: "a8d315b2b1c615d43042c3a62402b8a54288cf5c",
+}, {
+	Path: "go", Mode: "d---------", Name: "go",
+	Hash: "a39771a7651f97faf5c72e08224d857fc35133db", Tree: "a8d315b2b1c615d43042c3a62402b8a54288cf5c",
+}, {
+	Path: "go/example.go", Mode: "-rw-r--r--", Name: "example.go",
+	Hash: "880cd14280f4b9b6ed3986d6671f907d7cc2a198", Tree: "a39771a7651f97faf5c72e08224d857fc35133db",
+}, {
+	Path: "json", Mode: "d---------", Name: "json",
+	Hash: "5a877e6a906a2743ad6e45d99c1793642aaf8eda", Tree: "a8d315b2b1c615d43042c3a62402b8a54288cf5c",
+}, {
+	Path: "json/long.json", Mode: "-rw-r--r--", Name: "long.json",
+	Hash: "49c6bb89b17060d7b4deacb7b338fcc6ea2352a9", Tree: "5a877e6a906a2743ad6e45d99c1793642aaf8eda",
+}, {
+	Path: "json/short.json", Mode: "-rw-r--r--", Name: "short.json",
+	Hash: "c8f1d8c61f9da76f4cb49fd86322b6e685dba956", Tree: "5a877e6a906a2743ad6e45d99c1793642aaf8eda",
+}, {
+	Path: "php", Mode: "d---------", Name: "php",
+	Hash: "586af567d0bb5e771e49bdd9434f5e0fb76d25fa", Tree: "a8d315b2b1c615d43042c3a62402b8a54288cf5c",
+}, {
+	Path: "php/crappy.php", Mode: "-rw-r--r--", Name: "crappy.php",
+	Hash: "9a48f23120e880dfbe41f7c9b7b708e9ee62a492", Tree: "586af567d0bb5e771e49bdd9434f5e0fb76d25fa",
+}, {
+	Path: "vendor", Mode: "d---------", Name: "vendor",
+	Hash: "cf4aa3b38974fb7d81f367c0830f7d78d65ab86b", Tree: "a8d315b2b1c615d43042c3a62402b8a54288cf5c",
+}, {
+	Path: "vendor/foo.go", Mode: "-rw-r--r--", Name: "foo.go",
+	Hash: "9dea2395f5403188298c1dabe8bdafe562c491e3", Tree: "cf4aa3b38974fb7d81f367c0830f7d78d65ab86b",
+}}
+
+func entriesEquals(a, b []TreeEntry) bool {
+	if a == nil && b == nil {
+		return true
+	}
+
+	if a == nil || b == nil {
+		return false
+	}
+
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
 // When decoding a tree we were not checking the return value of read
 // when reading hashes.  As a hash is quite small, it worked well nearly
 // all the time.
@@ -337,7 +275,7 @@ func (o *SortReadCloser) Read(p []byte) (int, error) {
 //
 // This tests is performed with that object but using a SortReadObject to
 // simulate incomplete reads on all platforms and operating systems.
-func (s *SuiteTree) TestTreeDecodeReadBug(c *C) {
+func (s *TreeSuite) TestTreeDecodeReadBug(c *C) {
 	cont := []byte{
 		0x31, 0x30, 0x30, 0x36, 0x34, 0x34, 0x20, 0x61, 0x6c, 0x74,
 		0x65, 0x72, 0x2e, 0x63, 0x0, 0xa4, 0x9d, 0x33, 0x49, 0xd7,
@@ -1454,27 +1392,5 @@ func (s *SuiteTree) TestTreeDecodeReadBug(c *C) {
 	var obtained Tree
 	err := obtained.Decode(obj)
 	c.Assert(err, IsNil)
-	c.Assert(EntriesEquals(obtained.Entries, expected.Entries), Equals, true)
-}
-
-func EntriesEquals(a, b []TreeEntry) bool {
-	if a == nil && b == nil {
-		return true
-	}
-
-	if a == nil || b == nil {
-		return false
-	}
-
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-
-	return true
+	c.Assert(entriesEquals(obtained.Entries, expected.Entries), Equals, true)
 }

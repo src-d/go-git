@@ -1,80 +1,176 @@
 package git
 
 import (
-	"gopkg.in/src-d/go-git.v3/clients/http"
-	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/formats/packfile"
-	"gopkg.in/src-d/go-git.v3/storage/memory"
+	"io/ioutil"
+	"os"
+
+	"gopkg.in/src-d/go-git.v4/config"
+	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/storage/filesystem"
+	"gopkg.in/src-d/go-git.v4/storage/memory"
+	"gopkg.in/src-d/go-git.v4/utils/fs"
 
 	. "gopkg.in/check.v1"
 )
 
-type SuiteRemote struct{}
-
-var _ = Suite(&SuiteRemote{})
-
-const RepositoryFixture = "https://github.com/tyba/git-fixture"
-
-func (s *SuiteRemote) TestNewAuthenticatedRemote(c *C) {
-	a := &http.BasicAuth{}
-	r, err := NewAuthenticatedRemote(RepositoryFixture, a)
-	c.Assert(err, IsNil)
-	c.Assert(r.Auth, Equals, a)
+type RemoteSuite struct {
+	BaseSuite
 }
 
-func (s *SuiteRemote) TestConnect(c *C) {
-	r, err := NewRemote(RepositoryFixture)
+var _ = Suite(&RemoteSuite{})
+
+func (s *RemoteSuite) TestConnect(c *C) {
+	r := newRemote(nil, &config.RemoteConfig{Name: "foo", URL: RepositoryFixture})
+
+	err := r.Connect()
 	c.Assert(err, IsNil)
-	c.Assert(r.Connect(), IsNil)
 }
 
-func (s *SuiteRemote) TestDefaultBranch(c *C) {
-	r, err := NewRemote(RepositoryFixture)
+func (s *RemoteSuite) TestnewRemoteInvalidEndpoint(c *C) {
+	r := newRemote(nil, &config.RemoteConfig{Name: "foo", URL: "qux"})
+
+	err := r.Connect()
+	c.Assert(err, NotNil)
+}
+
+func (s *RemoteSuite) TestnewRemoteInvalidSchemaEndpoint(c *C) {
+	r := newRemote(nil, &config.RemoteConfig{Name: "foo", URL: "qux://foo"})
+
+	err := r.Connect()
+	c.Assert(err, NotNil)
+}
+
+func (s *RemoteSuite) TestInfo(c *C) {
+	r := newRemote(nil, &config.RemoteConfig{Name: "foo", URL: RepositoryFixture})
 	r.upSrv = &MockGitUploadPackService{}
 
-	c.Assert(err, IsNil)
+	c.Assert(r.Info(), IsNil)
 	c.Assert(r.Connect(), IsNil)
-	c.Assert(r.DefaultBranch(), Equals, "refs/heads/master")
+	c.Assert(r.Info(), NotNil)
+	c.Assert(r.Info().Capabilities.Get("ofs-delta"), NotNil)
 }
 
-func (s *SuiteRemote) TestCapabilities(c *C) {
-	r, err := NewRemote(RepositoryFixture)
+func (s *RemoteSuite) TestDefaultBranch(c *C) {
+	r := newRemote(nil, &config.RemoteConfig{Name: "foo", URL: RepositoryFixture})
 	r.upSrv = &MockGitUploadPackService{}
 
-	c.Assert(err, IsNil)
+	c.Assert(r.Connect(), IsNil)
+	c.Assert(r.Head().Name(), Equals, core.ReferenceName("refs/heads/master"))
+}
+
+func (s *RemoteSuite) TestCapabilities(c *C) {
+	r := newRemote(nil, &config.RemoteConfig{Name: "foo", URL: RepositoryFixture})
+	r.upSrv = &MockGitUploadPackService{}
+
 	c.Assert(r.Connect(), IsNil)
 	c.Assert(r.Capabilities().Get("agent").Values, HasLen, 1)
 }
 
-func (s *SuiteRemote) TestFetchDefaultBranch(c *C) {
-	r, err := NewRemote(RepositoryFixture)
+func (s *RemoteSuite) TestFetch(c *C) {
+	sto := memory.NewStorage()
+	r := newRemote(sto, &config.RemoteConfig{Name: "foo", URL: RepositoryFixture})
 	r.upSrv = &MockGitUploadPackService{}
 
-	c.Assert(err, IsNil)
 	c.Assert(r.Connect(), IsNil)
 
-	reader, err := r.FetchDefaultBranch()
-	c.Assert(err, IsNil)
+	err := r.Fetch(&FetchOptions{
+		RefSpecs: []config.RefSpec{config.DefaultRefSpec},
+	})
 
-	packfileReader := packfile.NewStream(reader)
-	d := packfile.NewDecoder(packfileReader)
-
-	sto := memory.NewObjectStorage()
-	err = d.Decode(sto)
 	c.Assert(err, IsNil)
-	c.Assert(sto.Objects, HasLen, 28)
+	c.Assert(sto.ObjectStorage().(*memory.ObjectStorage).Objects, HasLen, 31)
 }
 
-func (s *SuiteRemote) TestHead(c *C) {
-	r, err := NewRemote(RepositoryFixture)
+func (s *RemoteSuite) TestFetchObjectStorageWriter(c *C) {
+	dir, err := ioutil.TempDir("", "fetch")
+	c.Assert(err, IsNil)
+
+	defer os.RemoveAll(dir) // clean up
+
+	var sto Storage
+	sto, err = filesystem.NewStorage(fs.NewOS(dir))
+	c.Assert(err, IsNil)
+
+	r := newRemote(sto, &config.RemoteConfig{Name: "foo", URL: RepositoryFixture})
 	r.upSrv = &MockGitUploadPackService{}
 
+	c.Assert(r.Connect(), IsNil)
+
+	err = r.Fetch(&FetchOptions{
+		RefSpecs: []config.RefSpec{config.DefaultRefSpec},
+	})
+
 	c.Assert(err, IsNil)
 
-	err = r.Connect()
+	var count int
+	iter, err := sto.ObjectStorage().Iter(core.AnyObject)
 	c.Assert(err, IsNil)
 
-	hash, err := r.Head()
+	iter.ForEach(func(core.Object) error {
+		count++
+		return nil
+	})
+	c.Assert(count, Equals, 31)
+}
+
+func (s *RemoteSuite) TestFetchNoErrAlreadyUpToDate(c *C) {
+	sto := memory.NewStorage()
+	r := newRemote(sto, &config.RemoteConfig{Name: "foo", URL: RepositoryFixture})
+	r.upSrv = &MockGitUploadPackService{}
+
+	c.Assert(r.Connect(), IsNil)
+
+	o := &FetchOptions{
+		RefSpecs: []config.RefSpec{config.DefaultRefSpec},
+	}
+
+	err := r.Fetch(o)
 	c.Assert(err, IsNil)
-	c.Assert(hash, Equals, core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	err = r.Fetch(o)
+	c.Assert(err, Equals, NoErrAlreadyUpToDate)
+}
+
+func (s *RemoteSuite) TestHead(c *C) {
+	r := newRemote(nil, &config.RemoteConfig{Name: "foo", URL: RepositoryFixture})
+	r.upSrv = &MockGitUploadPackService{}
+
+	err := r.Connect()
+	c.Assert(err, IsNil)
+	c.Assert(r.Head().Hash(), Equals, core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+}
+
+func (s *RemoteSuite) TestRef(c *C) {
+	r := newRemote(nil, &config.RemoteConfig{Name: "foo", URL: RepositoryFixture})
+	r.upSrv = &MockGitUploadPackService{}
+
+	err := r.Connect()
+	c.Assert(err, IsNil)
+
+	ref, err := r.Ref(core.HEAD, false)
+	c.Assert(err, IsNil)
+	c.Assert(ref.Name(), Equals, core.HEAD)
+
+	ref, err = r.Ref(core.HEAD, true)
+	c.Assert(err, IsNil)
+	c.Assert(ref.Name(), Equals, core.ReferenceName("refs/heads/master"))
+}
+
+func (s *RemoteSuite) TestRefs(c *C) {
+	r := newRemote(nil, &config.RemoteConfig{Name: "foo", URL: RepositoryFixture})
+	r.upSrv = &MockGitUploadPackService{}
+
+	err := r.Connect()
+	c.Assert(err, IsNil)
+
+	iter, err := r.Refs()
+	c.Assert(err, IsNil)
+	c.Assert(iter, NotNil)
+}
+
+func (s *RemoteSuite) TestString(c *C) {
+	r := newRemote(nil, &config.RemoteConfig{Name: "foo", URL: RepositoryFixture})
+	c.Assert(r.String(), Equals, ""+
+		"foo\thttps://github.com/git-fixtures/basic.git (fetch)\n"+
+		"foo\thttps://github.com/git-fixtures/basic.git (push)",
+	)
 }

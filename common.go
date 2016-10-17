@@ -3,7 +3,17 @@ package git
 import (
 	"io"
 	"strings"
+
+	"gopkg.in/src-d/go-git.v4/config"
+	"gopkg.in/src-d/go-git.v4/core"
 )
+
+// Storage storage of objects and references
+type Storage interface {
+	ConfigStorage() config.ConfigStorage
+	ObjectStorage() core.ObjectStorage
+	ReferenceStorage() core.ReferenceStorage
+}
 
 // countLines returns the number of lines in a string à la git, this is
 // The newline character is assumed to be '\n'.  The empty string
@@ -41,3 +51,5 @@ func checkClose(c io.Closer, err *error) {
 		*err = cerr
 	}
 }
+
+const DateFormat = "Mon Jan 02 15:04:05 2006 -0700"

@@ -13,6 +13,13 @@ type SuiteCommon struct{}
 
 var _ = Suite(&SuiteCommon{})
 
+func (s *SuiteCommon) TestNewBasicAuth(c *C) {
+	a := NewBasicAuth("foo", "qux")
+
+	c.Assert(a.Name(), Equals, "http-basic-auth")
+	c.Assert(a.String(), Equals, "http-basic-auth - foo:*******")
+}
+
 func (s *SuiteCommon) TestNewHTTPError200(c *C) {
 	res := &http.Response{StatusCode: 200}
 	res.StatusCode = 200
@@ -21,11 +28,11 @@ func (s *SuiteCommon) TestNewHTTPError200(c *C) {
 }
 
 func (s *SuiteCommon) TestNewHTTPError401(c *C) {
-	s.testNewHTTPError(c, 401, "permanent client error.*not found.*")
+	s.testNewHTTPError(c, 401, "authorization required")
 }
 
 func (s *SuiteCommon) TestNewHTTPError404(c *C) {
-	s.testNewHTTPError(c, 404, "permanent client error.*not found.*")
+	s.testNewHTTPError(c, 404, "repository not found")
 }
 
 func (s *SuiteCommon) TestNewHTTPError40x(c *C) {

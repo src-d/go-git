@@ -1,129 +1,263 @@
 package git
 
 import (
-	"fmt"
-	"os"
+	"gopkg.in/src-d/go-git.v4/config"
+	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/storage/memory"
 
-	"gopkg.in/src-d/go-git.v3/clients/http"
-	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/storage/seekable"
-	"gopkg.in/src-d/go-git.v3/utils/fs"
-
-	"github.com/alcortesm/tgz"
 	. "gopkg.in/check.v1"
 )
 
-var dirFixturesInit = [...]struct {
-	name string
-	tgz  string
-	head string
-}{
-	{
-		name: "binrels",
-		tgz:  "storage/seekable/internal/gitdir/fixtures/alcortesm-binary-relations.tgz",
-		head: "c44b5176e99085c8fe36fa27b045590a7b9d34c9",
-	},
+type RepositorySuite struct {
+	BaseSuite
 }
 
-type dirFixture struct {
-	path string
-	head core.Hash
+var _ = Suite(&RepositorySuite{})
+
+func (s *RepositorySuite) TestNewRepository(c *C) {
+	r := NewMemoryRepository()
+	c.Assert(r, NotNil)
 }
 
-type SuiteRepository struct {
-	repos       map[string]*Repository
-	dirFixtures map[string]dirFixture
-}
-
-var _ = Suite(&SuiteRepository{})
-
-func (s *SuiteRepository) SetUpSuite(c *C) {
-	s.repos = unpackFixtures(c, tagFixtures, treeWalkerFixtures)
-
-	s.dirFixtures = make(map[string]dirFixture, len(dirFixturesInit))
-	for _, fix := range dirFixturesInit {
-		com := Commentf("fixture name = %s\n", fix.name)
-
-		path, err := tgz.Extract(fix.tgz)
-		c.Assert(err, IsNil, com)
-
-		s.dirFixtures[fix.name] = dirFixture{
-			path: path,
-			head: core.NewHash(fix.head),
-		}
-	}
-}
-
-func (s *SuiteRepository) TearDownSuite(c *C) {
-	for name, fix := range s.dirFixtures {
-		err := os.RemoveAll(fix.path)
-		c.Assert(err, IsNil, Commentf("cannot delete tmp dir for fixture %s: %s\n",
-			name, fix.path))
-	}
-}
-
-func (s *SuiteRepository) TestNewRepository(c *C) {
-	r, err := NewRepository(RepositoryFixture, nil)
-	c.Assert(err, IsNil)
-	c.Assert(r.Remotes["origin"].Auth, IsNil)
-}
-
-func (s *SuiteRepository) TestNewRepositoryWithAuth(c *C) {
-	auth := &http.BasicAuth{}
-	r, err := NewRepository(RepositoryFixture, auth)
-	c.Assert(err, IsNil)
-	c.Assert(r.Remotes["origin"].Auth, Equals, auth)
-}
-
-func (s *SuiteRepository) TestNewRepositoryFromFS(c *C) {
-	for name, fix := range s.dirFixtures {
-		fs := fs.NewOS()
-		gitPath := fs.Join(fix.path, ".git/")
-		com := Commentf("dir fixture %q → %q\n", name, gitPath)
-		repo, err := NewRepositoryFromFS(fs, gitPath)
-		c.Assert(err, IsNil, com)
-
-		err = repo.PullDefault()
-		c.Assert(err, ErrorMatches, `unable to find remote "origin"`)
-
-		c.Assert(repo.Storage, NotNil, com)
-		c.Assert(repo.Storage, FitsTypeOf, &seekable.ObjectStorage{}, com)
-	}
-}
-
-func (s *SuiteRepository) TestPull(c *C) {
-	r, err := NewRepository(RepositoryFixture, nil)
-	r.Remotes["origin"].upSrv = &MockGitUploadPackService{}
+func (s *RepositorySuite) TestCreateRemoteAndRemote(c *C) {
+	r := NewMemoryRepository()
+	remote, err := r.CreateRemote(&config.RemoteConfig{
+		Name: "foo",
+		URL:  "http://foo/foo.git",
+	})
 
 	c.Assert(err, IsNil)
-	c.Assert(r.Pull("origin", "refs/heads/master"), IsNil)
+	c.Assert(remote.Config().Name, Equals, "foo")
 
-	mock, ok := (r.Remotes["origin"].upSrv).(*MockGitUploadPackService)
-	c.Assert(ok, Equals, true)
-	err = mock.RC.Close()
-	c.Assert(err, Not(IsNil), Commentf("pull leaks an open fd from the fetch"))
+	alt, err := r.Remote("foo")
+	c.Assert(err, IsNil)
+	c.Assert(alt, Not(Equals), remote)
+	c.Assert(alt.Config().Name, Equals, "foo")
 }
 
-func (s *SuiteRepository) TestPullDefault(c *C) {
-	r, err := NewRepository(RepositoryFixture, nil)
-	r.Remotes[DefaultRemoteName].Connect()
-	r.Remotes[DefaultRemoteName].upSrv = &MockGitUploadPackService{}
+func (s *RepositorySuite) TestCreateRemoteInvalid(c *C) {
+	r := NewMemoryRepository()
+	remote, err := r.CreateRemote(&config.RemoteConfig{})
 
-	c.Assert(err, IsNil)
-	c.Assert(r.PullDefault(), IsNil)
-
-	mock, ok := (r.Remotes[DefaultRemoteName].upSrv).(*MockGitUploadPackService)
-	c.Assert(ok, Equals, true)
-	err = mock.RC.Close()
-	c.Assert(err, Not(IsNil), Commentf("pull leaks an open fd from the fetch"))
+	c.Assert(err, Equals, config.ErrRemoteConfigEmptyName)
+	c.Assert(remote, IsNil)
 }
 
-func (s *SuiteRepository) TestCommit(c *C) {
-	r, err := NewRepository(RepositoryFixture, nil)
-	r.Remotes["origin"].upSrv = &MockGitUploadPackService{}
+func (s *RepositorySuite) TestDeleteRemote(c *C) {
+	r := NewMemoryRepository()
+	_, err := r.CreateRemote(&config.RemoteConfig{
+		Name: "foo",
+		URL:  "http://foo/foo.git",
+	})
 
 	c.Assert(err, IsNil)
-	c.Assert(r.Pull("origin", "refs/heads/master"), IsNil)
+
+	err = r.DeleteRemote("foo")
+	c.Assert(err, IsNil)
+
+	alt, err := r.Remote("foo")
+	c.Assert(err, Equals, config.ErrRemoteConfigNotFound)
+	c.Assert(alt, IsNil)
+}
+
+func (s *RepositorySuite) TestClone(c *C) {
+	r := NewMemoryRepository()
+
+	head, err := r.Head()
+	c.Assert(err, Equals, core.ErrReferenceNotFound)
+	c.Assert(head, IsNil)
+
+	err = r.Clone(&CloneOptions{
+		URL: RepositoryFixture,
+	})
+
+	c.Assert(err, IsNil)
+
+	remotes, err := r.Remotes()
+	c.Assert(err, IsNil)
+	c.Assert(remotes, HasLen, 1)
+
+	head, err = r.Ref(core.HEAD, false)
+	c.Assert(err, IsNil)
+	c.Assert(head, NotNil)
+	c.Assert(head.Type(), Equals, core.SymbolicReference)
+	c.Assert(head.Target().String(), Equals, "refs/heads/master")
+
+	branch, err := r.Ref(head.Target(), false)
+	c.Assert(err, IsNil)
+	c.Assert(branch, NotNil)
+	c.Assert(branch.Hash().String(), Equals, "6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+
+	branch, err = r.Ref("refs/remotes/origin/master", false)
+	c.Assert(err, IsNil)
+	c.Assert(branch, NotNil)
+	c.Assert(branch.Type(), Equals, core.HashReference)
+	c.Assert(branch.Hash().String(), Equals, "6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+
+	branch, err = r.Ref("refs/remotes/origin/branch", false)
+	c.Assert(err, IsNil)
+	c.Assert(branch, NotNil)
+	c.Assert(branch.Type(), Equals, core.HashReference)
+	c.Assert(branch.Hash().String(), Equals, "e8d3ffab552895c19b9fcf7aa264d277cde33881")
+}
+
+func (s *RepositorySuite) TestCloneNonEmpty(c *C) {
+	r := NewMemoryRepository()
+
+	head, err := r.Head()
+	c.Assert(err, Equals, core.ErrReferenceNotFound)
+	c.Assert(head, IsNil)
+
+	o := &CloneOptions{URL: RepositoryFixture}
+	err = r.Clone(o)
+	c.Assert(err, IsNil)
+
+	err = r.Clone(o)
+	c.Assert(err, Equals, ErrRepositoryNonEmpty)
+}
+
+func (s *RepositorySuite) TestCloneSingleBranchAndNonHEAD(c *C) {
+	r := NewMemoryRepository()
+
+	head, err := r.Head()
+	c.Assert(err, Equals, core.ErrReferenceNotFound)
+	c.Assert(head, IsNil)
+
+	err = r.Clone(&CloneOptions{
+		URL:           RepositoryFixture,
+		ReferenceName: core.ReferenceName("refs/heads/branch"),
+		SingleBranch:  true,
+	})
+
+	c.Assert(err, IsNil)
+
+	remotes, err := r.Remotes()
+	c.Assert(err, IsNil)
+	c.Assert(remotes, HasLen, 1)
+
+	head, err = r.Ref(core.HEAD, false)
+	c.Assert(err, IsNil)
+	c.Assert(head, NotNil)
+	c.Assert(head.Type(), Equals, core.SymbolicReference)
+	c.Assert(head.Target().String(), Equals, "refs/heads/branch")
+
+	branch, err := r.Ref(head.Target(), false)
+	c.Assert(err, IsNil)
+	c.Assert(branch, NotNil)
+	c.Assert(branch.Hash().String(), Equals, "e8d3ffab552895c19b9fcf7aa264d277cde33881")
+
+	branch, err = r.Ref("refs/remotes/origin/branch", false)
+	c.Assert(err, IsNil)
+	c.Assert(branch, NotNil)
+	c.Assert(branch.Type(), Equals, core.HashReference)
+	c.Assert(branch.Hash().String(), Equals, "e8d3ffab552895c19b9fcf7aa264d277cde33881")
+}
+
+func (s *RepositorySuite) TestCloneSingleBranch(c *C) {
+	r := NewMemoryRepository()
+
+	head, err := r.Head()
+	c.Assert(err, Equals, core.ErrReferenceNotFound)
+	c.Assert(head, IsNil)
+
+	err = r.Clone(&CloneOptions{
+		URL:          RepositoryFixture,
+		SingleBranch: true,
+	})
+
+	c.Assert(err, IsNil)
+
+	remotes, err := r.Remotes()
+	c.Assert(err, IsNil)
+	c.Assert(remotes, HasLen, 1)
+
+	head, err = r.Ref(core.HEAD, false)
+	c.Assert(err, IsNil)
+	c.Assert(head, NotNil)
+	c.Assert(head.Type(), Equals, core.SymbolicReference)
+	c.Assert(head.Target().String(), Equals, "refs/heads/master")
+
+	branch, err := r.Ref(head.Target(), false)
+	c.Assert(err, IsNil)
+	c.Assert(branch, NotNil)
+	c.Assert(branch.Hash().String(), Equals, "6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+
+	branch, err = r.Ref("refs/remotes/origin/master", false)
+	c.Assert(err, IsNil)
+	c.Assert(branch, NotNil)
+	c.Assert(branch.Type(), Equals, core.HashReference)
+	c.Assert(branch.Hash().String(), Equals, "6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+}
+
+func (s *RepositorySuite) TestCloneDetachedHEAD(c *C) {
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{
+		URL:           RepositoryFixture,
+		ReferenceName: core.ReferenceName("refs/tags/v1.0.0"),
+	})
+
+	head, err := r.Ref(core.HEAD, false)
+	c.Assert(err, IsNil)
+	c.Assert(head, NotNil)
+	c.Assert(head.Type(), Equals, core.HashReference)
+	c.Assert(head.Hash().String(), Equals, "6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+}
+
+func (s *RepositorySuite) TestPull(c *C) {
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{
+		URL:          RepositoryFixture,
+		SingleBranch: true,
+	})
+
+	c.Assert(err, IsNil)
+
+	err = r.Pull(&PullOptions{})
+	c.Assert(err, Equals, NoErrAlreadyUpToDate)
+
+	branch, err := r.Ref("refs/heads/master", false)
+	c.Assert(err, IsNil)
+	c.Assert(branch.Hash().String(), Equals, "6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+
+	storage := r.s.ObjectStorage().(*memory.ObjectStorage)
+	c.Assert(storage.Objects, HasLen, 31)
+
+	r.CreateRemote(&config.RemoteConfig{
+		Name: "foo",
+		URL:  "https://github.com/git-fixtures/tags.git",
+	})
+
+	err = r.Pull(&PullOptions{RemoteName: "foo"})
+	c.Assert(err, IsNil)
+	c.Assert(storage.Objects, HasLen, 38)
+
+	branch, err = r.Ref("refs/heads/master", false)
+	c.Assert(err, IsNil)
+	c.Assert(branch.Hash().String(), Equals, "f7b877701fbf855b44c0a9e86f3fdce2c298b07f")
+}
+
+func (s *RepositorySuite) TestIsEmpty(c *C) {
+	r := NewMemoryRepository()
+
+	empty, err := r.IsEmpty()
+	c.Assert(err, IsNil)
+	c.Assert(empty, Equals, true)
+
+	err = r.Clone(&CloneOptions{URL: RepositoryFixture})
+	c.Assert(err, IsNil)
+
+	empty, err = r.IsEmpty()
+	c.Assert(err, IsNil)
+	c.Assert(empty, Equals, false)
+}
+
+func (s *RepositorySuite) TestCommit(c *C) {
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{
+		URL: RepositoryFixture,
+	})
+
+	c.Assert(err, IsNil)
 
 	hash := core.NewHash("b8e471f58bcbca63b07bda20e428190409c2db47")
 	commit, err := r.Commit(hash)
@@ -133,16 +267,18 @@ func (s *SuiteRepository) TestCommit(c *C) {
 	c.Assert(commit.Hash, Equals, commit.ID())
 	c.Assert(commit.Hash, Equals, hash)
 	c.Assert(commit.Type(), Equals, core.CommitObject)
-	c.Assert(commit.Tree().Hash.IsZero(), Equals, false)
+
+	tree, err := commit.Tree()
+	c.Assert(err, IsNil)
+	c.Assert(tree.Hash.IsZero(), Equals, false)
+
 	c.Assert(commit.Author.Email, Equals, "daniel@lordran.local")
 }
 
-func (s *SuiteRepository) TestCommits(c *C) {
-	r, err := NewRepository(RepositoryFixture, nil)
-	r.Remotes["origin"].upSrv = &MockGitUploadPackService{}
-
+func (s *RepositorySuite) TestCommits(c *C) {
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{URL: RepositoryFixture})
 	c.Assert(err, IsNil)
-	c.Assert(r.Pull("origin", "refs/heads/master"), IsNil)
 
 	count := 0
 	commits, err := r.Commits()
@@ -157,111 +293,104 @@ func (s *SuiteRepository) TestCommits(c *C) {
 		c.Assert(commit.Hash.IsZero(), Equals, false)
 		c.Assert(commit.Hash, Equals, commit.ID())
 		c.Assert(commit.Type(), Equals, core.CommitObject)
-		//c.Assert(commit.Tree.IsZero(), Equals, false)
 	}
 
-	c.Assert(count, Equals, 8)
+	c.Assert(count, Equals, 9)
 }
 
-func (s *SuiteRepository) TestTag(c *C) {
-	for i, t := range tagTests {
-		r, ok := s.repos[t.repo]
-		c.Assert(ok, Equals, true)
-		k := 0
-		for hashString, exp := range t.tags {
-			hash := core.NewHash(hashString)
-			tag, err := r.Tag(hash)
-			c.Assert(err, IsNil)
-			testTagExpected(c, tag, hash, exp, fmt.Sprintf("subtest %d, tag %d: ", i, k))
-			k++
-		}
-	}
-}
-
-func (s *SuiteRepository) TestTags(c *C) {
-	for i, t := range tagTests {
-		r, ok := s.repos[t.repo]
-		c.Assert(ok, Equals, true)
-		tagsIter, err := r.Tags()
-		c.Assert(err, IsNil)
-		testTagIter(c, tagsIter, t.tags, fmt.Sprintf("subtest %d, ", i))
-	}
-}
-
-func (s *SuiteRepository) TestObject(c *C) {
-	for i, t := range treeWalkerTests {
-		r, ok := s.repos[t.repo]
-		c.Assert(ok, Equals, true)
-		for k := 0; k < len(t.objs); k++ {
-			com := fmt.Sprintf("subtest %d, tag %d", i, k)
-			info := t.objs[k]
-			hash := core.NewHash(info.Hash)
-			obj, err := r.Object(hash)
-			c.Assert(err, IsNil, Commentf(com))
-			c.Assert(obj.Type(), Equals, info.Kind, Commentf(com))
-			c.Assert(obj.ID(), Equals, hash, Commentf(com))
-		}
-	}
-}
-
-func (s *SuiteRepository) TestCommitIterClosePanic(c *C) {
-	r, err := NewRepository(RepositoryFixture, nil)
-	r.Remotes["origin"].upSrv = &MockGitUploadPackService{}
-
+func (s *RepositorySuite) TestTag(c *C) {
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{URL: "https://github.com/spinnaker/spinnaker.git"})
 	c.Assert(err, IsNil)
-	c.Assert(r.Pull("origin", "refs/heads/master"), IsNil)
+
+	hash := core.NewHash("0a3fb06ff80156fb153bcdcc58b5e16c2d27625c")
+	tag, err := r.Tag(hash)
+	c.Assert(err, IsNil)
+
+	c.Assert(tag.Hash.IsZero(), Equals, false)
+	c.Assert(tag.Hash, Equals, hash)
+	c.Assert(tag.Type(), Equals, core.TagObject)
+}
+
+func (s *RepositorySuite) TestTags(c *C) {
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{URL: "https://github.com/spinnaker/spinnaker.git"})
+	c.Assert(err, IsNil)
+
+	count := 0
+	tags, err := r.Tags()
+	c.Assert(err, IsNil)
+	for {
+		tag, err := tags.Next()
+		if err != nil {
+			break
+		}
+
+		count++
+		c.Assert(tag.Hash.IsZero(), Equals, false)
+		c.Assert(tag.Type(), Equals, core.TagObject)
+	}
+
+	c.Assert(count, Equals, 11)
+}
+
+func (s *RepositorySuite) TestCommitIterClosePanic(c *C) {
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{URL: RepositoryFixture})
+	c.Assert(err, IsNil)
 
 	commits, err := r.Commits()
 	c.Assert(err, IsNil)
 	commits.Close()
 }
 
-func (s *SuiteRepository) TestHeadFromFs(c *C) {
-	for name, fix := range s.dirFixtures {
-		fs := fs.NewOS()
-		gitPath := fs.Join(fix.path, ".git/")
-		com := Commentf("dir fixture %q → %q\n", name, gitPath)
-		repo, err := NewRepositoryFromFS(fs, gitPath)
-		c.Assert(err, IsNil, com)
+func (s *RepositorySuite) TestRef(c *C) {
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{URL: RepositoryFixture})
+	c.Assert(err, IsNil)
 
-		head, err := repo.Head("")
-		c.Assert(err, IsNil)
+	ref, err := r.Ref(core.HEAD, false)
+	c.Assert(err, IsNil)
+	c.Assert(ref.Name(), Equals, core.HEAD)
 
-		c.Assert(head, Equals, fix.head)
-	}
+	ref, err = r.Ref(core.HEAD, true)
+	c.Assert(err, IsNil)
+	c.Assert(ref.Name(), Equals, core.ReferenceName("refs/heads/master"))
 }
 
-func (s *SuiteRepository) TestHeadFromRemote(c *C) {
-	r, err := NewRepository(RepositoryFixture, nil)
+func (s *RepositorySuite) TestRefs(c *C) {
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{URL: RepositoryFixture})
 	c.Assert(err, IsNil)
 
-	upSrv := &MockGitUploadPackService{}
-	r.Remotes[DefaultRemoteName].upSrv = upSrv
-	err = r.Remotes[DefaultRemoteName].Connect()
 	c.Assert(err, IsNil)
 
-	info, err := upSrv.Info()
+	iter, err := r.Refs()
 	c.Assert(err, IsNil)
-	expected := info.Head
-
-	obtained, err := r.Head(DefaultRemoteName)
-	c.Assert(err, IsNil)
-
-	c.Assert(obtained, Equals, expected)
+	c.Assert(iter, NotNil)
 }
 
-func (s *SuiteRepository) TestHeadErrors(c *C) {
-	r, err := NewRepository(RepositoryFixture, nil)
+func (s *RepositorySuite) TestObject(c *C) {
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{URL: "https://github.com/spinnaker/spinnaker.git"})
 	c.Assert(err, IsNil)
 
-	upSrv := &MockGitUploadPackService{}
-	r.Remotes[DefaultRemoteName].upSrv = upSrv
+	hash := core.NewHash("0a3fb06ff80156fb153bcdcc58b5e16c2d27625c")
+	tag, err := r.Tag(hash)
+	c.Assert(err, IsNil)
 
-	remote := "not found"
-	_, err = r.Head(remote)
-	c.Assert(err, ErrorMatches, fmt.Sprintf("unable to find remote %q", remote))
+	c.Assert(tag.Hash.IsZero(), Equals, false)
+	c.Assert(tag.Hash, Equals, hash)
+	c.Assert(tag.Type(), Equals, core.TagObject)
+}
 
-	remote = ""
-	_, err = r.Head(remote)
-	c.Assert(err, ErrorMatches, "cannot retrieve local head: no local data found")
+func (s *RepositorySuite) TestObjectNotFound(c *C) {
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{URL: "https://github.com/git-fixtures/basic.git"})
+	c.Assert(err, IsNil)
+
+	hash := core.NewHash("0a3fb06ff80156fb153bcdcc58b5e16c2d27625c")
+	tag, err := r.Object(core.TagObject, hash)
+	c.Assert(err, DeepEquals, core.ErrObjectNotFound)
+	c.Assert(tag, IsNil)
 }

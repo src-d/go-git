@@ -1,6 +1,6 @@
 package idxfile
 
-import "gopkg.in/src-d/go-git.v3/core"
+import "gopkg.in/src-d/go-git.v4/core"
 
 const (
 	// VersionSupported is the only idx version supported.
@@ -16,7 +16,7 @@ type Idxfile struct {
 	Version          uint32
 	Fanout           [255]uint32
 	ObjectCount      uint32
-	Entries          []Entry
+	Entries          EntryList
 	PackfileChecksum [20]byte
 	IdxChecksum      [20]byte
 }
@@ -25,8 +25,16 @@ type Idxfile struct {
 // offset and CRC32 checksum.
 type Entry struct {
 	Hash   core.Hash
-	CRC32  [4]byte
+	CRC32  uint32
 	Offset uint64
+}
+
+func (idx *Idxfile) Add(h core.Hash, offset uint64, crc32 uint32) {
+	idx.Entries = append(idx.Entries, Entry{
+		Hash:   h,
+		Offset: offset,
+		CRC32:  crc32,
+	})
 }
 
 func (idx *Idxfile) isValid() bool {
@@ -42,19 +50,12 @@ func (idx *Idxfile) isValid() bool {
 
 func (idx *Idxfile) calculateFanout() [256]uint32 {
 	fanout := [256]uint32{}
-	var c uint32
 	for _, e := range idx.Entries {
-		c++
-		fanout[e.Hash[0]] = c
+		fanout[e.Hash[0]]++
 	}
 
-	var i uint32
-	for k, c := range fanout {
-		if c != 0 {
-			i = c
-		}
-
-		fanout[k] = i
+	for i := 1; i < 256; i++ {
+		fanout[i] += fanout[i-1]
 	}
 
 	return fanout

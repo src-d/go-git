@@ -2,167 +2,166 @@ package git
 
 import (
 	"io"
+	"time"
 
-	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/fixtures"
 
 	. "gopkg.in/check.v1"
 )
 
 type SuiteCommit struct {
-	repos map[string]*Repository
+	BaseSuite
+	Commit *Commit
 }
 
 var _ = Suite(&SuiteCommit{})
 
-// create the repositories of the fixtures
 func (s *SuiteCommit) SetUpSuite(c *C) {
-	commitFixtures := []packedFixture{
-		{"https://github.com/tyba/git-fixture.git", "formats/packfile/fixtures/git-fixture.ofs-delta"},
-	}
-	s.repos = unpackFixtures(c, commitFixtures)
+	s.BaseSuite.SetUpSuite(c)
+
+	hash := core.NewHash("1669dce138d9b841a518c64b10914d88f5e488ea")
+
+	var err error
+	s.Commit, err = s.Repository.Commit(hash)
+	c.Assert(err, IsNil)
 }
 
-var commitIterTests = []struct {
-	repo    string   // the repo name in the test suite's map of fixtures
-	commits []string // the commit hashes to iterate over in the test
-}{
-	{"https://github.com/tyba/git-fixture.git", []string{
-		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5",
-		"918c48b83bd081e863dbe1b80f8998f058cd8294",
-		"af2d6a6954d532f8ffb47615169c8fdf9d383a1a",
-		"1669dce138d9b841a518c64b10914d88f5e488ea",
+func (s *SuiteCommit) TestDecodeNonCommit(c *C) {
+	hash := core.NewHash("9a48f23120e880dfbe41f7c9b7b708e9ee62a492")
+	blob, err := s.Repository.s.ObjectStorage().Get(core.AnyObject, hash)
+	c.Assert(err, IsNil)
+
+	commit := &Commit{}
+	err = commit.Decode(blob)
+	c.Assert(err, Equals, ErrUnsupportedObject)
+}
+
+func (s *SuiteCommit) TestType(c *C) {
+	c.Assert(s.Commit.Type(), Equals, core.CommitObject)
+}
+
+func (s *SuiteCommit) TestTree(c *C) {
+	tree, err := s.Commit.Tree()
+	c.Assert(err, IsNil)
+	c.Assert(tree.ID().String(), Equals, "eba74343e2f15d62adedfd8c883ee0262b5c8021")
+}
+
+func (s *SuiteCommit) TestParents(c *C) {
+	expected := []string{
 		"35e85108805c84807bc66a02d91535e1e24b38b9",
-		"b029517f6300c2da0f4b651b8642506cd6aaf45d",
 		"a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69",
-		"b029517f6300c2da0f4b651b8642506cd6aaf45d", // Intentional duplicate
-		"b8e471f58bcbca63b07bda20e428190409c2db47",
-		"b029517f6300c2da0f4b651b8642506cd6aaf45d"}}, // Intentional duplicate
-}
-
-func (s *SuiteCommit) TestIterSlice(c *C) {
-	for i, t := range commitIterTests {
-		r := s.repos[t.repo]
-		iter := NewCommitIter(r, core.NewObjectSliceIter(makeObjectSlice(t.commits, r.Storage)))
-		s.checkIter(c, r, i, iter, t.commits)
 	}
+
+	var output []string
+	i := s.Commit.Parents()
+	err := i.ForEach(func(commit *Commit) error {
+		output = append(output, commit.ID().String())
+		return nil
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(output, DeepEquals, expected)
 }
 
-func (s *SuiteCommit) TestIterLookup(c *C) {
-	for i, t := range commitIterTests {
-		r := s.repos[t.repo]
-		iter := NewCommitIter(r, core.NewObjectLookupIter(r.Storage, makeHashSlice(t.commits)))
-		s.checkIter(c, r, i, iter, t.commits)
+func (s *SuiteCommit) TestCommitEncodeDecodeIdempotent(c *C) {
+	ts, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05-07:00")
+	c.Assert(err, IsNil)
+	commits := []*Commit{
+		&Commit{
+			Author:    Signature{Name: "Foo", Email: "foo@example.local", When: ts},
+			Committer: Signature{Name: "Bar", Email: "bar@example.local", When: ts},
+			Message:   "Message\n\nFoo\nBar\nWith trailing blank lines\n\n",
+			tree:      core.NewHash("f000000000000000000000000000000000000001"),
+			parents:   []core.Hash{core.NewHash("f000000000000000000000000000000000000002")},
+		},
+		&Commit{
+			Author:    Signature{Name: "Foo", Email: "foo@example.local", When: ts},
+			Committer: Signature{Name: "Bar", Email: "bar@example.local", When: ts},
+			Message:   "Message\n\nFoo\nBar\nWith no trailing blank lines",
+			tree:      core.NewHash("0000000000000000000000000000000000000003"),
+			parents: []core.Hash{
+				core.NewHash("f000000000000000000000000000000000000004"),
+				core.NewHash("f000000000000000000000000000000000000005"),
+				core.NewHash("f000000000000000000000000000000000000006"),
+				core.NewHash("f000000000000000000000000000000000000007"),
+			},
+		},
 	}
-}
-
-func (s *SuiteCommit) checkIter(c *C, r *Repository, subtest int, iter *CommitIter, commits []string) {
-	for k := 0; k < len(commits); k++ {
-		commit, err := iter.Next()
-		c.Assert(err, IsNil, Commentf("subtest %d, iter %d, err=%v", subtest, k, err))
-		c.Assert(commit.Hash.String(), Equals, commits[k], Commentf("subtest %d, iter %d, hash=%v, expected=%s", subtest, k, commit.Hash.String(), commits[k]))
+	for _, commit := range commits {
+		obj := &core.MemoryObject{}
+		err = commit.Encode(obj)
+		c.Assert(err, IsNil)
+		newCommit := &Commit{}
+		err = newCommit.Decode(obj)
+		c.Assert(err, IsNil)
+		commit.Hash = obj.Hash()
+		c.Assert(newCommit, DeepEquals, commit)
 	}
-	_, err := iter.Next()
-	c.Assert(err, Equals, io.EOF)
-}
-
-func (s *SuiteCommit) TestIterSliceClose(c *C) {
-	for i, t := range commitIterTests {
-		r := s.repos[t.repo]
-		iter := NewCommitIter(r, core.NewObjectSliceIter(makeObjectSlice(t.commits, r.Storage)))
-		s.checkIterClose(c, i, iter)
-	}
-}
-
-func (s *SuiteCommit) TestIterLookupClose(c *C) {
-	for i, t := range commitIterTests {
-		r := s.repos[t.repo]
-		iter := NewCommitIter(r, core.NewObjectLookupIter(r.Storage, makeHashSlice(t.commits)))
-		s.checkIterClose(c, i, iter)
-	}
-}
-
-func (s *SuiteCommit) checkIterClose(c *C, subtest int, iter *CommitIter) {
-	iter.Close()
-	_, err := iter.Next()
-	c.Assert(err, Equals, io.EOF, Commentf("subtest %d, close 1, err=%v", subtest, err))
-
-	iter.Close()
-	_, err = iter.Next()
-	c.Assert(err, Equals, io.EOF, Commentf("subtest %d, close 2, err=%v", subtest, err))
-}
-
-var fileTests = []struct {
-	repo     string // the repo name as in localRepos
-	commit   string // the commit to search for the file
-	path     string // the path of the file to find
-	blobHash string // expected hash of the returned file
-	found    bool   // expected found value
-}{
-	// use git ls-tree commit to get the hash of the blobs
-	{"https://github.com/tyba/git-fixture.git", "b029517f6300c2da0f4b651b8642506cd6aaf45d", "not-found",
-		"", false},
-	{"https://github.com/tyba/git-fixture.git", "b029517f6300c2da0f4b651b8642506cd6aaf45d", ".gitignore",
-		"32858aad3c383ed1ff0a0f9bdf231d54a00c9e88", true},
-	{"https://github.com/tyba/git-fixture.git", "b029517f6300c2da0f4b651b8642506cd6aaf45d", "LICENSE",
-		"c192bd6a24ea1ab01d78686e417c8bdc7c3d197f", true},
-
-	{"https://github.com/tyba/git-fixture.git", "6ecf0ef2c2dffb796033e5a02219af86ec6584e5", "not-found",
-		"", false},
-	{"https://github.com/tyba/git-fixture.git", "6ecf0ef2c2dffb796033e5a02219af86ec6584e5", ".gitignore",
-		"32858aad3c383ed1ff0a0f9bdf231d54a00c9e88", true},
-	{"https://github.com/tyba/git-fixture.git", "6ecf0ef2c2dffb796033e5a02219af86ec6584e5", "binary.jpg",
-		"d5c0f4ab811897cadf03aec358ae60d21f91c50d", true},
-	{"https://github.com/tyba/git-fixture.git", "6ecf0ef2c2dffb796033e5a02219af86ec6584e5", "LICENSE",
-		"c192bd6a24ea1ab01d78686e417c8bdc7c3d197f", true},
-
-	{"https://github.com/tyba/git-fixture.git", "35e85108805c84807bc66a02d91535e1e24b38b9", "binary.jpg",
-		"d5c0f4ab811897cadf03aec358ae60d21f91c50d", true},
-	{"https://github.com/tyba/git-fixture.git", "b029517f6300c2da0f4b651b8642506cd6aaf45d", "binary.jpg",
-		"", false},
-
-	{"https://github.com/tyba/git-fixture.git", "6ecf0ef2c2dffb796033e5a02219af86ec6584e5", "CHANGELOG",
-		"d3ff53e0564a9f87d8e84b6e28e5060e517008aa", true},
-	{"https://github.com/tyba/git-fixture.git", "1669dce138d9b841a518c64b10914d88f5e488ea", "CHANGELOG",
-		"d3ff53e0564a9f87d8e84b6e28e5060e517008aa", true},
-	{"https://github.com/tyba/git-fixture.git", "a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69", "CHANGELOG",
-		"d3ff53e0564a9f87d8e84b6e28e5060e517008aa", true},
-	{"https://github.com/tyba/git-fixture.git", "35e85108805c84807bc66a02d91535e1e24b38b9", "CHANGELOG",
-		"d3ff53e0564a9f87d8e84b6e28e5060e517008aa", false},
-	{"https://github.com/tyba/git-fixture.git", "b8e471f58bcbca63b07bda20e428190409c2db47", "CHANGELOG",
-		"d3ff53e0564a9f87d8e84b6e28e5060e517008aa", true},
-	{"https://github.com/tyba/git-fixture.git", "b029517f6300c2da0f4b651b8642506cd6aaf45d", "CHANGELOG",
-		"d3ff53e0564a9f87d8e84b6e28e5060e517008aa", false},
 }
 
 func (s *SuiteCommit) TestFile(c *C) {
-	for i, t := range fileTests {
-		commit, err := s.repos[t.repo].Commit(core.NewHash(t.commit))
-		c.Assert(err, IsNil, Commentf("subtest %d: %v (%s)", i, err, t.commit))
-
-		file, err := commit.File(t.path)
-		found := err == nil
-		c.Assert(found, Equals, t.found, Commentf("subtest %d, path=%s, commit=%s", i, t.path, t.commit))
-		if found {
-			c.Assert(file.Hash.String(), Equals, t.blobHash, Commentf("subtest %d, commit=%s, path=%s", i, t.commit, t.path))
-		}
-	}
+	file, err := s.Commit.File("CHANGELOG")
+	c.Assert(err, IsNil)
+	c.Assert(file.Name, Equals, "CHANGELOG")
 }
 
-func makeObjectSlice(hashes []string, storage core.ObjectStorage) []core.Object {
-	series := make([]core.Object, 0, len(hashes))
-	for _, member := range hashes {
-		obj, err := storage.Get(core.NewHash(member))
-		if err == nil {
-			series = append(series, obj)
-		}
-	}
-	return series
+func (s *SuiteCommit) TestNumParents(c *C) {
+	c.Assert(s.Commit.NumParents(), Equals, 2)
 }
 
-func makeHashSlice(hashes []string) []core.Hash {
-	series := make([]core.Hash, 0, len(hashes))
-	for _, member := range hashes {
-		series = append(series, core.NewHash(member))
-	}
-	return series
+func (s *SuiteCommit) TestHistory(c *C) {
+	commits, err := s.Commit.History()
+	c.Assert(err, IsNil)
+	c.Assert(commits, HasLen, 5)
+	c.Assert(commits[0].Hash.String(), Equals, s.Commit.Hash.String())
+	c.Assert(commits[len(commits)-1].Hash.String(), Equals, "b029517f6300c2da0f4b651b8642506cd6aaf45d")
+}
+
+func (s *SuiteCommit) TestString(c *C) {
+	c.Assert(s.Commit.String(), Equals, ""+
+		"commit 1669dce138d9b841a518c64b10914d88f5e488ea\n"+
+		"Author: Máximo Cuadros Ortiz <mcuadros@gmail.com>\n"+
+		"Date:   Tue Mar 31 13:48:14 2015 +0200\n"+
+		"\n"+
+		"    Merge branch 'master' of github.com:tyba/git-fixture\n"+
+		"\n",
+	)
+}
+
+func (s *SuiteCommit) TestStringMultiLine(c *C) {
+	hash := core.NewHash("e7d896db87294e33ca3202e536d4d9bb16023db3")
+
+	s.buildRepositories(c, fixtures.ByURL("https://github.com/src-d/go-git.git"))
+
+	commit, err := s.Repositories["https://github.com/src-d/go-git.git"].Commit(hash)
+	c.Assert(err, IsNil)
+
+	c.Assert(commit.String(), Equals, ""+
+		"commit e7d896db87294e33ca3202e536d4d9bb16023db3\n"+
+		"Author: Alberto Cortés <alberto@sourced.tech>\n"+
+		"Date:   Wed Jan 27 11:13:49 2016 +0100\n"+
+		"\n"+
+		"    fix zlib invalid header error\n"+
+		"\n"+
+		"    The return value of reads to the packfile were being ignored, so zlib\n"+
+		"    was getting invalid data on it read buffers.\n"+
+		"\n",
+	)
+}
+
+func (s *SuiteCommit) TestCommitIterNext(c *C) {
+	i := s.Commit.Parents()
+
+	commit, err := i.Next()
+	c.Assert(err, IsNil)
+	c.Assert(commit.ID().String(), Equals, "35e85108805c84807bc66a02d91535e1e24b38b9")
+
+	commit, err = i.Next()
+	c.Assert(err, IsNil)
+	c.Assert(commit.ID().String(), Equals, "a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69")
+
+	commit, err = i.Next()
+	c.Assert(err, Equals, io.EOF)
+	c.Assert(commit, IsNil)
 }

@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/formats/pktline"
+	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/formats/pktline"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -17,20 +17,21 @@ type SuiteCommon struct{}
 var _ = Suite(&SuiteCommon{})
 
 func (s *SuiteCommon) TestNewEndpoint(c *C) {
+	e, err := NewEndpoint("ssh://git@github.com/user/repository.git")
+	c.Assert(err, IsNil)
+	c.Assert(e.String(), Equals, "ssh://git@github.com/user/repository.git")
+}
+
+func (s *SuiteCommon) TestNewEndpointSCPLike(c *C) {
 	e, err := NewEndpoint("git@github.com:user/repository.git")
 	c.Assert(err, IsNil)
-	c.Assert(e, Equals, Endpoint("https://github.com/user/repository.git"))
+	c.Assert(e.String(), Equals, "ssh://git@github.com/user/repository.git")
 }
 
 func (s *SuiteCommon) TestNewEndpointWrongForgat(c *C) {
 	e, err := NewEndpoint("foo")
 	c.Assert(err, Not(IsNil))
-	c.Assert(e, Equals, Endpoint(""))
-}
-
-func (s *SuiteCommon) TestEndpointService(c *C) {
-	e, _ := NewEndpoint("git@github.com:user/repository.git")
-	c.Assert(e.Service("foo"), Equals, "https://github.com/user/repository.git/info/refs?service=foo")
+	c.Assert(e.Host, Equals, "")
 }
 
 const CapabilitiesFixture = "6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEADmulti_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master agent=git/2:2.4.8~dbussink-fix-enterprise-tokens-compilation-1167-gc7006cf"
@@ -50,10 +51,35 @@ func (s *SuiteCommon) TestGitUploadPackInfo(c *C) {
 	err := i.Decode(pktline.NewDecoder(bytes.NewBuffer(b)))
 	c.Assert(err, IsNil)
 
-	ref := i.Capabilities.SymbolicReference("HEAD")
-	c.Assert(ref, Equals, "refs/heads/master")
-	c.Assert(i.Refs[ref].String(), Equals, "6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
-	c.Assert(i.Head.String(), Equals, "6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+	name := i.Capabilities.SymbolicReference("HEAD")
+	c.Assert(name, Equals, "refs/heads/master")
+	c.Assert(i.Refs, HasLen, 4)
+
+	ref := i.Refs[core.ReferenceName(name)]
+	c.Assert(ref, NotNil)
+	c.Assert(ref.Hash().String(), Equals, "6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+
+	ref = i.Refs[core.HEAD]
+	c.Assert(ref, NotNil)
+	c.Assert(ref.Target(), Equals, core.ReferenceName(name))
+}
+
+const GitUploadPackInfoNoHEADFixture = "MDAxZSMgc2VydmljZT1naXQtdXBsb2FkLXBhY2sKMDAwMDAwYmNkN2UxZmVlMjYxMjM0YmIzYTQzYzA5NmY1NTg3NDhhNTY5ZDc5ZWZmIHJlZnMvaGVhZHMvdjQAbXVsdGlfYWNrIHRoaW4tcGFjayBzaWRlLWJhbmQgc2lkZS1iYW5kLTY0ayBvZnMtZGVsdGEgc2hhbGxvdyBuby1wcm9ncmVzcyBpbmNsdWRlLXRhZyBtdWx0aV9hY2tfZGV0YWlsZWQgbm8tZG9uZSBhZ2VudD1naXQvMS45LjEKMDAwMA=="
+
+func (s *SuiteCommon) TestGitUploadPackInfoNoHEAD(c *C) {
+	b, _ := base64.StdEncoding.DecodeString(GitUploadPackInfoNoHEADFixture)
+
+	i := NewGitUploadPackInfo()
+	err := i.Decode(pktline.NewDecoder(bytes.NewBuffer(b)))
+	c.Assert(err, IsNil)
+
+	name := i.Capabilities.SymbolicReference("HEAD")
+	c.Assert(name, Equals, "")
+	c.Assert(i.Refs, HasLen, 1)
+
+	ref := i.Refs["refs/heads/v4"]
+	c.Assert(ref, NotNil)
+	c.Assert(ref.Hash().String(), Equals, "d7e1fee261234bb3a43c096f558748a569d79eff")
 }
 
 func (s *SuiteCommon) TestGitUploadPackInfoEmpty(c *C) {
@@ -101,11 +127,14 @@ func (s *SuiteCommon) TestGitUploadPackEncode(c *C) {
 	info := NewGitUploadPackInfo()
 	info.Capabilities.Add("symref", "HEAD:refs/heads/master")
 
-	info.Head = core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
-	info.Refs = map[string]core.Hash{
-		"refs/heads/master": info.Head,
+	ref := core.ReferenceName("refs/heads/master")
+	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+	info.Refs = map[core.ReferenceName]*core.Reference{
+		core.HEAD: core.NewSymbolicReference(core.HEAD, ref),
+		ref:       core.NewHashReference(ref, hash),
 	}
 
+	c.Assert(info.Head(), NotNil)
 	c.Assert(info.String(), Equals,
 		"001e# service=git-upload-pack\n"+
 			"000000506ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:refs/heads/master\n"+

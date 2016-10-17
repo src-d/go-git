@@ -1,6 +1,4 @@
 // Package ssh implements a ssh client for go-git.
-//
-// The Connect() method is not allowed in ssh, use ConnectWithAuth() instead.
 package ssh
 
 import (
@@ -10,12 +8,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/url"
+	"strings"
 
-	"gopkg.in/src-d/go-git.v3/clients/common"
-	"gopkg.in/src-d/go-git.v3/formats/pktline"
+	"gopkg.in/src-d/go-git.v4/clients/common"
+	"gopkg.in/src-d/go-git.v4/formats/pktline"
 
-	"gopkg.in/sourcegraph/go-vcsurl.v1"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -32,74 +29,79 @@ var (
 
 // GitUploadPackService holds the service information.
 // The zero value is safe to use.
-// TODO: remove NewGitUploadPackService().
 type GitUploadPackService struct {
 	connected bool
-	vcs       *vcsurl.RepoInfo
+	endpoint  common.Endpoint
 	client    *ssh.Client
 	auth      AuthMethod
 }
 
-// NewGitUploadPackService initialises a GitUploadPackService.
-// TODO: remove this, as the struct is zero-value safe.
-func NewGitUploadPackService() *GitUploadPackService {
-	return &GitUploadPackService{}
+// NewGitUploadPackService initialises a GitUploadPackService,
+func NewGitUploadPackService(endpoint common.Endpoint) common.GitUploadPackService {
+	return &GitUploadPackService{endpoint: endpoint}
 }
 
-// Connect cannot be used with SSH clients and always return
-// ErrAuthRequired. Use ConnectWithAuth instead.
-func (s *GitUploadPackService) Connect(ep common.Endpoint) (err error) {
-	return ErrAuthRequired
-}
-
-// ConnectWithAuth connects to ep using SSH. Authentication is handled
-// by auth.
-func (s *GitUploadPackService) ConnectWithAuth(ep common.Endpoint, auth common.AuthMethod) (err error) {
+// Connect connects to the SSH server, unless a AuthMethod was set with SetAuth
+// method, by default uses an auth method based on PublicKeysCallback, it
+// connects to a SSH agent, using the address stored in the SSH_AUTH_SOCK
+// environment var
+func (s *GitUploadPackService) Connect() error {
 	if s.connected {
 		return ErrAlreadyConnected
 	}
 
-	s.vcs, err = vcsurl.Parse(string(ep))
+	if err := s.setAuthFromEndpoint(); err != nil {
+		return err
+	}
+
+	var err error
+	s.client, err = ssh.Dial("tcp", s.getHostWithPort(), s.auth.clientConfig())
 	if err != nil {
 		return err
 	}
 
-	url, err := vcsToURL(s.vcs)
-	if err != nil {
-		return
+	s.connected = true
+	return nil
+}
+
+func (s *GitUploadPackService) getHostWithPort() string {
+	host := s.endpoint.Host
+	if strings.Index(s.endpoint.Host, ":") == -1 {
+		host += ":22"
 	}
 
+	return host
+}
+
+func (s *GitUploadPackService) setAuthFromEndpoint() error {
+	var u string
+	if info := s.endpoint.User; info != nil {
+		u = info.Username()
+	}
+
+	var err error
+	s.auth, err = NewSSHAgentAuth(u)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SetAuth sets the AuthMethod
+func (s *GitUploadPackService) SetAuth(auth common.AuthMethod) error {
 	var ok bool
 	s.auth, ok = auth.(AuthMethod)
 	if !ok {
 		return ErrInvalidAuthMethod
 	}
 
-	s.client, err = ssh.Dial("tcp", url.Host, s.auth.clientConfig())
-	if err != nil {
-		return err
-	}
-
-	s.connected = true
-	return
+	return nil
 }
 
-func vcsToURL(vcs *vcsurl.RepoInfo) (u *url.URL, err error) {
-	if vcs.VCS != vcsurl.Git {
-		return nil, ErrUnsupportedVCS
-	}
-	if vcs.RepoHost != vcsurl.GitHub {
-		return nil, ErrUnsupportedRepo
-	}
-	s := "ssh://git@" + string(vcs.RepoHost) + ":22/" + vcs.FullName
-	u, err = url.Parse(s)
-	return
-}
-
-// Info returns the GitUploadPackInfo of the repository.
-// The client must be connected with the repository (using
-// the ConnectWithAuth() method) before using this
-// method.
+// Info returns the GitUploadPackInfo of the repository. The client must be
+// connected with the repository (using the ConnectWithAuth() method) before
+// using this method.
 func (s *GitUploadPackService) Info() (i *common.GitUploadPackInfo, err error) {
 	if !s.connected {
 		return nil, ErrNotConnected
@@ -115,7 +117,7 @@ func (s *GitUploadPackService) Info() (i *common.GitUploadPackInfo, err error) {
 		_ = session.Close()
 	}()
 
-	out, err := session.Output("git-upload-pack " + s.vcs.FullName + ".git")
+	out, err := session.Output(s.getCommand())
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +149,7 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (rc io.Read
 	if err != nil {
 		return nil, err
 	}
+
 	defer func() {
 		// the session can be closed by the other endpoint,
 		// therefore we must ignore a close error.
@@ -163,20 +166,19 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (rc io.Read
 		return nil, err
 	}
 
+	if err := session.Start(s.getCommand()); err != nil {
+		return nil, err
+	}
+
 	go func() {
 		fmt.Fprintln(si, r.String())
 		err = si.Close()
 	}()
 
-	err = session.Start("git-upload-pack " + s.vcs.FullName + ".git")
-	if err != nil {
-		return nil, err
-	}
 	// TODO: investigate this *ExitError type (command fails or
 	// doesn't complete successfully), as it is happenning all
 	// the time, but everything seems to work fine.
-	err = session.Wait()
-	if err != nil {
+	if err := session.Wait(); err != nil {
 		if _, ok := err.(*ssh.ExitError); !ok {
 			return nil, err
 		}
@@ -200,6 +202,14 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (rc io.Read
 	if err != nil {
 		return nil, err
 	}
+
 	buf := bytes.NewBuffer(data)
 	return ioutil.NopCloser(buf), nil
+}
+
+func (s *GitUploadPackService) getCommand() string {
+	directory := s.endpoint.Path
+	directory = directory[1:len(directory)]
+
+	return fmt.Sprintf("git-upload-pack %s", directory)
 }

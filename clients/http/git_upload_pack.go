@@ -1,49 +1,74 @@
 package http
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v3/clients/common"
-	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/formats/pktline"
+	"gopkg.in/src-d/go-git.v4/clients/common"
+	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/formats/pktline"
 )
 
+// GitUploadPackService git-upoad-pack service over HTTP
 type GitUploadPackService struct {
-	Client *http.Client
-
+	client   *http.Client
 	endpoint common.Endpoint
 	auth     HTTPAuthMethod
 }
 
-func NewGitUploadPackService() *GitUploadPackService {
-	return &GitUploadPackService{
-		Client: http.DefaultClient,
+// NewGitUploadPackService connects to a git-upload-pack service over HTTP, the
+// auth is extracted from the URL, or can be provided using the SetAuth method
+func NewGitUploadPackService(endpoint common.Endpoint) common.GitUploadPackService {
+	s := &GitUploadPackService{
+		client:   http.DefaultClient,
+		endpoint: endpoint,
 	}
+
+	s.setBasicAuthFromEndpoint()
+	return s
 }
 
-func (s *GitUploadPackService) Connect(url common.Endpoint) error {
-	s.endpoint = url
-
+// Connect has not any effect, is here just for meet the interface
+func (s *GitUploadPackService) Connect() error {
 	return nil
 }
 
-func (s *GitUploadPackService) ConnectWithAuth(url common.Endpoint, auth common.AuthMethod) error {
+func (s *GitUploadPackService) setBasicAuthFromEndpoint() {
+	info := s.endpoint.User
+	if info == nil {
+		return
+	}
+
+	p, ok := info.Password()
+	if !ok {
+		return
+	}
+
+	u := info.Username()
+	s.auth = NewBasicAuth(u, p)
+}
+
+// SetAuth sets the AuthMethod
+func (s *GitUploadPackService) SetAuth(auth common.AuthMethod) error {
 	httpAuth, ok := auth.(HTTPAuthMethod)
 	if !ok {
-		return InvalidAuthMethodErr
+		return common.ErrInvalidAuthMethod
 	}
 
-	s.endpoint = url
 	s.auth = httpAuth
-
 	return nil
 }
 
+// Info returns the references info and capabilities from the service
 func (s *GitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
-	url := fmt.Sprintf("%s/info/refs?service=%s", s.endpoint, common.GitUploadPackServiceName)
+	url := fmt.Sprintf(
+		"%s/info/refs?service=%s",
+		s.endpoint.String(), common.GitUploadPackServiceName,
+	)
+
 	res, err := s.doRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -55,19 +80,48 @@ func (s *GitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
 	return i, i.Decode(pktline.NewDecoder(res.Body))
 }
 
+// Fetch request and returns a reader to a packfile
 func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadCloser, error) {
-	url := fmt.Sprintf("%s/%s", s.endpoint, common.GitUploadPackServiceName)
+	url := fmt.Sprintf(
+		"%s/%s",
+		s.endpoint.String(), common.GitUploadPackServiceName,
+	)
+
 	res, err := s.doRequest("POST", url, r.Reader())
 	if err != nil {
 		return nil, err
 	}
 
-	h := make([]byte, 8)
-	if _, err := res.Body.Read(h); err != nil {
-		return nil, core.NewUnexpectedError(err)
+	reader := newBufferedReadCloser(res.Body)
+	if _, err := reader.Peek(1); err != nil {
+		if err == io.ErrUnexpectedEOF {
+			return nil, common.ErrEmptyGitUploadPack
+		}
+
+		return nil, err
 	}
 
-	return res.Body, nil
+	if err := s.discardResponseInfo(reader); err != nil {
+		return nil, err
+	}
+
+	return reader, nil
+}
+
+func (s *GitUploadPackService) discardResponseInfo(r io.Reader) error {
+	decoder := pktline.NewDecoder(r)
+	for {
+		line, err := decoder.ReadLine()
+		if err != nil {
+			break
+		}
+
+		if line == "NAK\n" {
+			break
+		}
+	}
+
+	return nil
 }
 
 func (s *GitUploadPackService) doRequest(method, url string, content *strings.Reader) (*http.Response, error) {
@@ -84,7 +138,7 @@ func (s *GitUploadPackService) doRequest(method, url string, content *strings.Re
 	s.applyHeadersToRequest(req, content)
 	s.applyAuthToRequest(req)
 
-	res, err := s.Client.Do(req)
+	res, err := s.client.Do(req)
 	if err != nil {
 		return nil, core.NewUnexpectedError(err)
 	}
@@ -115,4 +169,22 @@ func (s *GitUploadPackService) applyAuthToRequest(req *http.Request) {
 	}
 
 	s.auth.setAuth(req)
+}
+
+// Disconnect do nothing
+func (s *GitUploadPackService) Disconnect() (err error) {
+	return nil
+}
+
+type bufferedReadCloser struct {
+	*bufio.Reader
+	closer io.Closer
+}
+
+func newBufferedReadCloser(r io.ReadCloser) *bufferedReadCloser {
+	return &bufferedReadCloser{bufio.NewReader(r), r}
+}
+
+func (r *bufferedReadCloser) Close() error {
+	return r.closer.Close()
 }

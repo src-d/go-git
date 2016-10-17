@@ -7,7 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v4/core"
 )
 
 // Tag represents an annotated tag object. It points to a single git object of
@@ -105,6 +105,36 @@ func (t *Tag) Decode(o core.Object) (err error) {
 	return nil
 }
 
+// Encode transforms a Tag into a core.Object.
+func (t *Tag) Encode(o core.Object) error {
+	o.SetType(core.TagObject)
+	w, err := o.Writer()
+	if err != nil {
+		return err
+	}
+	defer checkClose(w, &err)
+
+	if _, err = fmt.Fprintf(w,
+		"object %s\ntype %s\ntag %s\ntagger ",
+		t.Target.String(), t.TargetType.Bytes(), t.Name); err != nil {
+		return err
+	}
+
+	if err = t.Tagger.Encode(w); err != nil {
+		return err
+	}
+
+	if _, err = fmt.Fprint(w, "\n\n"); err != nil {
+		return err
+	}
+
+	if _, err = fmt.Fprint(w, t.Message); err != nil {
+		return err
+	}
+
+	return err
+}
+
 // Commit returns the commit pointed to by the tag. If the tag points to a
 // different type of object ErrUnsupportedObject will be returned.
 func (t *Tag) Commit() (*Commit, error) {
@@ -118,14 +148,13 @@ func (t *Tag) Commit() (*Commit, error) {
 // object the tree of that commit will be returned. If the tag does not point
 // to a commit or tree object ErrUnsupportedObject will be returned.
 func (t *Tag) Tree() (*Tree, error) {
-	// TODO: If the tag is of type commit, follow the commit to its tree?
 	switch t.TargetType {
 	case core.CommitObject:
 		commit, err := t.r.Commit(t.Target)
 		if err != nil {
 			return nil, err
 		}
-		return commit.Tree(), nil
+		return commit.Tree()
 	case core.TreeObject:
 		return t.r.Tree(t.Target)
 	default:
@@ -144,15 +173,17 @@ func (t *Tag) Blob() (*Blob, error) {
 
 // Object returns the object pointed to by the tag.
 func (t *Tag) Object() (Object, error) {
-	return t.r.Object(t.Target)
+	return t.r.Object(t.TargetType, t.Target)
 }
 
 // String returns the meta information contained in the tag as a formatted
 // string.
 func (t *Tag) String() string {
+	obj, _ := t.Object()
 	return fmt.Sprintf(
-		"%s %s\nObject: %s\nType: %s\nTag: %s\nTagger: %s\nDate:   %s\n",
-		core.TagObject, t.Hash, t.Target, t.TargetType, t.Name, t.Tagger.String(), t.Tagger.When,
+		"%s %s\nTagger: %s\nDate:   %s\n\n%s\n%s",
+		core.TagObject, t.Name, t.Tagger.String(), t.Tagger.When.Format(DateFormat),
+		t.Message, obj,
 	)
 }
 
@@ -180,4 +211,18 @@ func (iter *TagIter) Next() (*Tag, error) {
 
 	tag := &Tag{r: iter.r}
 	return tag, tag.Decode(obj)
+}
+
+// ForEach call the cb function for each tag contained on this iter until
+// an error happends or the end of the iter is reached. If ErrStop is sent
+// the iteration is stop but no error is returned. The iterator is closed.
+func (iter *TagIter) ForEach(cb func(*Tag) error) error {
+	return iter.ObjectIter.ForEach(func(obj core.Object) error {
+		tag := &Tag{r: iter.r}
+		if err := tag.Decode(obj); err != nil {
+			return err
+		}
+
+		return cb(tag)
+	})
 }

@@ -4,37 +4,28 @@ import (
 	"io/ioutil"
 	"time"
 
-	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/storage/memory"
+	"gopkg.in/src-d/go-git.v4/core"
 
 	. "gopkg.in/check.v1"
 )
 
 type ObjectsSuite struct {
-	r *Repository
+	BaseSuite
 }
 
 var _ = Suite(&ObjectsSuite{})
 
-func (s *ObjectsSuite) SetUpTest(c *C) {
-	var err error
-	s.r, err = NewRepository(RepositoryFixture, nil)
-	c.Assert(err, IsNil)
-
-	s.r.Remotes["origin"].upSrv = &MockGitUploadPackService{}
-
-	err = s.r.Pull("origin", "refs/heads/master")
-	c.Assert(err, IsNil)
-}
-
 func (s *ObjectsSuite) TestNewCommit(c *C) {
 	hash := core.NewHash("a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69")
-	commit, err := s.r.Commit(hash)
+	commit, err := s.Repository.Commit(hash)
 	c.Assert(err, IsNil)
 
 	c.Assert(commit.Hash, Equals, commit.ID())
 	c.Assert(commit.Hash.String(), Equals, "a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69")
-	c.Assert(commit.Tree().Hash.String(), Equals, "c2d30fa8ef288618f65f6eed6e168e0d514886f4")
+
+	tree, err := commit.Tree()
+	c.Assert(err, IsNil)
+	c.Assert(tree.Hash.String(), Equals, "c2d30fa8ef288618f65f6eed6e168e0d514886f4")
 
 	parents := commit.Parents()
 	parentCommit, err := parents.Next()
@@ -49,12 +40,12 @@ func (s *ObjectsSuite) TestNewCommit(c *C) {
 	c.Assert(commit.Author.Name, Equals, "Máximo Cuadros")
 	c.Assert(commit.Author.When.Format(time.RFC3339), Equals, "2015-03-31T13:47:14+02:00")
 	c.Assert(commit.Committer.Email, Equals, "mcuadros@gmail.com")
-	c.Assert(commit.Message, Equals, "Merge pull request #1 from dripolles/feature\n\nCreating changelog\n")
+	c.Assert(commit.Message, Equals, "Merge pull request #1 from dripolles/feature\n\nCreating changelog")
 }
 
 func (s *ObjectsSuite) TestParseTree(c *C) {
 	hash := core.NewHash("a8d315b2b1c615d43042c3a62402b8a54288cf5c")
-	tree, err := s.r.Tree(hash)
+	tree, err := s.Repository.Tree(hash)
 	c.Assert(err, IsNil)
 
 	c.Assert(tree.Entries, HasLen, 8)
@@ -83,7 +74,7 @@ func (s *ObjectsSuite) TestParseTree(c *C) {
 }
 
 func (s *ObjectsSuite) TestBlobHash(c *C) {
-	o := &memory.Object{}
+	o := &core.MemoryObject{}
 	o.SetType(core.BlobObject)
 	o.SetSize(3)
 
@@ -106,6 +97,27 @@ func (s *ObjectsSuite) TestBlobHash(c *C) {
 	data, err := ioutil.ReadAll(reader)
 	c.Assert(err, IsNil)
 	c.Assert(string(data), Equals, "FOO")
+}
+
+func (s *ObjectsSuite) TestBlobDecodeEncodeIdempotent(c *C) {
+	var objects []*core.MemoryObject
+	for _, str := range []string{"foo", "foo\n"} {
+		obj := &core.MemoryObject{}
+		obj.Write([]byte(str))
+		obj.SetType(core.BlobObject)
+		obj.Hash()
+		objects = append(objects, obj)
+	}
+	for _, object := range objects {
+		blob := &Blob{}
+		err := blob.Decode(object)
+		c.Assert(err, IsNil)
+		newObject := &core.MemoryObject{}
+		err = blob.Encode(newObject)
+		c.Assert(err, IsNil)
+		newObject.Hash() // Ensure Hash is pre-computed before deep comparison
+		c.Assert(newObject, DeepEquals, object)
+	}
 }
 
 func (s *ObjectsSuite) TestParseSignature(c *C) {

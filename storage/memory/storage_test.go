@@ -1,50 +1,49 @@
 package memory
 
 import (
+	"testing"
+
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v4/storage/test"
 )
 
-type ObjectStorageSuite struct{}
+func Test(t *testing.T) { TestingT(t) }
 
-var _ = Suite(&ObjectStorageSuite{})
-
-func (s *ObjectStorageSuite) TestSet(c *C) {
-	os := NewObjectStorage()
-
-	o := &Object{}
-	o.SetType(core.CommitObject)
-	o.SetSize(3)
-
-	writer, err := o.Writer()
-	c.Assert(err, IsNil)
-	defer func() { c.Assert(writer.Close(), IsNil) }()
-
-	writer.Write([]byte("foo"))
-
-	h, err := os.Set(o)
-	c.Assert(err, IsNil)
-	c.Assert(h.String(), Equals, "bc9968d75e48de59f0870ffb71f5e160bbbdcf52")
+type StorageSuite struct {
+	test.BaseStorageSuite
 }
 
-func (s *ObjectStorageSuite) TestGet(c *C) {
-	os := NewObjectStorage()
+var _ = Suite(&StorageSuite{})
 
-	o := &Object{}
-	o.SetType(core.CommitObject)
-	o.SetSize(3)
+func (s *StorageSuite) SetUpTest(c *C) {
+	storage := NewStorage()
+	s.BaseStorageSuite = test.NewBaseStorageSuite(
+		storage.ObjectStorage(),
+		storage.ReferenceStorage(),
+		storage.ConfigStorage(),
+	)
+}
 
-	writer, err := o.Writer()
-	c.Assert(err, IsNil)
-	defer func() { c.Assert(writer.Close(), IsNil) }()
+func (s *StorageSuite) TestStorageObjectStorage(c *C) {
+	storage := NewStorage()
+	o := storage.ObjectStorage()
+	e := storage.ObjectStorage()
 
-	writer.Write([]byte("foo"))
+	c.Assert(o == e, Equals, true)
+}
 
-	h, err := os.Set(o)
-	c.Assert(err, IsNil)
+func (s *StorageSuite) TestStorageReferenceStorage(c *C) {
+	storage := NewStorage()
+	o := storage.ReferenceStorage()
+	e := storage.ReferenceStorage()
 
-	ro, err := os.Get(h)
-	c.Assert(err, IsNil)
+	c.Assert(o == e, Equals, true)
+}
 
-	c.Assert(ro, DeepEquals, o)
+func (s *StorageSuite) TestStorageConfigStorage(c *C) {
+	storage := NewStorage()
+	o := storage.ConfigStorage()
+	e := storage.ConfigStorage()
+
+	c.Assert(o == e, Equals, true)
 }

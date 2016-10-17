@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 
-	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v4/core"
 )
 
 // Hash hash of an object
@@ -30,14 +31,17 @@ type Commit struct {
 }
 
 // Tree returns the Tree from the commit
-func (c *Commit) Tree() *Tree {
-	tree, _ := c.r.Tree(c.tree) // FIXME: Return error as well?
-	return tree
+func (c *Commit) Tree() (*Tree, error) {
+	return c.r.Tree(c.tree)
 }
 
 // Parents return a CommitIter to the parent Commits
 func (c *Commit) Parents() *CommitIter {
-	return NewCommitIter(c.r, core.NewObjectLookupIter(c.r.Storage, c.parents))
+	return NewCommitIter(c.r, core.NewObjectLookupIter(
+		c.r.s.ObjectStorage(),
+		core.CommitObject,
+		c.parents,
+	))
 }
 
 // NumParents returns the number of parents in a commit.
@@ -48,8 +52,23 @@ func (c *Commit) NumParents() int {
 // File returns the file with the specified "path" in the commit and a
 // nil error if the file exists. If the file does not exist, it returns
 // a nil file and the ErrFileNotFound error.
-func (c *Commit) File(path string) (file *File, err error) {
-	return c.Tree().File(path)
+func (c *Commit) File(path string) (*File, error) {
+	tree, err := c.Tree()
+	if err != nil {
+		return nil, err
+	}
+
+	return tree.File(path)
+}
+
+// Files returns a FileIter allowing to iterate over the Tree
+func (c *Commit) Files() (*FileIter, error) {
+	tree, err := c.Tree()
+	if err != nil {
+		return nil, err
+	}
+
+	return tree.Files(), nil
 }
 
 // ID returns the object ID of the commit. The returned value will always match
@@ -90,8 +109,8 @@ func (c *Commit) Decode(o core.Object) (err error) {
 			return err
 		}
 
-		line = bytes.TrimSpace(line)
 		if !message {
+			line = bytes.TrimSpace(line)
 			if len(line) == 0 {
 				message = true
 				continue
@@ -109,7 +128,7 @@ func (c *Commit) Decode(o core.Object) (err error) {
 				c.Committer.Decode(split[1])
 			}
 		} else {
-			c.Message += string(line) + "\n"
+			c.Message += string(line)
 		}
 
 		if err == io.EOF {
@@ -118,11 +137,71 @@ func (c *Commit) Decode(o core.Object) (err error) {
 	}
 }
 
+// History return a slice with the previous commits in the history of this commit
+func (c *Commit) History() ([]*Commit, error) {
+	var commits []*Commit
+	err := WalkCommitHistory(c, func(commit *Commit) error {
+		commits = append(commits, commit)
+		return nil
+	})
+
+	ReverseSortCommits(commits)
+	return commits, err
+}
+
+// Encode transforms a Commit into a core.Object.
+func (b *Commit) Encode(o core.Object) error {
+	o.SetType(core.CommitObject)
+	w, err := o.Writer()
+	if err != nil {
+		return err
+	}
+	defer checkClose(w, &err)
+	if _, err = fmt.Fprintf(w, "tree %s\n", b.tree.String()); err != nil {
+		return err
+	}
+	for _, parent := range b.parents {
+		if _, err = fmt.Fprintf(w, "parent %s\n", parent.String()); err != nil {
+			return err
+		}
+	}
+	if _, err = fmt.Fprint(w, "author "); err != nil {
+		return err
+	}
+	if err = b.Author.Encode(w); err != nil {
+		return err
+	}
+	if _, err = fmt.Fprint(w, "\ncommitter "); err != nil {
+		return err
+	}
+	if err = b.Committer.Encode(w); err != nil {
+		return err
+	}
+	if _, err = fmt.Fprintf(w, "\n\n%s", b.Message); err != nil {
+		return err
+	}
+	return err
+}
+
 func (c *Commit) String() string {
 	return fmt.Sprintf(
-		"%s %s\nAuthor: %s\nDate:   %s\n",
-		core.CommitObject, c.Hash, c.Author.String(), c.Author.When,
+		"%s %s\nAuthor: %s\nDate:   %s\n\n%s\n",
+		core.CommitObject, c.Hash, c.Author.String(),
+		c.Author.When.Format(DateFormat), indent(c.Message),
 	)
+}
+
+func indent(t string) string {
+	var output []string
+	for _, line := range strings.Split(t, "\n") {
+		if len(line) != 0 {
+			line = "    " + line
+		}
+
+		output = append(output, line)
+	}
+
+	return strings.Join(output, "\n")
 }
 
 // CommitIter provides an iterator for a set of commits.
@@ -151,6 +230,20 @@ func (iter *CommitIter) Next() (*Commit, error) {
 	return commit, commit.Decode(obj)
 }
 
+// ForEach call the cb function for each commit contained on this iter until
+// an error happends or the end of the iter is reached. If ErrStop is sent
+// the iteration is stop but no error is returned. The iterator is closed.
+func (iter *CommitIter) ForEach(cb func(*Commit) error) error {
+	return iter.ObjectIter.ForEach(func(obj core.Object) error {
+		commit := &Commit{r: iter.r}
+		if err := commit.Decode(obj); err != nil {
+			return err
+		}
+
+		return cb(commit)
+	})
+}
+
 type commitSorterer struct {
 	l []*Commit
 }
@@ -171,4 +264,10 @@ func (s commitSorterer) Swap(i, j int) {
 func SortCommits(l []*Commit) {
 	s := &commitSorterer{l}
 	sort.Sort(s)
+}
+
+// ReverseSortCommits sort a commit list by commit date, from newer to older.
+func ReverseSortCommits(l []*Commit) {
+	s := &commitSorterer{l}
+	sort.Sort(sort.Reverse(s))
 }

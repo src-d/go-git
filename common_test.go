@@ -1,53 +1,129 @@
 package git
 
 import (
-	"bytes"
+	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 
-	"gopkg.in/src-d/go-git.v3/clients/common"
-	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/formats/packfile"
+	"gopkg.in/src-d/go-git.v4/clients"
+	"gopkg.in/src-d/go-git.v4/clients/common"
+	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/formats/packfile"
+	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
 	. "gopkg.in/check.v1"
 )
 
 func Test(t *testing.T) { TestingT(t) }
 
+type BaseSuite struct {
+	fixtures.Suite
+
+	Repository   *Repository
+	Repositories map[string]*Repository
+}
+
+func (s *BaseSuite) SetUpSuite(c *C) {
+	s.Suite.SetUpSuite(c)
+	s.installMockProtocol(c)
+	s.buildRepository(c)
+
+	s.Repositories = make(map[string]*Repository, 0)
+	s.buildRepositories(c, fixtures.Basic())
+}
+
+func (s *BaseSuite) installMockProtocol(c *C) {
+	clients.InstallProtocol("https", func(end common.Endpoint) common.GitUploadPackService {
+		return &MockGitUploadPackService{endpoint: end}
+	})
+}
+
+func (s *BaseSuite) buildRepository(c *C) {
+	f := fixtures.Basic().One()
+
+	var err error
+	s.Repository, err = NewFilesystemRepository(f.DotGit().Base())
+	c.Assert(err, IsNil)
+}
+
+func (s *BaseSuite) buildRepositories(c *C, f fixtures.Fixtures) {
+	for _, fixture := range f {
+		r := NewMemoryRepository()
+
+		f := fixture.Packfile()
+		defer f.Close()
+
+		n := packfile.NewScanner(f)
+		d, err := packfile.NewDecoder(n, r.s.ObjectStorage())
+		c.Assert(err, IsNil)
+		_, err = d.Decode()
+		c.Assert(err, IsNil)
+
+		s.Repositories[fixture.URL] = r
+	}
+}
+
+const RepositoryFixture = "https://github.com/git-fixtures/basic.git"
+
 type MockGitUploadPackService struct {
-	Auth common.AuthMethod
-	RC   io.ReadCloser
+	connected bool
+	endpoint  common.Endpoint
+	auth      common.AuthMethod
 }
 
-func (s *MockGitUploadPackService) Connect(url common.Endpoint) error {
+func (p *MockGitUploadPackService) Connect() error {
+	p.connected = true
 	return nil
 }
 
-func (s *MockGitUploadPackService) ConnectWithAuth(url common.Endpoint, auth common.AuthMethod) error {
-	s.Auth = auth
+func (p *MockGitUploadPackService) SetAuth(auth common.AuthMethod) error {
+	p.auth = auth
 	return nil
 }
 
-func (s *MockGitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
-	h := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+func (p *MockGitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
+	if !p.connected {
+		return nil, errors.New("not connected")
+	}
+
+	h := fixtures.ByURL(p.endpoint.String()).One().Head
 
 	c := common.NewCapabilities()
 	c.Decode("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEADmulti_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master agent=git/2:2.4.8~dbussink-fix-enterprise-tokens-compilation-1167-gc7006cf")
 
+	ref := core.ReferenceName("refs/heads/master")
+	branch := core.ReferenceName("refs/heads/branch")
+	tag := core.ReferenceName("refs/tags/v1.0.0")
 	return &common.GitUploadPackInfo{
 		Capabilities: c,
-		Head:         h,
-		Refs:         map[string]core.Hash{"refs/heads/master": h},
+		Refs: map[core.ReferenceName]*core.Reference{
+			core.HEAD: core.NewSymbolicReference(core.HEAD, ref),
+			ref:       core.NewHashReference(ref, h),
+			tag:       core.NewHashReference(tag, h),
+			branch:    core.NewHashReference(branch, core.NewHash("e8d3ffab552895c19b9fcf7aa264d277cde33881")),
+		},
 	}, nil
 }
 
-func (s *MockGitUploadPackService) Fetch(*common.GitUploadPackRequest) (io.ReadCloser, error) {
-	var err error
-	s.RC, err = os.Open("formats/packfile/fixtures/git-fixture.ref-delta")
+func (p *MockGitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadCloser, error) {
+	if !p.connected {
+		return nil, errors.New("not connected")
+	}
 
-	return s.RC, err
+	f := fixtures.ByURL(p.endpoint.String())
+
+	if len(r.Wants) == 1 {
+		return f.Exclude("single-branch").One().Packfile(), nil
+	}
+
+	return f.One().Packfile(), nil
+}
+
+func (p *MockGitUploadPackService) Disconnect() error {
+	p.connected = false
+	return nil
 }
 
 type packedFixture struct {
@@ -71,21 +147,16 @@ func unpackFixtures(c *C, fixtures ...[]packedFixture) map[string]*Repository {
 
 			comment := Commentf("fixture packfile: %q", fixture.packfile)
 
-			repos[fixture.url] = NewPlainRepository()
+			repos[fixture.url] = NewMemoryRepository()
 
 			f, err := os.Open(fixture.packfile)
 			c.Assert(err, IsNil, comment)
 
-			// increase memory consumption to speed up tests
-			data, err := ioutil.ReadAll(f)
-			c.Assert(err, IsNil)
-			memStream := bytes.NewReader(data)
-			r := packfile.NewStream(memStream)
-
-			d := packfile.NewDecoder(r)
-			err = d.Decode(repos[fixture.url].Storage)
+			r := packfile.NewScanner(f)
+			d, err := packfile.NewDecoder(r, repos[fixture.url].s.ObjectStorage())
 			c.Assert(err, IsNil, comment)
-
+			_, err = d.Decode()
+			c.Assert(err, IsNil, comment)
 			c.Assert(f.Close(), IsNil, comment)
 		}
 	}
@@ -117,4 +188,27 @@ func (s *SuiteCommon) TestCountLines(c *C) {
 		o := countLines(t.i)
 		c.Assert(o, Equals, t.e, Commentf("subtest %d, input=%q", i, t.i))
 	}
+}
+
+func (s *BaseSuite) Clone(url string) *Repository {
+	r := NewMemoryRepository()
+	if err := r.Clone(&CloneOptions{URL: url}); err != nil {
+		panic(err)
+	}
+
+	return r
+}
+
+func (s *BaseSuite) NewRepository(f *fixtures.Fixture) *Repository {
+	storage, err := filesystem.NewStorage(f.DotGit())
+	if err != nil {
+		panic(err)
+	}
+
+	r, err := NewRepository(storage)
+	if err != nil {
+		panic(err)
+	}
+
+	return r
 }

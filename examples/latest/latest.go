@@ -4,26 +4,25 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/src-d/go-git.v3"
+	"gopkg.in/src-d/go-git.v4"
 )
 
 func main() {
-	fmt.Printf("Retrieving latest commit from: %q ...\n", os.Args[1])
-	r, err := git.NewRepository(os.Args[1], nil)
+	url := os.Args[1]
+
+	fmt.Printf("Retrieving latest commit from: %q ...\n", url)
+	r := git.NewMemoryRepository()
+
+	if err := r.Clone(&git.CloneOptions{URL: url}); err != nil {
+		panic(err)
+	}
+
+	head, err := r.Head()
 	if err != nil {
 		panic(err)
 	}
 
-	if err = r.Pull(git.DefaultRemoteName, "refs/heads/master"); err != nil {
-		panic(err)
-	}
-
-	hash, err := r.Remotes[git.DefaultRemoteName].Head()
-	if err != nil {
-		panic(err)
-	}
-
-	commit, err := r.Commit(hash)
+	commit, err := r.Commit(head.Hash())
 	if err != nil {
 		panic(err)
 	}

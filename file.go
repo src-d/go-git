@@ -2,8 +2,11 @@ package git
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"strings"
+
+	"gopkg.in/src-d/go-git.v4/core"
 )
 
 // File represents git file objects.
@@ -13,7 +16,8 @@ type File struct {
 	Blob
 }
 
-func newFile(name string, m os.FileMode, b *Blob) *File {
+// NewFile returns a File based on the given blob object
+func NewFile(name string, m os.FileMode, b *Blob) *File {
 	return &File{Name: name, Mode: m, Blob: *b}
 }
 
@@ -50,22 +54,56 @@ func (f *File) Lines() ([]string, error) {
 }
 
 type FileIter struct {
-	w TreeWalker
+	r *Repository
+	w TreeIter
 }
 
 func NewFileIter(r *Repository, t *Tree) *FileIter {
-	return &FileIter{w: *NewTreeWalker(r, t)}
+	return &FileIter{r: r, w: *NewTreeIter(r, t, true)}
 }
 
 func (iter *FileIter) Next() (*File, error) {
 	for {
-		name, entry, obj, err := iter.w.Next()
+		name, entry, err := iter.w.Next()
 		if err != nil {
 			return nil, err
 		}
 
-		if blob, ok := obj.(*Blob); ok {
-			return newFile(name, entry.Mode, blob), nil
+		if entry.Mode.IsDir() {
+			continue
+		}
+
+		blob, err := iter.r.Blob(entry.Hash)
+		if err != nil {
+			return nil, err
+		}
+
+		return NewFile(name, entry.Mode, blob), nil
+	}
+}
+
+// ForEach call the cb function for each file contained on this iter until
+// an error happends or the end of the iter is reached. If core.ErrStop is sent
+// the iteration is stop but no error is returned. The iterator is closed.
+func (iter *FileIter) ForEach(cb func(*File) error) error {
+	defer iter.Close()
+
+	for {
+		f, err := iter.Next()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+
+			return err
+		}
+
+		if err := cb(f); err != nil {
+			if err == core.ErrStop {
+				return nil
+			}
+
+			return err
 		}
 	}
 }
