@@ -312,9 +312,9 @@ func (r *GitUploadPackInfo) Bytes() []byte {
 	}
 
 	payloads = append(payloads, "")
-	pktlines, _ := pktline.NewFromStrings(payloads...) // TODO check errors here
-
+	pktlines, _ := pktline.NewFromStrings(payloads...)
 	b, _ := ioutil.ReadAll(pktlines)
+
 	return b
 }
 
@@ -355,7 +355,7 @@ func (r *GitUploadPackRequest) Reader() *strings.Reader {
 	payloads = append(payloads, "")
 	payloads = append(payloads, "done\n")
 
-	pktlines, _ := pktline.NewFromStrings(payloads...) // TODO check errors here
+	pktlines, _ := pktline.NewFromStrings(payloads...)
 	b, _ := ioutil.ReadAll(pktlines)
 
 	return strings.NewReader(string(b))
