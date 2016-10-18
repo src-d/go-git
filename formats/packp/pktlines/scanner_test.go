@@ -1,11 +1,11 @@
-package pktline_test
+package pktlines_test
 
 import (
 	"fmt"
 	"io"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/formats/packp/pktlines"
 
 	. "gopkg.in/check.v1"
 )
@@ -25,25 +25,26 @@ func (s *SuiteScanner) TestInvalid(c *C) {
 		"-001", "-000",
 	} {
 		r := strings.NewReader(test)
-		sc := pktline.NewScanner(r)
+		sc := pktlines.NewScanner(r)
 		_ = sc.Scan()
-		c.Assert(sc.Err(), ErrorMatches, pktline.ErrInvalidPktLen.Error(),
+		c.Assert(sc.Err(), ErrorMatches, pktlines.ErrInvalidPktLen.Error(),
 			Commentf("data = %q", test))
 	}
 }
 
 func (s *SuiteScanner) TestEmptyReader(c *C) {
 	r := strings.NewReader("")
-	sc := pktline.NewScanner(r)
+	sc := pktlines.NewScanner(r)
 	hasPayload := sc.Scan()
 	c.Assert(hasPayload, Equals, false)
 	c.Assert(sc.Err(), Equals, nil)
 }
 
 func (s *SuiteScanner) TestFlush(c *C) {
-	r, err := pktline.NewFromStrings("")
-	c.Assert(err, IsNil)
-	sc := pktline.NewScanner(r)
+	p := pktlines.New()
+	p.AddFlush()
+	sc := pktlines.NewScanner(p.R)
+
 	c.Assert(sc.Scan(), Equals, true)
 	payload := sc.Bytes()
 	c.Assert(len(payload), Equals, 0)
@@ -52,7 +53,7 @@ func (s *SuiteScanner) TestFlush(c *C) {
 func (s *SuiteScanner) TestPktLineTooShort(c *C) {
 	r := strings.NewReader("010cfoobar")
 
-	sc := pktline.NewScanner(r)
+	sc := pktlines.NewScanner(r)
 
 	c.Assert(sc.Scan(), Equals, false)
 	c.Assert(sc.Err(), ErrorMatches, "unexpected EOF")
@@ -66,12 +67,14 @@ func (s *SuiteScanner) TestScanAndPayload(c *C) {
 		strings.Repeat("a", 100) + "\n",
 		strings.Repeat("\x00", 100),
 		strings.Repeat("\x00", 100) + "\n",
-		strings.Repeat("a", pktline.MaxPayloadSize),
-		strings.Repeat("a", pktline.MaxPayloadSize-1) + "\n",
+		strings.Repeat("a", pktlines.MaxPayloadSize),
+		strings.Repeat("a", pktlines.MaxPayloadSize-1) + "\n",
 	} {
-		r, err := pktline.NewFromStrings(test)
-		c.Assert(err, IsNil, Commentf("input len=%x, contents=%.10q\n", len(test), test))
-		sc := pktline.NewScanner(r)
+		p := pktlines.New()
+		err := p.AddString(test)
+		c.Assert(err, IsNil,
+			Commentf("input len=%x, contents=%.10q\n", len(test), test))
+		sc := pktlines.NewScanner(p.R)
 
 		c.Assert(sc.Scan(), Equals, true,
 			Commentf("test = %.20q...", test))
@@ -91,8 +94,7 @@ func (s *SuiteScanner) TestSkip(c *C) {
 			input: []string{
 				"first",
 				"second",
-				"third",
-				""},
+				"third"},
 			n:        1,
 			expected: []byte("second"),
 		},
@@ -100,15 +102,15 @@ func (s *SuiteScanner) TestSkip(c *C) {
 			input: []string{
 				"first",
 				"second",
-				"third",
-				""},
+				"third"},
 			n:        2,
 			expected: []byte("third"),
 		},
 	} {
-		r, err := pktline.NewFromStrings(test.input...)
+		p := pktlines.New()
+		err := p.AddString(test.input...)
 		c.Assert(err, IsNil)
-		sc := pktline.NewScanner(r)
+		sc := pktlines.NewScanner(p.R)
 		for i := 0; i < test.n; i++ {
 			c.Assert(sc.Scan(), Equals, true,
 				Commentf("scan error = %s", sc.Err()))
@@ -123,9 +125,10 @@ func (s *SuiteScanner) TestSkip(c *C) {
 }
 
 func (s *SuiteScanner) TestEOF(c *C) {
-	r, err := pktline.NewFromStrings("first", "second")
+	p := pktlines.New()
+	err := p.AddString("first", "second")
 	c.Assert(err, IsNil)
-	sc := pktline.NewScanner(r)
+	sc := pktlines.NewScanner(p.R)
 	for sc.Scan() {
 	}
 	c.Assert(sc.Err(), IsNil)
@@ -137,7 +140,7 @@ func (s *SuiteScanner) TestReadSomeSections(c *C) {
 	nSections := 2
 	nLines := 4
 	data := sectionsExample(c, nSections, nLines)
-	sc := pktline.NewScanner(data)
+	sc := pktlines.NewScanner(data)
 
 	sectionCounter := 0
 	lineCounter := 0
@@ -161,19 +164,19 @@ func (s *SuiteScanner) TestReadSomeSections(c *C) {
 // 0000
 // and so on
 func sectionsExample(c *C, nSections, nLines int) io.Reader {
-	ss := []string{}
+	p := pktlines.New()
 	for section := 0; section < nSections; section++ {
+		ss := []string{}
 		for line := 0; line < nLines; line++ {
 			line := fmt.Sprintf(" %d.%d\n", section, line)
 			ss = append(ss, line)
 		}
-		ss = append(ss, "")
+		err := p.AddString(ss...)
+		c.Assert(err, IsNil)
+		p.AddFlush()
 	}
 
-	ret, err := pktline.NewFromStrings(ss...)
-	c.Assert(err, IsNil)
-
-	return ret
+	return p.R
 }
 
 func ExampleScanner() {
@@ -184,7 +187,7 @@ func ExampleScanner() {
 	)
 
 	// Create the scanner...
-	s := pktline.NewScanner(input)
+	s := pktlines.NewScanner(input)
 
 	// and scan every pkt-line found in the input.
 	for s.Scan() {

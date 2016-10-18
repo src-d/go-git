@@ -1,13 +1,12 @@
-package pktline_test
+package pktlines_test
 
 import (
-	"io"
 	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 
-	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
+	"gopkg.in/src-d/go-git.v3/formats/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/formats/packp/pktlines"
 
 	. "gopkg.in/check.v1"
 )
@@ -19,30 +18,29 @@ type SuitePktLine struct {
 
 var _ = Suite(&SuitePktLine{})
 
-func (s *SuitePktLine) TestNew(c *C) {
+func (s *SuitePktLine) TestNewIsEmpty(c *C) {
+	p := pktlines.New()
+
+	b, err := ioutil.ReadAll(p.R)
+	c.Assert(err, IsNil)
+	c.Assert(b, DeepEquals, []byte{})
+}
+
+func (s *SuitePktLine) TestAddFlush(c *C) {
+	p := pktlines.New()
+	p.AddFlush()
+
+	b, err := ioutil.ReadAll(p.R)
+	c.Assert(err, IsNil)
+	c.Assert(string(b), DeepEquals, "0000")
+}
+
+func (s *SuitePktLine) TestAdd(c *C) {
 	for i, test := range [...]struct {
 		input    [][]byte
 		expected []byte
 	}{
 		{
-			input:    [][]byte{},
-			expected: []byte{},
-		}, {
-			input: [][]byte{
-				[]byte(nil),
-			},
-			expected: []byte("0000"),
-		}, {
-			input: [][]byte{
-				[]byte{},
-			},
-			expected: []byte("0000"),
-		}, {
-			input: [][]byte{
-				[]byte(""),
-			},
-			expected: []byte("0000"),
-		}, {
 			input: [][]byte{
 				[]byte("hello\n"),
 			},
@@ -51,22 +49,30 @@ func (s *SuitePktLine) TestNew(c *C) {
 			input: [][]byte{
 				[]byte("hello\n"),
 				[]byte("world!\n"),
-				[]byte(""),
 				[]byte("foo"),
-				[]byte(""),
 			},
-			expected: []byte("000ahello\n000bworld!\n00000007foo0000"),
+			expected: []byte("000ahello\n000bworld!\n0007foo"),
 		}, {
 			input: [][]byte{
 				[]byte(strings.Repeat("a", pktline.MaxPayloadSize)),
 			},
-			expected: []byte("fff0" + strings.Repeat("a", pktline.MaxPayloadSize)),
+			expected: []byte(
+				"fff0" + strings.Repeat("a", pktline.MaxPayloadSize)),
+		}, {
+			input: [][]byte{
+				[]byte(strings.Repeat("a", pktline.MaxPayloadSize)),
+				[]byte(strings.Repeat("b", pktline.MaxPayloadSize)),
+			},
+			expected: []byte(
+				"fff0" + strings.Repeat("a", pktline.MaxPayloadSize) +
+					"fff0" + strings.Repeat("b", pktline.MaxPayloadSize)),
 		},
 	} {
-		r, err := pktline.New(test.input...)
+		p := pktlines.New()
+		err := p.Add(test.input...)
 		c.Assert(err, IsNil, Commentf("input %d = %v", i, test.input))
 
-		obtained, err := ioutil.ReadAll(r)
+		obtained, err := ioutil.ReadAll(p.R)
 		c.Assert(err, IsNil, Commentf("input %d = %v", i, test.input))
 
 		c.Assert(obtained, DeepEquals, test.expected,
@@ -74,14 +80,36 @@ func (s *SuitePktLine) TestNew(c *C) {
 	}
 }
 
-func (s *SuitePktLine) TestNewErrPayloadTooLong(c *C) {
+func (s *SuitePktLine) TestAddErrEmptyPayload(c *C) {
+	for _, input := range [...][][]byte{
+		[][]byte{
+			[]byte{},
+		},
+		[][]byte{
+			[]byte(nil),
+		},
+		[][]byte{
+			[]byte("hello world!"),
+			[]byte{},
+		},
+		[][]byte{
+			[]byte{},
+			[]byte("hello world!"),
+		},
+	} {
+		p := pktlines.New()
+		err := p.Add(input...)
+		c.Assert(err, Equals, pktlines.ErrEmptyPayload)
+	}
+}
+
+func (s *SuitePktLine) TestAddErrPayloadTooLong(c *C) {
 	for _, input := range [...][][]byte{
 		[][]byte{
 			[]byte(strings.Repeat("a", pktline.MaxPayloadSize+1)),
 		},
 		[][]byte{
 			[]byte("hello world!"),
-			[]byte(""),
 			[]byte(strings.Repeat("a", pktline.MaxPayloadSize+1)),
 		},
 		[][]byte{
@@ -90,13 +118,93 @@ func (s *SuitePktLine) TestNewErrPayloadTooLong(c *C) {
 			[]byte("foo"),
 		},
 	} {
-		_, err := pktline.New(input...)
-
-		c.Assert(err, Equals, pktline.ErrPayloadTooLong,
+		p := pktlines.New()
+		err := p.Add(input...)
+		c.Assert(err, Equals, pktlines.ErrPayloadTooLong,
 			Commentf("%v\n", input))
 	}
 }
 
+func (s *SuitePktLine) TestAddString(c *C) {
+	for i, test := range [...]struct {
+		input    []string
+		expected []byte
+	}{
+		{
+			input: []string{
+				"hello\n",
+			},
+			expected: []byte("000ahello\n"),
+		}, {
+			input: []string{
+				"hello\n",
+				"world!\n",
+				"foo",
+			},
+			expected: []byte("000ahello\n000bworld!\n0007foo"),
+		}, {
+			input: []string{
+				strings.Repeat("a", pktline.MaxPayloadSize),
+			},
+			expected: []byte(
+				"fff0" + strings.Repeat("a", pktline.MaxPayloadSize)),
+		}, {
+			input: []string{
+				strings.Repeat("a", pktline.MaxPayloadSize),
+				strings.Repeat("b", pktline.MaxPayloadSize),
+			},
+			expected: []byte(
+				"fff0" + strings.Repeat("a", pktline.MaxPayloadSize) +
+					"fff0" + strings.Repeat("b", pktline.MaxPayloadSize)),
+		},
+	} {
+		p := pktlines.New()
+		err := p.AddString(test.input...)
+		c.Assert(err, IsNil, Commentf("input %d = %v", i, test.input))
+
+		obtained, err := ioutil.ReadAll(p.R)
+		c.Assert(err, IsNil, Commentf("input %d = %v", i, test.input))
+
+		c.Assert(obtained, DeepEquals, test.expected,
+			Commentf("input %d = %v", i, test.input))
+	}
+}
+
+func (s *SuitePktLine) TestAddStringErrEmptyPayload(c *C) {
+	for _, input := range [...][]string{
+		[]string{""},
+		[]string{"hello world!", ""},
+		[]string{"", "hello world!"},
+	} {
+		p := pktlines.New()
+		err := p.AddString(input...)
+		c.Assert(err, Equals, pktlines.ErrEmptyPayload)
+	}
+}
+
+func (s *SuitePktLine) TestAddStringErrPayloadTooLong(c *C) {
+	for _, input := range [...][]string{
+		[]string{
+			strings.Repeat("a", pktline.MaxPayloadSize+1),
+		},
+		[]string{
+			"hello world!",
+			strings.Repeat("a", pktline.MaxPayloadSize+1),
+		},
+		[]string{
+			"hello world!",
+			strings.Repeat("a", pktline.MaxPayloadSize+1),
+			"foo",
+		},
+	} {
+		p := pktlines.New()
+		err := p.AddString(input...)
+		c.Assert(err, Equals, pktlines.ErrPayloadTooLong,
+			Commentf("%v\n", input))
+	}
+}
+
+/*
 func (s *SuitePktLine) TestNewFromStrings(c *C) {
 	for _, test := range [...]struct {
 		input    []string
@@ -197,3 +305,4 @@ func ExampleNewFromStrings() {
 	// 000bworld!
 	// 0000
 }
+*/
