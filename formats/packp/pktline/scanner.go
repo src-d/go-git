@@ -110,21 +110,23 @@ func (s *Scanner) readPayloadLen() (int, error) {
 func hexDecode(buf [lenSize]byte) (int, error) {
 	var ret int
 	for i := 0; i < lenSize; i++ {
-		n, err := hexToInt(buf[i])
+		n, err := asciiHexToByte(buf[i])
 		if err != nil {
 			return 0, ErrInvalidPktLen
 		}
-		ret = 16*ret + n
+		ret = 16*ret + int(n)
 	}
 	return ret, nil
 }
 
-func hexToInt(b byte) (int, error) {
+// turns the hexadecimal ascii representation of a byte into its
+// numerical value.  Example: from 'b' to 11 (0xb).
+func asciiHexToByte(b byte) (byte, error) {
 	switch {
 	case b >= '0' && b <= '9':
-		return int(b) - int('0'), nil
+		return b - '0', nil
 	case b >= 'a' && b <= 'f':
-		return int(b) - int('a') + 10, nil
+		return b - 'a' + 10, nil
 	default:
 		return 0, ErrInvalidPktLen
 	}

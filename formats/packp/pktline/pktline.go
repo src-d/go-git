@@ -64,15 +64,17 @@ func add(dst *[]io.Reader, e []byte) error {
 // generation.
 func int16ToHex(n int) []byte {
 	var ret [4]byte
-	ret[0] = int2ToHex(n & 0xf000 >> 12)
-	ret[1] = int2ToHex(n & 0x0f00 >> 8)
-	ret[2] = int2ToHex(n & 0x00f0 >> 4)
-	ret[3] = int2ToHex(n & 0x000f)
+	ret[0] = byteToAsciiHex(byte(n & 0xf000 >> 12))
+	ret[1] = byteToAsciiHex(byte(n & 0x0f00 >> 8))
+	ret[2] = byteToAsciiHex(byte(n & 0x00f0 >> 4))
+	ret[3] = byteToAsciiHex(byte(n & 0x000f))
 
 	return ret[:]
 }
 
-func int2ToHex(n int) byte {
+// turns a byte into its hexadecimal ascii representation.  Example:
+// from 11 (0xb) into 'b'.
+func byteToAsciiHex(n byte) byte {
 	if n < 10 {
 		return byte('0' + n)
 	}
