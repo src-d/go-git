@@ -1,4 +1,4 @@
-// Package pktline implements reading and creating pkt-lines as per
+// Package pktlines implements reading and creating pkt-lines as per
 // https://github.com/git/git/blob/master/Documentation/technical/protocol-common.txt.
 package pktlines
 
@@ -12,7 +12,6 @@ import (
 const (
 	// MaxPayloadSize is the maximum payload size of a pkt-line in bytes.
 	MaxPayloadSize = 65516
-	headLen        = 4
 )
 
 var (
@@ -91,25 +90,25 @@ func checkPayloadLength(n int) error {
 // []byte{'0', '4', 'd', '2'}.
 func asciiHex16(n int) []byte {
 	var ret [4]byte
-	ret[0] = byteToAsciiHex(byte(n & 0xf000 >> 12))
-	ret[1] = byteToAsciiHex(byte(n & 0x0f00 >> 8))
-	ret[2] = byteToAsciiHex(byte(n & 0x00f0 >> 4))
-	ret[3] = byteToAsciiHex(byte(n & 0x000f))
+	ret[0] = byteToASCIIHex(byte(n & 0xf000 >> 12))
+	ret[1] = byteToASCIIHex(byte(n & 0x0f00 >> 8))
+	ret[2] = byteToASCIIHex(byte(n & 0x00f0 >> 4))
+	ret[3] = byteToASCIIHex(byte(n & 0x000f))
 
 	return ret[:]
 }
 
 // turns a byte into its hexadecimal ascii representation.  Example:
 // from 11 (0xb) to 'b'.
-func byteToAsciiHex(n byte) byte {
+func byteToASCIIHex(n byte) byte {
 	if n < 10 {
-		return byte('0' + n)
+		return '0' + n
 	}
 
-	return byte('a' - 10 + n)
+	return 'a' - 10 + n
 }
 
-// AddStrings adds the strings in pp as payloads of a
+// AddString adds the strings in pp as payloads of a
 // corresponding number of pktlines.
 func (p *PktLines) AddString(pp ...string) error {
 	tmp := []io.Reader{p.R}

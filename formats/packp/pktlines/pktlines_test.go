@@ -1,11 +1,12 @@
 package pktlines_test
 
 import (
+	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
-	"gopkg.in/src-d/go-git.v3/formats/packp/pktline"
 	"gopkg.in/src-d/go-git.v4/formats/packp/pktlines"
 
 	. "gopkg.in/check.v1"
@@ -54,18 +55,18 @@ func (s *SuitePktLine) TestAdd(c *C) {
 			expected: []byte("000ahello\n000bworld!\n0007foo"),
 		}, {
 			input: [][]byte{
-				[]byte(strings.Repeat("a", pktline.MaxPayloadSize)),
+				[]byte(strings.Repeat("a", pktlines.MaxPayloadSize)),
 			},
 			expected: []byte(
-				"fff0" + strings.Repeat("a", pktline.MaxPayloadSize)),
+				"fff0" + strings.Repeat("a", pktlines.MaxPayloadSize)),
 		}, {
 			input: [][]byte{
-				[]byte(strings.Repeat("a", pktline.MaxPayloadSize)),
-				[]byte(strings.Repeat("b", pktline.MaxPayloadSize)),
+				[]byte(strings.Repeat("a", pktlines.MaxPayloadSize)),
+				[]byte(strings.Repeat("b", pktlines.MaxPayloadSize)),
 			},
 			expected: []byte(
-				"fff0" + strings.Repeat("a", pktline.MaxPayloadSize) +
-					"fff0" + strings.Repeat("b", pktline.MaxPayloadSize)),
+				"fff0" + strings.Repeat("a", pktlines.MaxPayloadSize) +
+					"fff0" + strings.Repeat("b", pktlines.MaxPayloadSize)),
 		},
 	} {
 		p := pktlines.New()
@@ -106,15 +107,15 @@ func (s *SuitePktLine) TestAddErrEmptyPayload(c *C) {
 func (s *SuitePktLine) TestAddErrPayloadTooLong(c *C) {
 	for _, input := range [...][][]byte{
 		[][]byte{
-			[]byte(strings.Repeat("a", pktline.MaxPayloadSize+1)),
+			[]byte(strings.Repeat("a", pktlines.MaxPayloadSize+1)),
 		},
 		[][]byte{
 			[]byte("hello world!"),
-			[]byte(strings.Repeat("a", pktline.MaxPayloadSize+1)),
+			[]byte(strings.Repeat("a", pktlines.MaxPayloadSize+1)),
 		},
 		[][]byte{
 			[]byte("hello world!"),
-			[]byte(strings.Repeat("a", pktline.MaxPayloadSize+1)),
+			[]byte(strings.Repeat("a", pktlines.MaxPayloadSize+1)),
 			[]byte("foo"),
 		},
 	} {
@@ -144,18 +145,18 @@ func (s *SuitePktLine) TestAddString(c *C) {
 			expected: []byte("000ahello\n000bworld!\n0007foo"),
 		}, {
 			input: []string{
-				strings.Repeat("a", pktline.MaxPayloadSize),
+				strings.Repeat("a", pktlines.MaxPayloadSize),
 			},
 			expected: []byte(
-				"fff0" + strings.Repeat("a", pktline.MaxPayloadSize)),
+				"fff0" + strings.Repeat("a", pktlines.MaxPayloadSize)),
 		}, {
 			input: []string{
-				strings.Repeat("a", pktline.MaxPayloadSize),
-				strings.Repeat("b", pktline.MaxPayloadSize),
+				strings.Repeat("a", pktlines.MaxPayloadSize),
+				strings.Repeat("b", pktlines.MaxPayloadSize),
 			},
 			expected: []byte(
-				"fff0" + strings.Repeat("a", pktline.MaxPayloadSize) +
-					"fff0" + strings.Repeat("b", pktline.MaxPayloadSize)),
+				"fff0" + strings.Repeat("a", pktlines.MaxPayloadSize) +
+					"fff0" + strings.Repeat("b", pktlines.MaxPayloadSize)),
 		},
 	} {
 		p := pktlines.New()
@@ -185,15 +186,15 @@ func (s *SuitePktLine) TestAddStringErrEmptyPayload(c *C) {
 func (s *SuitePktLine) TestAddStringErrPayloadTooLong(c *C) {
 	for _, input := range [...][]string{
 		[]string{
-			strings.Repeat("a", pktline.MaxPayloadSize+1),
+			strings.Repeat("a", pktlines.MaxPayloadSize+1),
 		},
 		[]string{
 			"hello world!",
-			strings.Repeat("a", pktline.MaxPayloadSize+1),
+			strings.Repeat("a", pktlines.MaxPayloadSize+1),
 		},
 		[]string{
 			"hello world!",
-			strings.Repeat("a", pktline.MaxPayloadSize+1),
+			strings.Repeat("a", pktlines.MaxPayloadSize+1),
 			"foo",
 		},
 	} {
@@ -204,105 +205,20 @@ func (s *SuitePktLine) TestAddStringErrPayloadTooLong(c *C) {
 	}
 }
 
-/*
-func (s *SuitePktLine) TestNewFromStrings(c *C) {
-	for _, test := range [...]struct {
-		input    []string
-		expected []byte
-	}{
-		{
-			input:    []string(nil),
-			expected: []byte{},
-		}, {
-			input:    []string{},
-			expected: []byte{},
-		}, {
-			input:    []string{""},
-			expected: []byte("0000"),
-		}, {
-			input:    []string{"hello\n"},
-			expected: []byte("000ahello\n"),
-		}, {
-			input:    []string{"hello\n", "world!\n", "", "foo", ""},
-			expected: []byte("000ahello\n000bworld!\n00000007foo0000"),
-		}, {
-			input: []string{
-				strings.Repeat("a", pktline.MaxPayloadSize),
-			},
-			expected: []byte("fff0" + strings.Repeat("a", pktline.MaxPayloadSize)),
-		},
-	} {
-		r, err := pktline.NewFromStrings(test.input...)
-		c.Assert(err, IsNil)
+func Example() {
+	p := pktlines.New()
 
-		obtained, err := ioutil.ReadAll(r)
-		c.Assert(err, IsNil)
+	// error checks removed for brevity
+	p.Add([]byte("foo\n"), []byte("bar\n"))
+	p.AddString("hello\n", "world!\n")
+	p.AddFlush()
 
-		c.Assert(obtained, DeepEquals, test.expected,
-			Commentf("input = %v\n", test.input))
-	}
-}
+	io.Copy(os.Stdout, p.R)
 
-func (s *SuitePktLine) TestNewFromStringsErrPayloadTooLong(c *C) {
-	for _, input := range [...][]string{
-		[]string{
-			strings.Repeat("a", pktline.MaxPayloadSize+1),
-		},
-		[]string{
-			"hello world!",
-			"",
-			strings.Repeat("a", pktline.MaxPayloadSize+1),
-		},
-		[]string{
-			"hello world!",
-			strings.Repeat("a", pktline.MaxPayloadSize+1),
-			"foo",
-		},
-	} {
-		_, err := pktline.NewFromStrings(input...)
-
-		c.Assert(err, Equals, pktline.ErrPayloadTooLong,
-			Commentf("%v\n", input))
-	}
-}
-
-func ExampleNew() {
-	// These are the payloads we want to turn into pkt-lines,
-	// the empty slice at the end will generate a flush-pkt.
-	payloads := [][]byte{
-		[]byte{'h', 'e', 'l', 'l', 'o', '\n'},
-		[]byte{'w', 'o', 'r', 'l', 'd', '!', '\n'},
-		[]byte{},
-	}
-
-	// Create the pkt-lines, ignoring errors...
-	pktlines, _ := pktline.New(payloads...)
-
-	// Send the raw data to stdout, ignoring errors...
-	_, _ = io.Copy(os.Stdout, pktlines)
-
-	// Output: 000ahello
+	// Output:
+	// 0008foo
+	// 0008bar
+	// 000ahello
 	// 000bworld!
 	// 0000
 }
-
-func ExampleNewFromStrings() {
-	// These are the payloads we want to turn into pkt-lines,
-	// the empty string at the end will generate a flush-pkt.
-	payloads := []string{
-		"hello\n",
-		"world!\n",
-		"",
-	}
-
-	// Create the pkt-lines, ignoring errors...
-	pktlines, _ := pktline.NewFromStrings(payloads...)
-
-	// Send the raw data to stdout, ignoring errors...
-	_, _ = io.Copy(os.Stdout, pktlines)
-
-	// Output: 000ahello
-	// 000bworld!
-	// 0000
-}
-*/
