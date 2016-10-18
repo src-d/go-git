@@ -3,6 +3,7 @@ package fs
 import (
 	"io"
 	"io/ioutil"
+	"strings"
 	"testing"
 
 	. "gopkg.in/check.v1"
@@ -22,6 +23,12 @@ func (s *FilesystemSuite) TestCreate(c *C) {
 
 func (s *FilesystemSuite) TestCreateDepth(c *C) {
 	f, err := s.fs.Create("bar/foo")
+	c.Assert(err, IsNil)
+	c.Assert(f.Filename(), Equals, "bar/foo")
+}
+
+func (s *FilesystemSuite) TestCreateDepthAbsolute(c *C) {
+	f, err := s.fs.Create("/bar/foo")
 	c.Assert(err, IsNil)
 	c.Assert(f.Filename(), Equals, "bar/foo")
 }
@@ -94,6 +101,27 @@ func (s *FilesystemSuite) TestRename(c *C) {
 	bar, err := s.fs.Stat("bar")
 	c.Assert(bar, NotNil)
 	c.Assert(err, IsNil)
+}
+
+func (s *FilesystemSuite) TestTempFile(c *C) {
+	f, err := s.fs.TempFile("", "bar")
+	c.Assert(err, IsNil)
+
+	c.Assert(strings.HasPrefix(f.Filename(), "bar"), Equals, true)
+}
+
+func (s *FilesystemSuite) TestTempFileWithPath(c *C) {
+	f, err := s.fs.TempFile("foo", "bar")
+	c.Assert(err, IsNil)
+
+	c.Assert(strings.HasPrefix(f.Filename(), s.fs.Join("foo", "bar")), Equals, true)
+}
+
+func (s *FilesystemSuite) TestTempFileFullWithPath(c *C) {
+	f, err := s.fs.TempFile("/foo", "bar")
+	c.Assert(err, IsNil)
+
+	c.Assert(strings.HasPrefix(f.Filename(), s.fs.Join("foo", "bar")), Equals, true)
 }
 
 func (s *FilesystemSuite) TestOpenAndStat(c *C) {
