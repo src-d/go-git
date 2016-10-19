@@ -6,47 +6,41 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/src-d/go-git.v4/clients/common"
 	"gopkg.in/src-d/go-git.v4/core"
 	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 )
 
 // The state of the parser: items are detected from the scanner s and
 // get decoded and stored in the corresponding sections of ret.
-type parser struct {
+type Decoder struct {
 	s     *pktline.Scanner // a pkt-line scanner from the output of a git-upload-pack command
 	line  []byte           // current pkt-line contents, use parser.nextLine() to make it advance
 	nLine int              // current pkt-line number for debugging, begins at 1
 	hash  core.Hash        // last hash read
 	err   error            // sticky error, use the parser.error() method to fill this out
-	ret   *Contents        // parsed data
+	ret   *AdvRefs         // parsed data
 }
 
-func newParser(r io.Reader) *parser {
-	return &parser{
+func NewDecoder(r io.Reader) *Decoder {
+	return &Decoder{
 		s: pktline.NewScanner(r),
-		ret: &Contents{
-			Caps:     common.NewCapabilities(),
-			Refs:     make(map[string]core.Hash),
-			Peeled:   make(map[string]core.Hash),
-			Shallows: []core.Hash{},
-		},
 	}
 }
 
-// Parses the input until state is nil
-func (p *parser) run() (*Contents, error) {
-	for state := parseFirstHash; state != nil; {
-		state = state(p)
+func (d *Decoder) Decode(ar *AdvRefs) error {
+	d.ret = ar
+
+	for state := decodeFirstHash; state != nil; {
+		state = state(d)
 	}
 
-	return p.ret, p.err
+	return d.err
 }
 
-type parserStateFn func(*parser) parserStateFn
+type decoderStateFn func(*Decoder) decoderStateFn
 
 // fills out the parser stiky error
-func (p *parser) error(format string, a ...interface{}) {
+func (p *Decoder) error(format string, a ...interface{}) {
 	p.err = fmt.Errorf("pkt-line %d: %s", p.nLine,
 		fmt.Sprintf(format, a...))
 }
@@ -55,7 +49,7 @@ func (p *parser) error(format string, a ...interface{}) {
 // and increments p.nLine.  A successful invocation returns true,
 // otherwise, false is returned and the sticky error is filled out
 // accordingly.  Trims eols at the end of the payloads.
-func (p *parser) nextLine() bool {
+func (p *Decoder) nextLine() bool {
 	p.nLine++
 
 	if !p.s.Scan() {
@@ -77,7 +71,7 @@ func (p *parser) nextLine() bool {
 // If the first hash is zero, then a no-refs is comming. Otherwise, a
 // list-of-refs is comming, and the hash will be followed by the first
 // advertised ref.
-func parseFirstHash(p *parser) parserStateFn {
+func decodeFirstHash(p *Decoder) decoderStateFn {
 	if ok := p.nextLine(); !ok {
 		return nil
 	}
@@ -95,13 +89,14 @@ func parseFirstHash(p *parser) parserStateFn {
 	p.line = p.line[hashSize:]
 
 	if p.hash.IsZero() {
-		return parseSkipNoRefs
+		return decodeSkipNoRefs
 	}
-	return parseFirstRef
+
+	return decodeFirstRef
 }
 
 // skips SP "capabilities^{}" NUL
-func parseSkipNoRefs(p *parser) parserStateFn {
+func decodeSkipNoRefs(p *Decoder) decoderStateFn {
 	if len(p.line) < len(noHeadMark) {
 		p.error("too short zero-id ref")
 		return nil
@@ -114,11 +109,11 @@ func parseSkipNoRefs(p *parser) parserStateFn {
 
 	p.line = p.line[len(noHeadMark):]
 
-	return parseCaps
+	return decodeCaps
 }
 
 // SP refname NULL
-func parseFirstRef(l *parser) parserStateFn {
+func decodeFirstRef(l *Decoder) decoderStateFn {
 	if len(l.line) < 3 {
 		l.error("line too short after hash")
 		return nil
@@ -144,12 +139,12 @@ func parseFirstRef(l *parser) parserStateFn {
 		l.ret.Refs[string(ref)] = l.hash
 	}
 
-	return parseCaps
+	return decodeCaps
 }
 
-func parseCaps(p *parser) parserStateFn {
+func decodeCaps(p *Decoder) decoderStateFn {
 	if len(p.line) == 0 {
-		return parseOtherRefs
+		return decodeOtherRefs
 	}
 
 	for _, c := range bytes.Split(p.line, sp) {
@@ -157,7 +152,7 @@ func parseCaps(p *parser) parserStateFn {
 		p.ret.Caps.Add(name, values...)
 	}
 
-	return parseOtherRefs
+	return decodeOtherRefs
 }
 
 // capabilities are a single string or a name=value.
@@ -174,14 +169,14 @@ func readCapability(data []byte) (name string, values []string) {
 
 // the refs are either tips (obj-id SP refname) or a peeled (obj-id SP refname^{}).
 // If there are no refs, then there might be a shallow or flush-ptk.
-func parseOtherRefs(p *parser) parserStateFn {
+func decodeOtherRefs(p *Decoder) decoderStateFn {
 	if ok := p.nextLine(); !ok {
 		return nil
 	}
 
 	if bytes.HasPrefix(p.line, shallow) {
 		p.line = bytes.TrimPrefix(p.line, shallow)
-		return parseHalfReadShallow
+		return decodeHalfReadShallow
 	}
 
 	if len(p.line) == 0 {
@@ -201,7 +196,7 @@ func parseOtherRefs(p *parser) parserStateFn {
 	}
 	saveTo[ref] = hash
 
-	return parseOtherRefs
+	return decodeOtherRefs
 }
 
 // reads a ref-name
@@ -218,7 +213,7 @@ func readRef(data []byte) (string, core.Hash, error) {
 }
 
 // reads a hash from a shallow pkt-line
-func parseHalfReadShallow(p *parser) parserStateFn {
+func decodeHalfReadShallow(p *Decoder) decoderStateFn {
 	if len(p.line) != hashSize {
 		p.error(fmt.Sprintf(
 			"malformed shallow hash: wrong length, expected 40 bytes, read %d bytes",
@@ -235,11 +230,11 @@ func parseHalfReadShallow(p *parser) parserStateFn {
 
 	p.ret.Shallows = append(p.ret.Shallows, h)
 
-	return parseShallow
+	return decodeShallow
 }
 
 // keeps reading shallows until a flush-pkt is found
-func parseShallow(p *parser) parserStateFn {
+func decodeShallow(p *Decoder) decoderStateFn {
 	if ok := p.nextLine(); !ok {
 		return nil
 	}
@@ -254,5 +249,5 @@ func parseShallow(p *parser) parserStateFn {
 	}
 	p.line = bytes.TrimPrefix(p.line, shallow)
 
-	return parseHalfReadShallow
+	return decodeHalfReadShallow
 }

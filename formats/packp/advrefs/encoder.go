@@ -14,7 +14,7 @@ import (
 // payloads that will get turned into real pkt-lines and made accesible
 // through the ret field.
 type Encoder struct {
-	data *Contents // data to encode
+	data *AdvRefs  // data to encode
 	w    io.Writer // where to write the encoded data
 	err  error     // sticky error
 }
@@ -26,8 +26,9 @@ func NewEncoder(w io.Writer) *Encoder {
 }
 
 // Writes the advrefs contents, as pkt-lines, to the writer in e.
-func (e *Encoder) Encode(data *Contents) error {
+func (e *Encoder) Encode(data *AdvRefs) error {
 	e.data = data
+
 	for state := encodeFirstLine; state != nil; {
 		state = state(e)
 	}

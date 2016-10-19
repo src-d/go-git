@@ -1,11 +1,9 @@
-// Package advrefs implements reading and generating advertised-refs
+// Package advrefs implements encoding and decoding advertised-refs
 // messages from a git-upload-pack command, as explained in
 // https://github.com/git/git/blob/master/Documentation/technical/pack-protocol.txt.
 package advrefs
 
 import (
-	"io"
-
 	"gopkg.in/src-d/go-git.v4/clients/common"
 	"gopkg.in/src-d/go-git.v4/core"
 )
@@ -26,8 +24,9 @@ var (
 )
 
 // Contents values represent the information transmitted on an
-// advertised-refs message.  Values from this type are zero-value safe.
-type Contents struct {
+// advertised-refs message.  Values from this type are not zero-value
+// safe, use the New function instead.
+type AdvRefs struct {
 	Head     *core.Hash
 	Caps     *common.Capabilities
 	Refs     map[string]core.Hash
@@ -35,8 +34,12 @@ type Contents struct {
 	Shallows []core.Hash
 }
 
-// Parse reads an advertised-refs message and returns its contents.
-func Parse(r io.Reader) (*Contents, error) {
-	p := newParser(r)
-	return p.run()
+// NewAdvRefs returns a pointer to a new AdvRefs value, ready to be used.
+func NewAdvRefs() *AdvRefs {
+	return &AdvRefs{
+		Caps:     common.NewCapabilities(),
+		Refs:     map[string]core.Hash{},
+		Peeled:   map[string]core.Hash{},
+		Shallows: []core.Hash{},
+	}
 }

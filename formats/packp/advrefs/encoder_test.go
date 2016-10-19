@@ -33,7 +33,7 @@ func bytesFromReader(c *C, r io.Reader) []byte {
 }
 
 func (s *SuiteAdvRefs) TestEncodeZeroValue(c *C) {
-	ar := &advrefs.Contents{}
+	ar := &advrefs.AdvRefs{}
 
 	expected := pktlines(c,
 		[]byte("0000000000000000000000000000000000000000 capabilities^{}\x00\n"),
@@ -53,7 +53,7 @@ func (s *SuiteAdvRefs) TestEncodeZeroValue(c *C) {
 
 func (s *SuiteAdvRefs) TestEncodeHead(c *C) {
 	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
-	ar := &advrefs.Contents{
+	ar := &advrefs.AdvRefs{
 		Head: &hash,
 	}
 
@@ -78,7 +78,7 @@ func (s *SuiteAdvRefs) TestEncodeCapsNoHead(c *C) {
 	caps.Add("symref", "HEAD:/refs/heads/master")
 	caps.Add("ofs-delta")
 	caps.Add("multi_ack")
-	ar := &advrefs.Contents{
+	ar := &advrefs.AdvRefs{
 		Caps: caps,
 	}
 
@@ -104,7 +104,7 @@ func (s *SuiteAdvRefs) TestEncodeCapsWithHead(c *C) {
 	caps.Add("symref", "HEAD:/refs/heads/master")
 	caps.Add("ofs-delta")
 	caps.Add("multi_ack")
-	ar := &advrefs.Contents{
+	ar := &advrefs.AdvRefs{
 		Head: &hash,
 		Caps: caps,
 	}
@@ -133,7 +133,7 @@ func (s *SuiteAdvRefs) TestEncodeRefs(c *C) {
 		"refs/tags/v2.6.13-tree": core.NewHash("2222222222222222222222222222222222222222"),
 		"refs/tags/v2.6.11-tree": core.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
 	}
-	ar := &advrefs.Contents{
+	ar := &advrefs.AdvRefs{
 		Refs: refs,
 	}
 
@@ -170,7 +170,7 @@ func (s *SuiteAdvRefs) TestEncodePeeled(c *C) {
 		"refs/tags/v2.7.13-tree": core.NewHash("4444444444444444444444444444444444444444"),
 		"refs/tags/v2.6.12-tree": core.NewHash("5555555555555555555555555555555555555555"),
 	}
-	ar := &advrefs.Contents{
+	ar := &advrefs.AdvRefs{
 		Refs:   refs,
 		Peeled: peeled,
 	}
@@ -205,7 +205,7 @@ func (s *SuiteAdvRefs) TestEncodeShallow(c *C) {
 		core.NewHash("3333333333333333333333333333333333333333"),
 		core.NewHash("2222222222222222222222222222222222222222"),
 	}
-	ar := &advrefs.Contents{
+	ar := &advrefs.AdvRefs{
 		Shallows: shallows,
 	}
 
@@ -257,7 +257,7 @@ func (s *SuiteAdvRefs) TestEncodeAll(c *C) {
 		core.NewHash("2222222222222222222222222222222222222222"),
 	}
 
-	ar := &advrefs.Contents{
+	ar := &advrefs.AdvRefs{
 		Head:     &hash,
 		Caps:     caps,
 		Refs:     refs,
@@ -296,7 +296,7 @@ func (s *SuiteAdvRefs) TestEncodeErrorTooLong(c *C) {
 	refs := map[string]core.Hash{
 		strings.Repeat("a", pktline.MaxPayloadSize): core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
 	}
-	ar := &advrefs.Contents{
+	ar := &advrefs.AdvRefs{
 		Refs: refs,
 	}
 
