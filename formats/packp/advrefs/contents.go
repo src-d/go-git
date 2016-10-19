@@ -6,22 +6,23 @@ package advrefs
 import (
 	"io"
 
-	"gopkg.in/src-d/go-git.v3/clients/common"
-	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v4/clients/common"
+	"gopkg.in/src-d/go-git.v4/core"
 )
 
 const (
 	hashSize = 40
+	head     = "HEAD"
+	noHead   = "capabilities^{}"
 )
 
 var (
-	noRefText = []byte(" capabilities^{}\x00")
-	peeled    = []byte("^{}")
-	shallow   = []byte("shallow ")
-	eol       = []byte("\n")
-	null      = []byte("\x00")
-	head      = []byte("HEAD")
-	sp        = []byte(" ")
+	sp         = []byte(" ")
+	null       = []byte("\x00")
+	eol        = []byte("\n")
+	peeled     = []byte("^{}")
+	shallow    = []byte("shallow ")
+	noHeadMark = []byte(" capabilities^{}\x00")
 )
 
 // Contents values represent the information transmitted on an
@@ -38,10 +39,4 @@ type Contents struct {
 func Parse(r io.Reader) (*Contents, error) {
 	p := newParser(r)
 	return p.run()
-}
-
-// Encode returns a reader for the Contents encoded as an advertised-refs message.
-func (ar *Contents) Encode() (io.Reader, error) {
-	e := newEncoder(ar)
-	return e.run()
 }

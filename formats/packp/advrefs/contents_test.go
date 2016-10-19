@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/src-d/go-git.v3/clients/common"
-	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/formats/packp/advrefs"
-	"gopkg.in/src-d/go-git.v3/formats/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/clients/common"
+	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/formats/packp/advrefs"
+	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 
 	. "gopkg.in/check.v1"
 )
@@ -90,7 +90,7 @@ func (s *SuiteAdvRefs) TestParseEncode(c *C) {
 			tee := io.TeeReader(r, &input)
 			inputCopy, err := ioutil.ReadAll(tee)
 			c.Assert(err, IsNil, Commentf("input = %v\n", test.input))
-			comment = Commentf("input = %s\n", string(inputCopy))
+			comment = Commentf("input = %q\n", string(inputCopy))
 		}
 
 		var expected []byte
@@ -109,10 +109,11 @@ func (s *SuiteAdvRefs) TestParseEncode(c *C) {
 
 		var obtained []byte
 		{
-			r, err := ar.Encode()
+			var buf bytes.Buffer
+			e := advrefs.NewEncoder(&buf)
+			err := e.Encode(ar)
 			c.Assert(err, IsNil)
-			obtained, err = ioutil.ReadAll(r)
-			c.Assert(err, IsNil, comment)
+			obtained = buf.Bytes()
 		}
 
 		c.Assert(obtained, DeepEquals, expected, comment)
@@ -171,10 +172,11 @@ func ExampleContents_Encode() {
 		Peeled:   peeled,
 		Shallows: shallows,
 	}
-	r, _ := ar.Encode()
 
-	raw, _ := ioutil.ReadAll(r)
-	fmt.Printf("%q", string(raw))
+	var buf bytes.Buffer
+	e := advrefs.NewEncoder(&buf)
+	_ = e.Encode(ar)
+	fmt.Printf("%q", buf.String())
 	// Output:
 	// "00651111111111111111111111111111111111111111 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n003f2222222222222222222222222222222222222222 refs/heads/master\n003a3333333333333333333333333333333333333333 refs/tags/v1\n003d4444444444444444444444444444444444444444 refs/tags/v1^{}\n0035shallow 5555555555555555555555555555555555555555\n0000"
 }

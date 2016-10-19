@@ -1,14 +1,15 @@
 package advrefs_test
 
 import (
+	"bytes"
 	"io"
 	"io/ioutil"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v3/clients/common"
-	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/formats/packp/advrefs"
-	"gopkg.in/src-d/go-git.v3/formats/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/clients/common"
+	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/formats/packp/advrefs"
+	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 
 	. "gopkg.in/check.v1"
 )
@@ -39,9 +40,11 @@ func (s *SuiteAdvRefs) TestEncodeZeroValue(c *C) {
 		[]byte(""),
 	)
 
-	r, err := ar.Encode()
+	var buf bytes.Buffer
+	e := advrefs.NewEncoder(&buf)
+	err := e.Encode(ar)
 	c.Assert(err, IsNil)
-	obtained := bytesFromReader(c, r)
+	obtained := buf.Bytes()
 
 	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
 
@@ -59,9 +62,11 @@ func (s *SuiteAdvRefs) TestEncodeHead(c *C) {
 		[]byte(""),
 	)
 
-	r, err := ar.Encode()
+	var buf bytes.Buffer
+	e := advrefs.NewEncoder(&buf)
+	err := e.Encode(ar)
 	c.Assert(err, IsNil)
-	obtained := bytesFromReader(c, r)
+	obtained := buf.Bytes()
 
 	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
 
@@ -82,9 +87,11 @@ func (s *SuiteAdvRefs) TestEncodeCapsNoHead(c *C) {
 		[]byte(""),
 	)
 
-	r, err := ar.Encode()
+	var buf bytes.Buffer
+	e := advrefs.NewEncoder(&buf)
+	err := e.Encode(ar)
 	c.Assert(err, IsNil)
-	obtained := bytesFromReader(c, r)
+	obtained := buf.Bytes()
 
 	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
 
@@ -107,9 +114,11 @@ func (s *SuiteAdvRefs) TestEncodeCapsWithHead(c *C) {
 		[]byte(""),
 	)
 
-	r, err := ar.Encode()
+	var buf bytes.Buffer
+	e := advrefs.NewEncoder(&buf)
+	err := e.Encode(ar)
 	c.Assert(err, IsNil)
-	obtained := bytesFromReader(c, r)
+	obtained := buf.Bytes()
 
 	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
 
@@ -138,9 +147,11 @@ func (s *SuiteAdvRefs) TestEncodeRefs(c *C) {
 		[]byte(""),
 	)
 
-	r, err := ar.Encode()
+	var buf bytes.Buffer
+	e := advrefs.NewEncoder(&buf)
+	err := e.Encode(ar)
 	c.Assert(err, IsNil)
-	obtained := bytesFromReader(c, r)
+	obtained := buf.Bytes()
 
 	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
 
@@ -176,9 +187,11 @@ func (s *SuiteAdvRefs) TestEncodePeeled(c *C) {
 		[]byte(""),
 	)
 
-	r, err := ar.Encode()
+	var buf bytes.Buffer
+	e := advrefs.NewEncoder(&buf)
+	err := e.Encode(ar)
 	c.Assert(err, IsNil)
-	obtained := bytesFromReader(c, r)
+	obtained := buf.Bytes()
 
 	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
 
@@ -205,9 +218,11 @@ func (s *SuiteAdvRefs) TestEncodeShallow(c *C) {
 		[]byte(""),
 	)
 
-	r, err := ar.Encode()
+	var buf bytes.Buffer
+	e := advrefs.NewEncoder(&buf)
+	err := e.Encode(ar)
 	c.Assert(err, IsNil)
-	obtained := bytesFromReader(c, r)
+	obtained := buf.Bytes()
 
 	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
 
@@ -266,9 +281,11 @@ func (s *SuiteAdvRefs) TestEncodeAll(c *C) {
 		[]byte(""),
 	)
 
-	r, err := ar.Encode()
+	var buf bytes.Buffer
+	e := advrefs.NewEncoder(&buf)
+	err := e.Encode(ar)
 	c.Assert(err, IsNil)
-	obtained := bytesFromReader(c, r)
+	obtained := buf.Bytes()
 
 	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
 
@@ -283,6 +300,8 @@ func (s *SuiteAdvRefs) TestEncodeErrorTooLong(c *C) {
 		Refs: refs,
 	}
 
-	_, err := ar.Encode()
+	var buf bytes.Buffer
+	e := advrefs.NewEncoder(&buf)
+	err := e.Encode(ar)
 	c.Assert(err, ErrorMatches, ".*payload is too long.*")
 }

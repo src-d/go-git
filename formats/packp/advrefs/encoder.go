@@ -1,90 +1,114 @@
 package advrefs
 
 import (
+	"fmt"
 	"io"
 	"sort"
 
-	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/formats/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 )
 
 // The state of the encoder.  The provided Contents is used as input,
 // then the run method goes over every field, adding the corresponding
 // payloads that will get turned into real pkt-lines and made accesible
 // through the ret field.
-type encoder struct {
-	contents *Contents // input data
-	payloads [][]byte  // the payloads that will be used for each pkt-line
-	err      error     // sticky error
-	ret      io.Reader // the whole advertised refs message (a sequence of pkt-lines)
+type Encoder struct {
+	data *Contents // data to encode
+	w    io.Writer // where to write the encoded data
+	err  error     // sticky error
 }
 
-func newEncoder(ar *Contents) *encoder {
-	return &encoder{
-		contents: ar,
-		payloads: [][]byte{},
+func NewEncoder(w io.Writer) *Encoder {
+	return &Encoder{
+		w: w,
 	}
 }
 
-// Encodes the contents into the corresponding pkt-lines.
-func (e *encoder) run() (io.Reader, error) {
+// Writes the advrefs contents, as pkt-lines, to the writer in e.
+func (e *Encoder) Encode(data *Contents) error {
+	e.data = data
 	for state := encodeFirstLine; state != nil; {
 		state = state(e)
 	}
 
-	if e.err != nil {
-		return nil, e.err
-	}
-
-	return e.ret, nil
+	return e.err
 }
 
-type encoderStateFn func(*encoder) encoderStateFn
-
-func (e *encoder) addPayload(bb ...[]byte) {
-	p := []byte{}
-	for _, b := range bb {
-		p = append(p, b...)
-	}
-	e.payloads = append(e.payloads, p)
-}
+type encoderStateFn func(*Encoder) encoderStateFn
 
 // Adds the first pkt-line payload: head hash, head ref and capabilities.
 // Also handle the special case when no HEAD ref is found.
-func encodeFirstLine(e *encoder) encoderStateFn {
-	caps := []byte{}
-	if e.contents.Caps != nil {
-		e.contents.Caps.Sort()
-		caps = []byte(e.contents.Caps.String())
+func encodeFirstLine(e *Encoder) encoderStateFn {
+	var hash string
+	var headRef string
+	if e.data.Head == nil {
+		hash = core.ZeroHash.String()
+		headRef = noHead
+	} else {
+		hash = e.data.Head.String()
+		headRef = head
 	}
 
-	if e.contents.Head == nil {
-		hash := []byte(core.ZeroHash.String())
-		e.addPayload(hash, noRefText, caps, eol)
-
-		return encodeRefs
+	var caps string
+	if e.data.Caps != nil {
+		e.data.Caps.Sort()
+		caps = e.data.Caps.String()
 	}
 
-	hash := []byte(e.contents.Head.String())
-	e.addPayload(hash, sp, head, null, caps, eol)
+	payload := fmt.Sprintf("%s %s\x00%s\n", hash, string(headRef), caps)
+	var p pktline.PktLine
+	p, e.err = pktline.NewFromStrings(payload)
+	if e.err != nil {
+		return nil
+	}
+
+	if _, e.err = io.Copy(e.w, p); e.err != nil {
+		return nil
+	}
 
 	return encodeRefs
 }
 
 // adds the (sorted) refs: hash SP refname EOL
 // and their peeled refs if any.
-func encodeRefs(e *encoder) encoderStateFn {
-	refs := sortRefs(e.contents.Refs)
+func encodeRefs(e *Encoder) encoderStateFn {
+	refs := sortRefs(e.data.Refs)
 	for _, r := range refs {
-		h, _ := e.contents.Refs[r]
-		hash := []byte(h.String())
-		refname := []byte(r)
-		e.addPayload(hash, sp, refname, eol)
+		h, _ := e.data.Refs[r]
+		hash := h.String()
+		n := len(hash) + len(sp) + len(r) + len(eol)
+		payload := make([]byte, n)
+		nw := copy(payload, hash)
+		nw += copy(payload[nw:], sp)
+		nw += copy(payload[nw:], r)
+		nw += copy(payload[nw:], eol)
+		var p pktline.PktLine
+		p, e.err = pktline.New(payload)
+		if e.err != nil {
+			return nil
+		}
+		if _, e.err = io.Copy(e.w, p); e.err != nil {
+			return nil
+		}
 
-		if h, ok := e.contents.Peeled[r]; ok {
-			hash = []byte(h.String())
-			refname = []byte(r)
-			e.addPayload(hash, sp, refname, peeled, eol)
+		if h, ok := e.data.Peeled[r]; ok {
+			hash = h.String()
+			n := len(hash) + len(sp) + len(r) + len(peeled) + len(eol)
+			payload := make([]byte, n)
+			nw := copy(payload, hash)
+			nw += copy(payload[nw:], sp)
+			nw += copy(payload[nw:], r)
+			nw += copy(payload[nw:], peeled)
+			nw += copy(payload[nw:], eol)
+			var p pktline.PktLine
+			p, e.err = pktline.New(payload)
+			if e.err != nil {
+				return nil
+			}
+			if _, e.err = io.Copy(e.w, p); e.err != nil {
+				return nil
+			}
 		}
 	}
 
@@ -102,10 +126,22 @@ func sortRefs(m map[string]core.Hash) []string {
 }
 
 // adds the (sorted) shallows: "shallow" SP hash EOL
-func encodeShallow(e *encoder) encoderStateFn {
-	sorted := sortShallows(e.contents.Shallows)
+func encodeShallow(e *Encoder) encoderStateFn {
+	sorted := sortShallows(e.data.Shallows)
 	for _, hash := range sorted {
-		e.addPayload(shallow, []byte(hash), eol)
+		n := len(shallow) + len(hash) + len(eol)
+		payload := make([]byte, n)
+		nw := copy(payload, shallow)
+		nw += copy(payload[nw:], hash)
+		nw += copy(payload[nw:], eol)
+		var p pktline.PktLine
+		p, e.err = pktline.New(payload)
+		if e.err != nil {
+			return nil
+		}
+		if _, e.err = io.Copy(e.w, p); e.err != nil {
+			return nil
+		}
 	}
 
 	return encodeFlush
@@ -121,15 +157,11 @@ func sortShallows(c []core.Hash) []string {
 	return ret
 }
 
-func encodeFlush(e *encoder) encoderStateFn {
-	e.addPayload([]byte{})
-
-	return encodePayloads
-}
-
-// encode all payloads as pkt-lines
-func encodePayloads(e *encoder) encoderStateFn {
-	e.ret, e.err = pktline.New(e.payloads...)
+func encodeFlush(e *Encoder) encoderStateFn {
+	p, _ := pktline.New([]byte{})
+	if _, e.err = io.Copy(e.w, p); e.err != nil {
+		return nil
+	}
 
 	return nil
 }

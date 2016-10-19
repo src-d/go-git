@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/core"
@@ -95,6 +96,10 @@ func NewCapabilities() *Capabilities {
 	}
 }
 
+func (c *Capabilities) IsEmpty() bool {
+	return len(c.o) == 0
+}
+
 // Decode decodes a string
 func (c *Capabilities) Decode(raw string) {
 	params := strings.Split(raw, " ")
@@ -162,6 +167,11 @@ func (c *Capabilities) SymbolicReference(sym string) string {
 	}
 
 	return ""
+}
+
+// Sorts capabilities in increasing order of their name
+func (c *Capabilities) Sort() {
+	sort.Strings(c.o)
 }
 
 func (c *Capabilities) String() string {

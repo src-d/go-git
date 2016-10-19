@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/src-d/go-git.v3/clients/common"
-	"gopkg.in/src-d/go-git.v3/core"
-	"gopkg.in/src-d/go-git.v3/formats/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/clients/common"
+	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 )
 
 // The state of the parser: items are detected from the scanner s and
@@ -102,18 +102,17 @@ func parseFirstHash(p *parser) parserStateFn {
 
 // skips SP "capabilities^{}" NUL
 func parseSkipNoRefs(p *parser) parserStateFn {
-	if len(p.line) < len(noRefText) {
+	if len(p.line) < len(noHeadMark) {
 		p.error("too short zero-id ref")
 		return nil
 	}
 
-	toSkip := p.line[:len(noRefText)]
-	if !bytes.Equal(toSkip, noRefText) {
+	if !bytes.HasPrefix(p.line, noHeadMark) {
 		p.error("malformed zero-id ref")
 		return nil
 	}
 
-	p.line = p.line[len(noRefText):]
+	p.line = p.line[len(noHeadMark):]
 
 	return parseCaps
 }
@@ -139,7 +138,7 @@ func parseFirstRef(l *parser) parserStateFn {
 	ref := chunks[0]
 	l.line = chunks[1]
 
-	if bytes.Equal(ref, head) {
+	if bytes.Equal(ref, []byte(head)) {
 		l.ret.Head = &l.hash
 	} else {
 		l.ret.Refs[string(ref)] = l.hash
