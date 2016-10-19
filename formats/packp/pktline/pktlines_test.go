@@ -1,4 +1,4 @@
-package pktlines_test
+package pktline_test
 
 import (
 	"io"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/src-d/go-git.v4/formats/packp/pktlines"
+	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 
 	. "gopkg.in/check.v1"
 )
@@ -20,7 +20,7 @@ type SuitePktLine struct {
 var _ = Suite(&SuitePktLine{})
 
 func (s *SuitePktLine) TestNewIsEmpty(c *C) {
-	p := pktlines.New()
+	p := pktline.New()
 
 	b, err := ioutil.ReadAll(p.R)
 	c.Assert(err, IsNil)
@@ -28,7 +28,7 @@ func (s *SuitePktLine) TestNewIsEmpty(c *C) {
 }
 
 func (s *SuitePktLine) TestAddFlush(c *C) {
-	p := pktlines.New()
+	p := pktline.New()
 	p.AddFlush()
 
 	b, err := ioutil.ReadAll(p.R)
@@ -55,21 +55,21 @@ func (s *SuitePktLine) TestAdd(c *C) {
 			expected: []byte("000ahello\n000bworld!\n0007foo"),
 		}, {
 			input: [][]byte{
-				[]byte(strings.Repeat("a", pktlines.MaxPayloadSize)),
+				[]byte(strings.Repeat("a", pktline.MaxPayloadSize)),
 			},
 			expected: []byte(
-				"fff0" + strings.Repeat("a", pktlines.MaxPayloadSize)),
+				"fff0" + strings.Repeat("a", pktline.MaxPayloadSize)),
 		}, {
 			input: [][]byte{
-				[]byte(strings.Repeat("a", pktlines.MaxPayloadSize)),
-				[]byte(strings.Repeat("b", pktlines.MaxPayloadSize)),
+				[]byte(strings.Repeat("a", pktline.MaxPayloadSize)),
+				[]byte(strings.Repeat("b", pktline.MaxPayloadSize)),
 			},
 			expected: []byte(
-				"fff0" + strings.Repeat("a", pktlines.MaxPayloadSize) +
-					"fff0" + strings.Repeat("b", pktlines.MaxPayloadSize)),
+				"fff0" + strings.Repeat("a", pktline.MaxPayloadSize) +
+					"fff0" + strings.Repeat("b", pktline.MaxPayloadSize)),
 		},
 	} {
-		p := pktlines.New()
+		p := pktline.New()
 		err := p.Add(test.input...)
 		c.Assert(err, IsNil, Commentf("input %d = %v", i, test.input))
 
@@ -98,30 +98,30 @@ func (s *SuitePktLine) TestAddErrEmptyPayload(c *C) {
 			[]byte("hello world!"),
 		},
 	} {
-		p := pktlines.New()
+		p := pktline.New()
 		err := p.Add(input...)
-		c.Assert(err, Equals, pktlines.ErrEmptyPayload)
+		c.Assert(err, Equals, pktline.ErrEmptyPayload)
 	}
 }
 
 func (s *SuitePktLine) TestAddErrPayloadTooLong(c *C) {
 	for _, input := range [...][][]byte{
 		[][]byte{
-			[]byte(strings.Repeat("a", pktlines.MaxPayloadSize+1)),
+			[]byte(strings.Repeat("a", pktline.MaxPayloadSize+1)),
 		},
 		[][]byte{
 			[]byte("hello world!"),
-			[]byte(strings.Repeat("a", pktlines.MaxPayloadSize+1)),
+			[]byte(strings.Repeat("a", pktline.MaxPayloadSize+1)),
 		},
 		[][]byte{
 			[]byte("hello world!"),
-			[]byte(strings.Repeat("a", pktlines.MaxPayloadSize+1)),
+			[]byte(strings.Repeat("a", pktline.MaxPayloadSize+1)),
 			[]byte("foo"),
 		},
 	} {
-		p := pktlines.New()
+		p := pktline.New()
 		err := p.Add(input...)
-		c.Assert(err, Equals, pktlines.ErrPayloadTooLong,
+		c.Assert(err, Equals, pktline.ErrPayloadTooLong,
 			Commentf("%v\n", input))
 	}
 }
@@ -145,21 +145,21 @@ func (s *SuitePktLine) TestAddString(c *C) {
 			expected: []byte("000ahello\n000bworld!\n0007foo"),
 		}, {
 			input: []string{
-				strings.Repeat("a", pktlines.MaxPayloadSize),
+				strings.Repeat("a", pktline.MaxPayloadSize),
 			},
 			expected: []byte(
-				"fff0" + strings.Repeat("a", pktlines.MaxPayloadSize)),
+				"fff0" + strings.Repeat("a", pktline.MaxPayloadSize)),
 		}, {
 			input: []string{
-				strings.Repeat("a", pktlines.MaxPayloadSize),
-				strings.Repeat("b", pktlines.MaxPayloadSize),
+				strings.Repeat("a", pktline.MaxPayloadSize),
+				strings.Repeat("b", pktline.MaxPayloadSize),
 			},
 			expected: []byte(
-				"fff0" + strings.Repeat("a", pktlines.MaxPayloadSize) +
-					"fff0" + strings.Repeat("b", pktlines.MaxPayloadSize)),
+				"fff0" + strings.Repeat("a", pktline.MaxPayloadSize) +
+					"fff0" + strings.Repeat("b", pktline.MaxPayloadSize)),
 		},
 	} {
-		p := pktlines.New()
+		p := pktline.New()
 		err := p.AddString(test.input...)
 		c.Assert(err, IsNil, Commentf("input %d = %v", i, test.input))
 
@@ -177,36 +177,36 @@ func (s *SuitePktLine) TestAddStringErrEmptyPayload(c *C) {
 		[]string{"hello world!", ""},
 		[]string{"", "hello world!"},
 	} {
-		p := pktlines.New()
+		p := pktline.New()
 		err := p.AddString(input...)
-		c.Assert(err, Equals, pktlines.ErrEmptyPayload)
+		c.Assert(err, Equals, pktline.ErrEmptyPayload)
 	}
 }
 
 func (s *SuitePktLine) TestAddStringErrPayloadTooLong(c *C) {
 	for _, input := range [...][]string{
 		[]string{
-			strings.Repeat("a", pktlines.MaxPayloadSize+1),
+			strings.Repeat("a", pktline.MaxPayloadSize+1),
 		},
 		[]string{
 			"hello world!",
-			strings.Repeat("a", pktlines.MaxPayloadSize+1),
+			strings.Repeat("a", pktline.MaxPayloadSize+1),
 		},
 		[]string{
 			"hello world!",
-			strings.Repeat("a", pktlines.MaxPayloadSize+1),
+			strings.Repeat("a", pktline.MaxPayloadSize+1),
 			"foo",
 		},
 	} {
-		p := pktlines.New()
+		p := pktline.New()
 		err := p.AddString(input...)
-		c.Assert(err, Equals, pktlines.ErrPayloadTooLong,
+		c.Assert(err, Equals, pktline.ErrPayloadTooLong,
 			Commentf("%v\n", input))
 	}
 }
 
 func Example() {
-	p := pktlines.New()
+	p := pktline.New()
 
 	// error checks removed for brevity
 	p.Add([]byte("foo\n"), []byte("bar\n"))

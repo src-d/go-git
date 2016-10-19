@@ -1,6 +1,5 @@
-// Package pktlines implements reading and creating pkt-lines as per
-// https://github.com/git/git/blob/master/Documentation/technical/protocol-common.txt.
-package pktlines
+// Package pktlines implements reading payloads form pkt-lines and creating pkt-lines from payloads.
+package pktline
 
 import (
 	"bytes"

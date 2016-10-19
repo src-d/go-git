@@ -1,4 +1,4 @@
-package pktlines
+package pktline
 
 import (
 	"errors"
