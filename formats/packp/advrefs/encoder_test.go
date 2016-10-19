@@ -1,0 +1,288 @@
+package advrefs_test
+
+import (
+	"io"
+	"io/ioutil"
+	"strings"
+
+	"gopkg.in/src-d/go-git.v3/clients/common"
+	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v3/formats/packp/advrefs"
+	"gopkg.in/src-d/go-git.v3/formats/packp/pktline"
+
+	. "gopkg.in/check.v1"
+)
+
+// returns a byte slice with the pkt-lines for the given payloads.
+func pktlines(c *C, payloads ...[]byte) []byte {
+	pl, err := pktline.New(payloads...)
+	c.Assert(err, IsNil, Commentf("building pktlines for %v\n", payloads))
+
+	ret, err := ioutil.ReadAll(pl)
+	c.Assert(err, IsNil, Commentf("reading form pktlines for %v\n", payloads))
+
+	return ret
+}
+
+func bytesFromReader(c *C, r io.Reader) []byte {
+	b, err := ioutil.ReadAll(r)
+	c.Assert(err, IsNil)
+
+	return b
+}
+
+func (s *SuiteAdvRefs) TestEncodeZeroValue(c *C) {
+	ar := &advrefs.Contents{}
+
+	expected := pktlines(c,
+		[]byte("0000000000000000000000000000000000000000 capabilities^{}\x00\n"),
+		[]byte(""),
+	)
+
+	r, err := ar.Encode()
+	c.Assert(err, IsNil)
+	obtained := bytesFromReader(c, r)
+
+	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
+
+	c.Assert(obtained, DeepEquals, expected, comment)
+}
+
+func (s *SuiteAdvRefs) TestEncodeHead(c *C) {
+	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+	ar := &advrefs.Contents{
+		Head: &hash,
+	}
+
+	expected := pktlines(c,
+		[]byte("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00\n"),
+		[]byte(""),
+	)
+
+	r, err := ar.Encode()
+	c.Assert(err, IsNil)
+	obtained := bytesFromReader(c, r)
+
+	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
+
+	c.Assert(obtained, DeepEquals, expected, comment)
+}
+
+func (s *SuiteAdvRefs) TestEncodeCapsNoHead(c *C) {
+	caps := common.NewCapabilities()
+	caps.Add("symref", "HEAD:/refs/heads/master")
+	caps.Add("ofs-delta")
+	caps.Add("multi_ack")
+	ar := &advrefs.Contents{
+		Caps: caps,
+	}
+
+	expected := pktlines(c,
+		[]byte("0000000000000000000000000000000000000000 capabilities^{}\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n"),
+		[]byte(""),
+	)
+
+	r, err := ar.Encode()
+	c.Assert(err, IsNil)
+	obtained := bytesFromReader(c, r)
+
+	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
+
+	c.Assert(obtained, DeepEquals, expected, comment)
+}
+
+func (s *SuiteAdvRefs) TestEncodeCapsWithHead(c *C) {
+	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+	caps := common.NewCapabilities()
+	caps.Add("symref", "HEAD:/refs/heads/master")
+	caps.Add("ofs-delta")
+	caps.Add("multi_ack")
+	ar := &advrefs.Contents{
+		Head: &hash,
+		Caps: caps,
+	}
+
+	expected := pktlines(c,
+		[]byte("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n"),
+		[]byte(""),
+	)
+
+	r, err := ar.Encode()
+	c.Assert(err, IsNil)
+	obtained := bytesFromReader(c, r)
+
+	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
+
+	c.Assert(obtained, DeepEquals, expected, comment)
+}
+
+func (s *SuiteAdvRefs) TestEncodeRefs(c *C) {
+	refs := map[string]core.Hash{
+		"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
+		"refs/tags/v2.6.12-tree": core.NewHash("1111111111111111111111111111111111111111"),
+		"refs/tags/v2.7.13-tree": core.NewHash("3333333333333333333333333333333333333333"),
+		"refs/tags/v2.6.13-tree": core.NewHash("2222222222222222222222222222222222222222"),
+		"refs/tags/v2.6.11-tree": core.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
+	}
+	ar := &advrefs.Contents{
+		Refs: refs,
+	}
+
+	expected := pktlines(c,
+		[]byte("0000000000000000000000000000000000000000 capabilities^{}\x00\n"),
+		[]byte("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n"),
+		[]byte("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n"),
+		[]byte("1111111111111111111111111111111111111111 refs/tags/v2.6.12-tree\n"),
+		[]byte("2222222222222222222222222222222222222222 refs/tags/v2.6.13-tree\n"),
+		[]byte("3333333333333333333333333333333333333333 refs/tags/v2.7.13-tree\n"),
+		[]byte(""),
+	)
+
+	r, err := ar.Encode()
+	c.Assert(err, IsNil)
+	obtained := bytesFromReader(c, r)
+
+	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
+
+	c.Assert(obtained, DeepEquals, expected, comment)
+}
+
+func (s *SuiteAdvRefs) TestEncodePeeled(c *C) {
+	refs := map[string]core.Hash{
+		"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
+		"refs/tags/v2.6.12-tree": core.NewHash("1111111111111111111111111111111111111111"),
+		"refs/tags/v2.7.13-tree": core.NewHash("3333333333333333333333333333333333333333"),
+		"refs/tags/v2.6.13-tree": core.NewHash("2222222222222222222222222222222222222222"),
+		"refs/tags/v2.6.11-tree": core.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
+	}
+	peeled := map[string]core.Hash{
+		"refs/tags/v2.7.13-tree": core.NewHash("4444444444444444444444444444444444444444"),
+		"refs/tags/v2.6.12-tree": core.NewHash("5555555555555555555555555555555555555555"),
+	}
+	ar := &advrefs.Contents{
+		Refs:   refs,
+		Peeled: peeled,
+	}
+
+	expected := pktlines(c,
+		[]byte("0000000000000000000000000000000000000000 capabilities^{}\x00\n"),
+		[]byte("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n"),
+		[]byte("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n"),
+		[]byte("1111111111111111111111111111111111111111 refs/tags/v2.6.12-tree\n"),
+		[]byte("5555555555555555555555555555555555555555 refs/tags/v2.6.12-tree^{}\n"),
+		[]byte("2222222222222222222222222222222222222222 refs/tags/v2.6.13-tree\n"),
+		[]byte("3333333333333333333333333333333333333333 refs/tags/v2.7.13-tree\n"),
+		[]byte("4444444444444444444444444444444444444444 refs/tags/v2.7.13-tree^{}\n"),
+		[]byte(""),
+	)
+
+	r, err := ar.Encode()
+	c.Assert(err, IsNil)
+	obtained := bytesFromReader(c, r)
+
+	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
+
+	c.Assert(obtained, DeepEquals, expected, comment)
+}
+
+func (s *SuiteAdvRefs) TestEncodeShallow(c *C) {
+	shallows := []core.Hash{
+		core.NewHash("1111111111111111111111111111111111111111"),
+		core.NewHash("4444444444444444444444444444444444444444"),
+		core.NewHash("3333333333333333333333333333333333333333"),
+		core.NewHash("2222222222222222222222222222222222222222"),
+	}
+	ar := &advrefs.Contents{
+		Shallows: shallows,
+	}
+
+	expected := pktlines(c,
+		[]byte("0000000000000000000000000000000000000000 capabilities^{}\x00\n"),
+		[]byte("shallow 1111111111111111111111111111111111111111\n"),
+		[]byte("shallow 2222222222222222222222222222222222222222\n"),
+		[]byte("shallow 3333333333333333333333333333333333333333\n"),
+		[]byte("shallow 4444444444444444444444444444444444444444\n"),
+		[]byte(""),
+	)
+
+	r, err := ar.Encode()
+	c.Assert(err, IsNil)
+	obtained := bytesFromReader(c, r)
+
+	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
+
+	c.Assert(obtained, DeepEquals, expected, comment)
+}
+
+func (s *SuiteAdvRefs) TestEncodeAll(c *C) {
+	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+
+	caps := common.NewCapabilities()
+	caps.Add("symref", "HEAD:/refs/heads/master")
+	caps.Add("ofs-delta")
+	caps.Add("multi_ack")
+
+	refs := map[string]core.Hash{
+		"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
+		"refs/tags/v2.6.12-tree": core.NewHash("1111111111111111111111111111111111111111"),
+		"refs/tags/v2.7.13-tree": core.NewHash("3333333333333333333333333333333333333333"),
+		"refs/tags/v2.6.13-tree": core.NewHash("2222222222222222222222222222222222222222"),
+		"refs/tags/v2.6.11-tree": core.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
+	}
+
+	peeled := map[string]core.Hash{
+		"refs/tags/v2.7.13-tree": core.NewHash("4444444444444444444444444444444444444444"),
+		"refs/tags/v2.6.12-tree": core.NewHash("5555555555555555555555555555555555555555"),
+	}
+
+	shallows := []core.Hash{
+		core.NewHash("1111111111111111111111111111111111111111"),
+		core.NewHash("4444444444444444444444444444444444444444"),
+		core.NewHash("3333333333333333333333333333333333333333"),
+		core.NewHash("2222222222222222222222222222222222222222"),
+	}
+
+	ar := &advrefs.Contents{
+		Head:     &hash,
+		Caps:     caps,
+		Refs:     refs,
+		Peeled:   peeled,
+		Shallows: shallows,
+	}
+
+	expected := pktlines(c,
+		[]byte("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n"),
+		[]byte("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n"),
+		[]byte("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n"),
+		[]byte("1111111111111111111111111111111111111111 refs/tags/v2.6.12-tree\n"),
+		[]byte("5555555555555555555555555555555555555555 refs/tags/v2.6.12-tree^{}\n"),
+		[]byte("2222222222222222222222222222222222222222 refs/tags/v2.6.13-tree\n"),
+		[]byte("3333333333333333333333333333333333333333 refs/tags/v2.7.13-tree\n"),
+		[]byte("4444444444444444444444444444444444444444 refs/tags/v2.7.13-tree^{}\n"),
+		[]byte("shallow 1111111111111111111111111111111111111111\n"),
+		[]byte("shallow 2222222222222222222222222222222222222222\n"),
+		[]byte("shallow 3333333333333333333333333333333333333333\n"),
+		[]byte("shallow 4444444444444444444444444444444444444444\n"),
+		[]byte(""),
+	)
+
+	r, err := ar.Encode()
+	c.Assert(err, IsNil)
+	obtained := bytesFromReader(c, r)
+
+	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
+
+	c.Assert(obtained, DeepEquals, expected, comment)
+}
+
+func (s *SuiteAdvRefs) TestEncodeErrorTooLong(c *C) {
+	refs := map[string]core.Hash{
+		strings.Repeat("a", pktline.MaxPayloadSize): core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
+	}
+	ar := &advrefs.Contents{
+		Refs: refs,
+	}
+
+	_, err := ar.Encode()
+	c.Assert(err, ErrorMatches, ".*payload is too long.*")
+}
