@@ -9,8 +9,7 @@ import (
 
 // OS a filesystem base on the os filesystem
 type OS struct {
-	base      string
-	tempfiles []string
+	base string
 }
 
 // NewOS returns a new OS filesystem
@@ -107,7 +106,7 @@ func (fs *OS) Stat(filename string) (FileInfo, error) {
 
 func (fs *OS) TempFile(dir, prefix string) (File, error) {
 	fullpath := fs.Join(fs.base, dir)
-	if err := fs.createDir(fullpath + "/"); err != nil {
+	if err := fs.createDir(fullpath + string(os.PathSeparator)); err != nil {
 		return nil, err
 	}
 
