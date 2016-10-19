@@ -1,6 +1,5 @@
 // Package advrefs implements encoding and decoding advertised-refs
-// messages from a git-upload-pack command, as explained in
-// https://github.com/git/git/blob/master/Documentation/technical/pack-protocol.txt.
+// messages from a git-upload-pack command.
 package advrefs
 
 import (
