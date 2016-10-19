@@ -10,25 +10,29 @@ import (
 	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 )
 
-// The state of the parser: items are detected from the scanner s and
-// get decoded and stored in the corresponding sections of ret.
+// A Decoder reads and decodes AdvRef values from an input stream.
 type Decoder struct {
-	s     *pktline.Scanner // a pkt-line scanner from the output of a git-upload-pack command
+	s     *pktline.Scanner // a pkt-line scanner from the input stream
 	line  []byte           // current pkt-line contents, use parser.nextLine() to make it advance
 	nLine int              // current pkt-line number for debugging, begins at 1
 	hash  core.Hash        // last hash read
 	err   error            // sticky error, use the parser.error() method to fill this out
-	ret   *AdvRefs         // parsed data
+	data  *AdvRefs         // parsed data is stored here
 }
 
+// NewDecoder returns a new decoder that reads from r.
+//
+// Will not read more data from r than necessary.
 func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{
 		s: pktline.NewScanner(r),
 	}
 }
 
-func (d *Decoder) Decode(ar *AdvRefs) error {
-	d.ret = ar
+// Decode reads the next advertised-refs message form its input and
+// stores it in the value pointed to by v.
+func (d *Decoder) Decode(v *AdvRefs) error {
+	d.data = v
 
 	for state := decodeFirstHash; state != nil; {
 		state = state(d)
@@ -95,7 +99,7 @@ func decodeFirstHash(p *Decoder) decoderStateFn {
 	return decodeFirstRef
 }
 
-// skips SP "capabilities^{}" NUL
+// Skips SP "capabilities^{}" NUL
 func decodeSkipNoRefs(p *Decoder) decoderStateFn {
 	if len(p.line) < len(noHeadMark) {
 		p.error("too short zero-id ref")
@@ -112,7 +116,7 @@ func decodeSkipNoRefs(p *Decoder) decoderStateFn {
 	return decodeCaps
 }
 
-// SP refname NULL
+// decode the refname, expectes SP refname NULL
 func decodeFirstRef(l *Decoder) decoderStateFn {
 	if len(l.line) < 3 {
 		l.error("line too short after hash")
@@ -134,9 +138,9 @@ func decodeFirstRef(l *Decoder) decoderStateFn {
 	l.line = chunks[1]
 
 	if bytes.Equal(ref, []byte(head)) {
-		l.ret.Head = &l.hash
+		l.data.Head = &l.hash
 	} else {
-		l.ret.Refs[string(ref)] = l.hash
+		l.data.Refs[string(ref)] = l.hash
 	}
 
 	return decodeCaps
@@ -149,13 +153,13 @@ func decodeCaps(p *Decoder) decoderStateFn {
 
 	for _, c := range bytes.Split(p.line, sp) {
 		name, values := readCapability(c)
-		p.ret.Caps.Add(name, values...)
+		p.data.Caps.Add(name, values...)
 	}
 
 	return decodeOtherRefs
 }
 
-// capabilities are a single string or a name=value.
+// Capabilities are a single string or a name=value.
 // Even though we are only going to read at moust 1 value, we return
 // a slice of values, as Capability.Add receives that.
 func readCapability(data []byte) (name string, values []string) {
@@ -167,7 +171,7 @@ func readCapability(data []byte) (name string, values []string) {
 	return string(pair[0]), values
 }
 
-// the refs are either tips (obj-id SP refname) or a peeled (obj-id SP refname^{}).
+// The refs are either tips (obj-id SP refname) or a peeled (obj-id SP refname^{}).
 // If there are no refs, then there might be a shallow or flush-ptk.
 func decodeOtherRefs(p *Decoder) decoderStateFn {
 	if ok := p.nextLine(); !ok {
@@ -183,10 +187,10 @@ func decodeOtherRefs(p *Decoder) decoderStateFn {
 		return nil
 	}
 
-	saveTo := p.ret.Refs
+	saveTo := p.data.Refs
 	if bytes.HasSuffix(p.line, peeled) {
 		p.line = bytes.TrimSuffix(p.line, peeled)
-		saveTo = p.ret.Peeled
+		saveTo = p.data.Peeled
 	}
 
 	ref, hash, err := readRef(p.line)
@@ -199,7 +203,7 @@ func decodeOtherRefs(p *Decoder) decoderStateFn {
 	return decodeOtherRefs
 }
 
-// reads a ref-name
+// Reads a ref-name
 func readRef(data []byte) (string, core.Hash, error) {
 	chunks := bytes.Split(data, sp)
 	if len(chunks) == 1 {
@@ -212,7 +216,7 @@ func readRef(data []byte) (string, core.Hash, error) {
 	return string(chunks[1]), core.NewHash(string(chunks[0])), nil
 }
 
-// reads a hash from a shallow pkt-line
+// Reads a hash from a shallow pkt-line
 func decodeHalfReadShallow(p *Decoder) decoderStateFn {
 	if len(p.line) != hashSize {
 		p.error(fmt.Sprintf(
@@ -228,12 +232,12 @@ func decodeHalfReadShallow(p *Decoder) decoderStateFn {
 		return nil
 	}
 
-	p.ret.Shallows = append(p.ret.Shallows, h)
+	p.data.Shallows = append(p.data.Shallows, h)
 
 	return decodeShallow
 }
 
-// keeps reading shallows until a flush-pkt is found
+// Keeps reading shallows until a flush-pkt is found
 func decodeShallow(p *Decoder) decoderStateFn {
 	if ok := p.nextLine(); !ok {
 		return nil

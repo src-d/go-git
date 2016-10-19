@@ -130,7 +130,8 @@ func (s *SuiteAdvRefs) TestDecodeEncode(c *C) {
 
 func ExampleDecoder_Decode() {
 	// Here is a raw advertised-ref message.
-	raw := "0065a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n" +
+	raw := "" +
+		"0065a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n" +
 		"003fa6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n" +
 		"00441111111111111111111111111111111111111111 refs/tags/v2.6.11-tree\n" +
 		"00475555555555555555555555555555555555555555 refs/tags/v2.6.11-tree^{}\n" +

@@ -5,29 +5,32 @@ import (
 	"io"
 	"sort"
 
+	"gopkg.in/src-d/go-git.v4/clients/common"
 	"gopkg.in/src-d/go-git.v4/core"
 	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 )
 
-// The state of the encoder.  The provided Contents is used as input,
-// then the run method goes over every field, adding the corresponding
-// payloads that will get turned into real pkt-lines and made accesible
-// through the ret field.
+// An Encoder writes AdvRefs values to an output stream.
 type Encoder struct {
 	data *AdvRefs  // data to encode
 	w    io.Writer // where to write the encoded data
 	err  error     // sticky error
 }
 
+// NewEncoder returns a new encoder that writes to w.
 func NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{
 		w: w,
 	}
 }
 
-// Writes the advrefs contents, as pkt-lines, to the writer in e.
-func (e *Encoder) Encode(data *AdvRefs) error {
-	e.data = data
+// Encode writes the AdvRefs encoding of v to the stream.
+//
+// All the payloads will end with a newline character.  Capabilities,
+// References and shallows are writen in alphabetical order, except for
+// peeled references that always follow their corresponding references.
+func (e *Encoder) Encode(v *AdvRefs) error {
+	e.data = v
 
 	for state := encodeFirstLine; state != nil; {
 		state = state(e)
@@ -38,76 +41,75 @@ func (e *Encoder) Encode(data *AdvRefs) error {
 
 type encoderStateFn func(*Encoder) encoderStateFn
 
+// Formats a payload using the default formats for its operands and
+// write the corresponding pktline to the encoder writer.
+func (e *Encoder) writePktLine(format string, a ...interface{}) error {
+	payload := fmt.Sprintf(format, a...)
+
+	p, err := pktline.NewFromStrings(payload)
+	if err != nil {
+		return err
+	}
+
+	if _, err = io.Copy(e.w, p); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Adds the first pkt-line payload: head hash, head ref and capabilities.
 // Also handle the special case when no HEAD ref is found.
 func encodeFirstLine(e *Encoder) encoderStateFn {
-	var hash string
-	var headRef string
-	if e.data.Head == nil {
-		hash = core.ZeroHash.String()
-		headRef = noHead
-	} else {
-		hash = e.data.Head.String()
-		headRef = head
-	}
+	head := formatHead(e.data.Head)
+	sep := formatSeparator(e.data.Head)
+	caps := formatCaps(e.data.Caps)
 
-	var caps string
-	if e.data.Caps != nil {
-		e.data.Caps.Sort()
-		caps = e.data.Caps.String()
-	}
-
-	payload := fmt.Sprintf("%s %s\x00%s\n", hash, string(headRef), caps)
-	var p pktline.PktLine
-	p, e.err = pktline.NewFromStrings(payload)
-	if e.err != nil {
-		return nil
-	}
-
-	if _, e.err = io.Copy(e.w, p); e.err != nil {
+	if e.err = e.writePktLine("%s %s\x00%s\n", head, sep, caps); e.err != nil {
 		return nil
 	}
 
 	return encodeRefs
 }
 
-// adds the (sorted) refs: hash SP refname EOL
+func formatHead(h *core.Hash) string {
+	if h == nil {
+		return core.ZeroHash.String()
+	}
+
+	return h.String()
+}
+
+func formatSeparator(h *core.Hash) string {
+	if h == nil {
+		return noHead
+	}
+
+	return head
+}
+
+func formatCaps(c *common.Capabilities) string {
+	if c == nil {
+		return ""
+	}
+
+	c.Sort()
+
+	return c.String()
+}
+
+// Adds the (sorted) refs: hash SP refname EOL
 // and their peeled refs if any.
 func encodeRefs(e *Encoder) encoderStateFn {
 	refs := sortRefs(e.data.Refs)
 	for _, r := range refs {
-		h, _ := e.data.Refs[r]
-		hash := h.String()
-		n := len(hash) + len(sp) + len(r) + len(eol)
-		payload := make([]byte, n)
-		nw := copy(payload, hash)
-		nw += copy(payload[nw:], sp)
-		nw += copy(payload[nw:], r)
-		nw += copy(payload[nw:], eol)
-		var p pktline.PktLine
-		p, e.err = pktline.New(payload)
-		if e.err != nil {
-			return nil
-		}
-		if _, e.err = io.Copy(e.w, p); e.err != nil {
+		hash, _ := e.data.Refs[r]
+		if e.err = e.writePktLine("%s %s\n", hash.String(), r); e.err != nil {
 			return nil
 		}
 
-		if h, ok := e.data.Peeled[r]; ok {
-			hash = h.String()
-			n := len(hash) + len(sp) + len(r) + len(peeled) + len(eol)
-			payload := make([]byte, n)
-			nw := copy(payload, hash)
-			nw += copy(payload[nw:], sp)
-			nw += copy(payload[nw:], r)
-			nw += copy(payload[nw:], peeled)
-			nw += copy(payload[nw:], eol)
-			var p pktline.PktLine
-			p, e.err = pktline.New(payload)
-			if e.err != nil {
-				return nil
-			}
-			if _, e.err = io.Copy(e.w, p); e.err != nil {
+		if hash, ok := e.data.Peeled[r]; ok {
+			if e.err = e.writePktLine("%s %s^{}\n", hash.String(), r); e.err != nil {
 				return nil
 			}
 		}
@@ -126,21 +128,11 @@ func sortRefs(m map[string]core.Hash) []string {
 	return ret
 }
 
-// adds the (sorted) shallows: "shallow" SP hash EOL
+// Adds the (sorted) shallows: "shallow" SP hash EOL
 func encodeShallow(e *Encoder) encoderStateFn {
 	sorted := sortShallows(e.data.Shallows)
 	for _, hash := range sorted {
-		n := len(shallow) + len(hash) + len(eol)
-		payload := make([]byte, n)
-		nw := copy(payload, shallow)
-		nw += copy(payload[nw:], hash)
-		nw += copy(payload[nw:], eol)
-		var p pktline.PktLine
-		p, e.err = pktline.New(payload)
-		if e.err != nil {
-			return nil
-		}
-		if _, e.err = io.Copy(e.w, p); e.err != nil {
+		if e.err = e.writePktLine("shallow %s\n", hash); e.err != nil {
 			return nil
 		}
 	}
