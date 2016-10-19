@@ -107,7 +107,7 @@ func (s *SuiteAdvRefs) TestDecodeEncode(c *C) {
 
 		var ar *advrefs.AdvRefs
 		{
-			ar = advrefs.NewAdvRefs()
+			ar = advrefs.New()
 			d := advrefs.NewDecoder(input)
 			err = d.Decode(ar)
 			c.Assert(err, IsNil, comment)
@@ -145,7 +145,7 @@ func ExampleDecoder_Decode() {
 	d := advrefs.NewDecoder(input)
 
 	// Decode the input into a newly allocated AdvRefs value.
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	_ = d.Decode(ar) // error check ignored for brevity
 
 	// Do something interesting with the AdvRefs, e.g. print its contents.
@@ -160,8 +160,8 @@ func ExampleDecoder_Decode() {
 }
 
 func ExampleEncoder_Encode() {
-	// Create a advrefs.Contents with the contents you want...
-	ar := advrefs.NewAdvRefs()
+	// Create an AdvRefs with the contents you want...
+	ar := advrefs.New()
 
 	// ...add a hash for the HEAD...
 	head := core.NewHash("1111111111111111111111111111111111111111")
@@ -183,13 +183,15 @@ func ExampleEncoder_Encode() {
 	ar.Shallows = append(ar.Shallows, core.NewHash("5555555555555555555555555555555555555555"))
 
 	// Encode the advrefs.Contents to a bytes.Buffer.
-	// You can encode into stdout too, but you will miss the `\x00`.
+	// You can encode into stdout too, but you will not be able
+	// see the '\x00' after "HEAD".
 	var buf bytes.Buffer
 	e := advrefs.NewEncoder(&buf)
 	_ = e.Encode(ar) // error checks ignored for brevity
 
 	// Print the contents of the buffer as a quoted string.
-	// Printing is as a non-quoted string will be prettier but you will miss the '\x00'.
+	// Printing is as a non-quoted string will be prettier but you
+	// will miss the '\x00' after "HEAD".
 	fmt.Printf("%q", buf.String())
 	// Output:
 	// "00651111111111111111111111111111111111111111 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n003f2222222222222222222222222222222222222222 refs/heads/master\n003a3333333333333333333333333333333333333333 refs/tags/v1\n003d4444444444444444444444444444444444444444 refs/tags/v1^{}\n0035shallow 5555555555555555555555555555555555555555\n0000"

@@ -13,7 +13,7 @@ import (
 )
 
 func (s *SuiteAdvRefs) TestDecodeEOF(c *C) {
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	var buf bytes.Buffer
 	d := advrefs.NewDecoder(&buf)
 
@@ -25,7 +25,7 @@ func (s *SuiteAdvRefs) TestParseShortForHash(c *C) {
 	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796", "")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -36,7 +36,7 @@ func (s *SuiteAdvRefs) TestParseInvalidFirstHash(c *C) {
 	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796alberto2219af86ec6584e5 HEAD\x00multi_ack thin-pack\n", "")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -47,7 +47,7 @@ func (s *SuiteAdvRefs) TestParseZeroId(c *C) {
 	input, err := pktline.NewFromStrings("0000000000000000000000000000000000000000 capabilities^{}\x00multi_ack thin-pack\n", "")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -59,7 +59,7 @@ func (s *SuiteAdvRefs) TestParseMalformedZeroId(c *C) {
 	input, err := pktline.NewFromStrings("0000000000000000000000000000000000000000 wrong\x00multi_ack thin-pack\n", "")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -70,7 +70,7 @@ func (s *SuiteAdvRefs) TestParseShortZeroId(c *C) {
 	input, err := pktline.NewFromStrings("0000000000000000000000000000000000000000 capabi", "")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -81,7 +81,7 @@ func (s *SuiteAdvRefs) TestParseHead(c *C) {
 	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00", "")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -94,7 +94,7 @@ func (s *SuiteAdvRefs) TestParseFirstIsNotHead(c *C) {
 	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 refs/heads/master\x00", "")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -108,7 +108,7 @@ func (s *SuiteAdvRefs) TestParseShortRef(c *C) {
 	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 H", "")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -119,7 +119,7 @@ func (s *SuiteAdvRefs) TestParseNoNULL(c *C) {
 	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEADofs-delta multi_ack", "")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -130,7 +130,7 @@ func (s *SuiteAdvRefs) TestParseNoSpaceAfterHash(c *C) {
 	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796033e5a02219af86ec6584e5-HEAD\x00", "")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -141,7 +141,7 @@ func (s *SuiteAdvRefs) TestParseNoCaps(c *C) {
 	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00", "")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -224,7 +224,7 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 		input, err := pktline.NewFromStrings(test.input...)
 		c.Assert(err, IsNil, Commentf("input = %q", test.input))
 
-		ar := advrefs.NewAdvRefs()
+		ar := advrefs.New()
 		d := advrefs.NewDecoder(input)
 
 		err = d.Decode(ar)
@@ -341,7 +341,7 @@ func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {
 
 		comment := Commentf("input = %q", test.input)
 
-		ar := advrefs.NewAdvRefs()
+		ar := advrefs.New()
 		d := advrefs.NewDecoder(input)
 
 		err = d.Decode(ar)
@@ -360,7 +360,7 @@ func (s *SuiteAdvRefs) TestParseMalformedOtherRefsNoSpace(c *C) {
 	)
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -375,7 +375,7 @@ func (s *SuiteAdvRefs) TestParseMalformedOtherRefsMultipleSpaces(c *C) {
 	)
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -427,7 +427,7 @@ func (s *SuiteAdvRefs) TestParseShallow(c *C) {
 
 		comment := Commentf("input = %q", test.input)
 
-		ar := advrefs.NewAdvRefs()
+		ar := advrefs.New()
 		d := advrefs.NewDecoder(input)
 
 		err = d.Decode(ar)
@@ -448,7 +448,7 @@ func (s *SuiteAdvRefs) TestParseInvalidShallowHash(c *C) {
 		"")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -466,7 +466,7 @@ func (s *SuiteAdvRefs) TestParseGarbageAfterShallow(c *C) {
 		"b5be40b90dbaa6bd337f3b77de361bfc0723468b refs/tags/v4.4")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -483,7 +483,7 @@ func (s *SuiteAdvRefs) TestParseMalformedShallowHash(c *C) {
 		"shallow 2222222222222222222222222222222222222222 malformed\n")
 	c.Assert(err, IsNil)
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err = d.Decode(ar)
@@ -496,7 +496,7 @@ func (s *SuiteAdvRefs) TestParseEOFRefs(c *C) {
 			"003fa6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n" +
 			"00355dc01c595e6c6ec9ccda4f6ffbf614e4d92bb0c7 refs/foo\n")
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err := d.Decode(ar)
@@ -512,7 +512,7 @@ func (s *SuiteAdvRefs) TestParseEOFShallows(c *C) {
 			"0035shallow 1111111111111111111111111111111111111111\n" +
 			"0034shallow 222222222222222222222222")
 
-	ar := advrefs.NewAdvRefs()
+	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
 
 	err := d.Decode(ar)

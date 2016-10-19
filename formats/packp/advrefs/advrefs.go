@@ -22,7 +22,7 @@ var (
 	noHeadMark = []byte(" capabilities^{}\x00")
 )
 
-// Contents values represent the information transmitted on an
+// AdvRefs values represent the information transmitted on an
 // advertised-refs message.  Values from this type are not zero-value
 // safe, use the New function instead.
 type AdvRefs struct {
@@ -33,8 +33,8 @@ type AdvRefs struct {
 	Shallows []core.Hash
 }
 
-// NewAdvRefs returns a pointer to a new AdvRefs value, ready to be used.
-func NewAdvRefs() *AdvRefs {
+// New returns a pointer to a new AdvRefs value, ready to be used.
+func New() *AdvRefs {
 	return &AdvRefs{
 		Caps:     common.NewCapabilities(),
 		Refs:     map[string]core.Hash{},

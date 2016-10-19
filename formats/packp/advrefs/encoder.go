@@ -27,7 +27,7 @@ func NewEncoder(w io.Writer) *Encoder {
 // Encode writes the AdvRefs encoding of v to the stream.
 //
 // All the payloads will end with a newline character.  Capabilities,
-// References and shallows are writen in alphabetical order, except for
+// references and shallows are writen in alphabetical order, except for
 // peeled references that always follow their corresponding references.
 func (e *Encoder) Encode(v *AdvRefs) error {
 	e.data = v
