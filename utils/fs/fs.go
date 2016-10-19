@@ -35,18 +35,3 @@ type File interface {
 }
 
 type FileInfo os.FileInfo
-
-type BaseFile struct {
-	filename string
-	closed   bool
-}
-
-//Filename returns the filename from the File
-func (f *BaseFile) Filename() string {
-	return f.filename
-}
-
-//IsClosed returns if te file is closed
-func (f *BaseFile) IsClosed() bool {
-	return f.closed
-}
