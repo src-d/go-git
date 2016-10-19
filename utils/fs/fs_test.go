@@ -37,10 +37,31 @@ func (s *FilesystemSuite) TestCreateAndWrite(c *C) {
 	f, err := s.fs.Create("foo")
 	c.Assert(err, IsNil)
 	l, err := f.Write([]byte("foo"))
-	c.Assert(l, Equals, 3)
 	c.Assert(err, IsNil)
+	c.Assert(l, Equals, 3)
 
 	f.Seek(0, io.SeekStart)
+	wrote, err := ioutil.ReadAll(f)
+	c.Assert(err, IsNil)
+	c.Assert(wrote, DeepEquals, []byte("foo"))
+}
+
+func (s *FilesystemSuite) TestCreateOverwrite(c *C) {
+	for i := 0; i < 2; i++ {
+		f, err := s.fs.Create("foo")
+		c.Assert(err, IsNil)
+
+		l, err := f.Write([]byte("foo"))
+		c.Assert(err, IsNil)
+		c.Assert(l, Equals, 3)
+
+		err = f.Close()
+		c.Assert(err, IsNil)
+	}
+
+	f, err := s.fs.Open("foo")
+	c.Assert(err, IsNil)
+
 	wrote, err := ioutil.ReadAll(f)
 	c.Assert(err, IsNil)
 	c.Assert(wrote, DeepEquals, []byte("foo"))
