@@ -22,7 +22,7 @@ var _ = Suite(&SuitePktLine{})
 func (s *SuitePktLine) TestNewIsEmpty(c *C) {
 	p := pktline.New()
 
-	b, err := ioutil.ReadAll(p.R)
+	b, err := ioutil.ReadAll(p)
 	c.Assert(err, IsNil)
 	c.Assert(b, DeepEquals, []byte{})
 }
@@ -31,7 +31,7 @@ func (s *SuitePktLine) TestAddFlush(c *C) {
 	p := pktline.New()
 	p.AddFlush()
 
-	b, err := ioutil.ReadAll(p.R)
+	b, err := ioutil.ReadAll(p)
 	c.Assert(err, IsNil)
 	c.Assert(string(b), DeepEquals, "0000")
 }
@@ -73,7 +73,7 @@ func (s *SuitePktLine) TestAdd(c *C) {
 		err := p.Add(test.input...)
 		c.Assert(err, IsNil, Commentf("input %d = %v", i, test.input))
 
-		obtained, err := ioutil.ReadAll(p.R)
+		obtained, err := ioutil.ReadAll(p)
 		c.Assert(err, IsNil, Commentf("input %d = %v", i, test.input))
 
 		c.Assert(obtained, DeepEquals, test.expected,
@@ -163,7 +163,7 @@ func (s *SuitePktLine) TestAddString(c *C) {
 		err := p.AddString(test.input...)
 		c.Assert(err, IsNil, Commentf("input %d = %v", i, test.input))
 
-		obtained, err := ioutil.ReadAll(p.R)
+		obtained, err := ioutil.ReadAll(p)
 		c.Assert(err, IsNil, Commentf("input %d = %v", i, test.input))
 
 		c.Assert(obtained, DeepEquals, test.expected,
@@ -205,15 +205,22 @@ func (s *SuitePktLine) TestAddStringErrPayloadTooLong(c *C) {
 	}
 }
 
-func Example() {
+func ExamplePktLines() {
+	// Create an empty collection of pktlines.
 	p := pktline.New()
 
-	// error checks removed for brevity
-	p.Add([]byte("foo\n"), []byte("bar\n"))
-	p.AddString("hello\n", "world!\n")
+	// Add two strings as payloads ("foo\n" and "bar\n"), they will
+	// end up as two consecutive pktlines.
+	p.AddString("foo\n", "bar\n") // error checks removed for brevity
+
+	// You can also add byte slices as payloads...
+	p.Add([]byte("hello\n"), []byte("world!\n"))
+
+	// Add a flush-pkt.
 	p.AddFlush()
 
-	io.Copy(os.Stdout, p.R)
+	// PktLines are Readers, so you can directly read the full sequence.
+	io.Copy(os.Stdout, p)
 
 	// Output:
 	// 0008foo

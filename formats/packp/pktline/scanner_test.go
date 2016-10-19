@@ -43,7 +43,7 @@ func (s *SuiteScanner) TestEmptyReader(c *C) {
 func (s *SuiteScanner) TestFlush(c *C) {
 	p := pktline.New()
 	p.AddFlush()
-	sc := pktline.NewScanner(p.R)
+	sc := pktline.NewScanner(p)
 
 	c.Assert(sc.Scan(), Equals, true)
 	payload := sc.Bytes()
@@ -74,7 +74,7 @@ func (s *SuiteScanner) TestScanAndPayload(c *C) {
 		err := p.AddString(test)
 		c.Assert(err, IsNil,
 			Commentf("input len=%x, contents=%.10q\n", len(test), test))
-		sc := pktline.NewScanner(p.R)
+		sc := pktline.NewScanner(p)
 
 		c.Assert(sc.Scan(), Equals, true,
 			Commentf("test = %.20q...", test))
@@ -110,7 +110,7 @@ func (s *SuiteScanner) TestSkip(c *C) {
 		p := pktline.New()
 		err := p.AddString(test.input...)
 		c.Assert(err, IsNil)
-		sc := pktline.NewScanner(p.R)
+		sc := pktline.NewScanner(p)
 		for i := 0; i < test.n; i++ {
 			c.Assert(sc.Scan(), Equals, true,
 				Commentf("scan error = %s", sc.Err()))
@@ -128,7 +128,7 @@ func (s *SuiteScanner) TestEOF(c *C) {
 	p := pktline.New()
 	err := p.AddString("first", "second")
 	c.Assert(err, IsNil)
-	sc := pktline.NewScanner(p.R)
+	sc := pktline.NewScanner(p)
 	for sc.Scan() {
 	}
 	c.Assert(sc.Err(), IsNil)
@@ -176,7 +176,7 @@ func sectionsExample(c *C, nSections, nLines int) io.Reader {
 		p.AddFlush()
 	}
 
-	return p.R
+	return p
 }
 
 func ExampleScanner() {

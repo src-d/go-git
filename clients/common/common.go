@@ -312,7 +312,7 @@ func (r *GitUploadPackInfo) Bytes() []byte {
 	}
 
 	p.AddFlush()
-	b, _ := ioutil.ReadAll(p.R)
+	b, _ := ioutil.ReadAll(p)
 
 	return b
 }
@@ -354,7 +354,7 @@ func (r *GitUploadPackRequest) Reader() *strings.Reader {
 	p.AddFlush()
 	_ = p.AddString("done\n")
 
-	b, _ := ioutil.ReadAll(p.R)
+	b, _ := ioutil.ReadAll(p)
 
 	return strings.NewReader(string(b))
 }

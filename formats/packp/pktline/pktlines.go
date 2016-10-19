@@ -20,7 +20,7 @@ var (
 // PktLines values represent a succession of pkt-lines.  Values from
 // this type are not zero-value safe, use the New function instead.
 type PktLines struct {
-	R io.Reader
+	r io.Reader
 }
 
 var (
@@ -35,25 +35,25 @@ var (
 // New returns an empty PktLines (with no payloads) ready to be used.
 func New() *PktLines {
 	return &PktLines{
-		R: io.MultiReader([]io.Reader{}...),
+		r: bytes.NewReader(nil),
 	}
 }
 
 // AddFlush adds a flush-pkt to p.
 func (p *PktLines) AddFlush() {
-	p.R = io.MultiReader(p.R, bytes.NewReader(flush))
+	p.r = io.MultiReader(p.r, bytes.NewReader(flush))
 }
 
 // Add adds the slices in pp as the payloads of a
 // corresponding number of pktlines.
 func (p *PktLines) Add(pp ...[]byte) error {
-	tmp := []io.Reader{p.R}
+	tmp := []io.Reader{p.r}
 	for _, p := range pp {
 		if err := add(&tmp, p); err != nil {
 			return err
 		}
 	}
-	p.R = io.MultiReader(tmp...)
+	p.r = io.MultiReader(tmp...)
 
 	return nil
 }
@@ -110,14 +110,14 @@ func byteToASCIIHex(n byte) byte {
 // AddString adds the strings in pp as payloads of a
 // corresponding number of pktlines.
 func (p *PktLines) AddString(pp ...string) error {
-	tmp := []io.Reader{p.R}
+	tmp := []io.Reader{p.r}
 	for _, p := range pp {
 		if err := addString(&tmp, p); err != nil {
 			return err
 		}
 	}
 
-	p.R = io.MultiReader(tmp...)
+	p.r = io.MultiReader(tmp...)
 
 	return nil
 }
@@ -132,4 +132,9 @@ func addString(dst *[]io.Reader, s string) error {
 	*dst = append(*dst, strings.NewReader(s))
 
 	return nil
+}
+
+// Read reads the pktlines for the payloads added so far.
+func (p *PktLines) Read(b []byte) (n int, err error) {
+	return p.r.Read(b)
 }
