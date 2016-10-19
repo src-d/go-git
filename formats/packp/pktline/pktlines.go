@@ -1,4 +1,4 @@
-// Package pktlines implements reading payloads form pkt-lines and creating pkt-lines from payloads.
+// Package pktline implements reading payloads form pkt-lines and creating pkt-lines from payloads.
 package pktline
 
 import (

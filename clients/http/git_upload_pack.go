@@ -10,7 +10,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/clients/common"
 	"gopkg.in/src-d/go-git.v4/core"
-	"gopkg.in/src-d/go-git.v4/formats/packp/pktlines"
+	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 )
 
 // GitUploadPackService git-upoad-pack service over HTTP
@@ -78,7 +78,7 @@ func (s *GitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
 	defer res.Body.Close()
 
 	i := common.NewGitUploadPackInfo()
-	return i, i.Decode(pktlines.NewScanner(res.Body))
+	return i, i.Decode(pktline.NewScanner(res.Body))
 }
 
 // Fetch request and returns a reader to a packfile
@@ -110,7 +110,7 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadClo
 }
 
 func discardResponseInfo(r io.Reader) error {
-	s := pktlines.NewScanner(r)
+	s := pktline.NewScanner(r)
 	for s.Scan() {
 		if bytes.Equal(s.Bytes(), []byte{'N', 'A', 'K', '\n'}) {
 			break

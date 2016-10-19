@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"gopkg.in/src-d/go-git.v4/core"
-	"gopkg.in/src-d/go-git.v4/formats/packp/pktlines"
+	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 
 	. "gopkg.in/check.v1"
 )
@@ -49,7 +49,7 @@ func (s *SuiteCommon) TestGitUploadPackInfo(c *C) {
 	b, _ := base64.StdEncoding.DecodeString(GitUploadPackInfoFixture)
 
 	i := NewGitUploadPackInfo()
-	err := i.Decode(pktlines.NewScanner(bytes.NewBuffer(b)))
+	err := i.Decode(pktline.NewScanner(bytes.NewBuffer(b)))
 	c.Assert(err, IsNil)
 
 	name := i.Capabilities.SymbolicReference("HEAD")
@@ -71,7 +71,7 @@ func (s *SuiteCommon) TestGitUploadPackInfoNoHEAD(c *C) {
 	b, _ := base64.StdEncoding.DecodeString(GitUploadPackInfoNoHEADFixture)
 
 	i := NewGitUploadPackInfo()
-	err := i.Decode(pktlines.NewScanner(bytes.NewBuffer(b)))
+	err := i.Decode(pktline.NewScanner(bytes.NewBuffer(b)))
 	c.Assert(err, IsNil)
 
 	name := i.Capabilities.SymbolicReference("HEAD")
@@ -87,7 +87,7 @@ func (s *SuiteCommon) TestGitUploadPackInfoEmpty(c *C) {
 	b := bytes.NewBuffer(nil)
 
 	i := NewGitUploadPackInfo()
-	err := i.Decode(pktlines.NewScanner(b))
+	err := i.Decode(pktline.NewScanner(b))
 	c.Assert(err, ErrorMatches, "permanent.*empty.*")
 }
 

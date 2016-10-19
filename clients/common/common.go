@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/core"
-	"gopkg.in/src-d/go-git.v4/formats/packp/pktlines"
+	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
@@ -204,7 +204,7 @@ func NewGitUploadPackInfo() *GitUploadPackInfo {
 	return &GitUploadPackInfo{Capabilities: NewCapabilities()}
 }
 
-func (r *GitUploadPackInfo) Decode(s *pktlines.Scanner) error {
+func (r *GitUploadPackInfo) Decode(s *pktline.Scanner) error {
 	if err := r.read(s); err != nil {
 		if err == ErrEmptyGitUploadPack {
 			return core.NewPermanentError(err)
@@ -216,7 +216,7 @@ func (r *GitUploadPackInfo) Decode(s *pktlines.Scanner) error {
 	return nil
 }
 
-func (r *GitUploadPackInfo) read(s *pktlines.Scanner) error {
+func (r *GitUploadPackInfo) read(s *pktline.Scanner) error {
 	isEmpty := true
 	r.Refs = make(memory.ReferenceStorage, 0)
 	smartCommentIgnore := false
@@ -293,7 +293,7 @@ func (r *GitUploadPackInfo) String() string {
 }
 
 func (r *GitUploadPackInfo) Bytes() []byte {
-	p := pktlines.New()
+	p := pktline.New()
 	_ = p.AddString("# service=git-upload-pack\n")
 	// inserting a flush-pkt here violates the protocol spec, but some
 	// servers do it, like Github.com
@@ -337,7 +337,7 @@ func (r *GitUploadPackRequest) String() string {
 }
 
 func (r *GitUploadPackRequest) Reader() *strings.Reader {
-	p := pktlines.New()
+	p := pktline.New()
 
 	for _, want := range r.Wants {
 		_ = p.AddString(fmt.Sprintf("want %s\n", want))
