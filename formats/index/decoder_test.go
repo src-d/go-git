@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git.v3/core"
 	"gopkg.in/src-d/go-git.v4/fixtures"
 )
 
@@ -54,4 +55,33 @@ func (s *IdxfileSuite) TestDecodeEntries(c *C) {
 
 	e = idx.Entries[1]
 	c.Assert(e.Name, Equals, "CHANGELOG")
+}
+
+func (s *IdxfileSuite) TestDecodeCacheTree(c *C) {
+	f, err := fixtures.Basic().One().DotGit().Open("index")
+	c.Assert(err, IsNil)
+
+	idx := &Index{}
+	d := NewDecoder(f)
+	err = d.Decode(idx)
+	c.Assert(err, IsNil)
+
+	c.Assert(idx.Entries, HasLen, 9)
+	c.Assert(idx.Cache.Entries, HasLen, 5)
+
+	for i, expected := range expectedEntries {
+		c.Assert(idx.Cache.Entries[i].Path, Equals, expected.Path)
+		c.Assert(idx.Cache.Entries[i].Entries, Equals, expected.Entries)
+		c.Assert(idx.Cache.Entries[i].Trees, Equals, expected.Trees)
+		c.Assert(idx.Cache.Entries[i].Hash.String(), Equals, expected.Hash.String())
+	}
+
+}
+
+var expectedEntries = []TreeEntry{
+	{Path: "", Entries: 9, Trees: 4, Hash: core.NewHash("a8d315b2b1c615d43042c3a62402b8a54288cf5c")},
+	{Path: "go", Entries: 1, Trees: 0, Hash: core.NewHash("a39771a7651f97faf5c72e08224d857fc35133db")},
+	{Path: "php", Entries: 1, Trees: 0, Hash: core.NewHash("586af567d0bb5e771e49bdd9434f5e0fb76d25fa")},
+	{Path: "json", Entries: 2, Trees: 0, Hash: core.NewHash("5a877e6a906a2743ad6e45d99c1793642aaf8eda")},
+	{Path: "vendor", Entries: 1, Trees: 0, Hash: core.NewHash("cf4aa3b38974fb7d81f367c0830f7d78d65ab86b")},
 }
