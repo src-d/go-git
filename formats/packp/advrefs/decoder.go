@@ -44,8 +44,8 @@ func (d *Decoder) Decode(v *AdvRefs) error {
 type decoderStateFn func(*Decoder) decoderStateFn
 
 // fills out the parser stiky error
-func (p *Decoder) error(format string, a ...interface{}) {
-	p.err = fmt.Errorf("pkt-line %d: %s", p.nLine,
+func (d *Decoder) error(format string, a ...interface{}) {
+	d.err = fmt.Errorf("pkt-line %d: %s", d.nLine,
 		fmt.Sprintf(format, a...))
 }
 
@@ -53,21 +53,21 @@ func (p *Decoder) error(format string, a ...interface{}) {
 // and increments p.nLine.  A successful invocation returns true,
 // otherwise, false is returned and the sticky error is filled out
 // accordingly.  Trims eols at the end of the payloads.
-func (p *Decoder) nextLine() bool {
-	p.nLine++
+func (d *Decoder) nextLine() bool {
+	d.nLine++
 
-	if !p.s.Scan() {
-		if err := p.s.Err(); err != nil {
-			p.error("%s", err)
+	if !d.s.Scan() {
+		if err := d.s.Err(); err != nil {
+			d.error("%s", err)
 			return false
 		}
-		p.error("EOF")
+		d.error("EOF")
 
 		return false
 	}
 
-	p.line = p.s.Bytes()
-	p.line = bytes.TrimSuffix(p.line, eol)
+	d.line = d.s.Bytes()
+	d.line = bytes.TrimSuffix(d.line, eol)
 
 	return true
 }
