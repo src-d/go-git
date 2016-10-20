@@ -16,7 +16,8 @@ import (
 
 // returns a byte slice with the pkt-lines for the given payloads.
 func pktlines(c *C, payloads ...[]byte) []byte {
-	pl, err := pktline.New(payloads...)
+	pl := pktline.New()
+	err := pl.Add(payloads...)
 	c.Assert(err, IsNil, Commentf("building pktlines for %v\n", payloads))
 
 	ret, err := ioutil.ReadAll(pl)
@@ -37,7 +38,7 @@ func (s *SuiteAdvRefs) TestEncodeZeroValue(c *C) {
 
 	expected := pktlines(c,
 		[]byte("0000000000000000000000000000000000000000 capabilities^{}\x00\n"),
-		[]byte(""),
+		pktline.Flush,
 	)
 
 	var buf bytes.Buffer
@@ -59,7 +60,7 @@ func (s *SuiteAdvRefs) TestEncodeHead(c *C) {
 
 	expected := pktlines(c,
 		[]byte("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00\n"),
-		[]byte(""),
+		pktline.Flush,
 	)
 
 	var buf bytes.Buffer
@@ -84,7 +85,7 @@ func (s *SuiteAdvRefs) TestEncodeCapsNoHead(c *C) {
 
 	expected := pktlines(c,
 		[]byte("0000000000000000000000000000000000000000 capabilities^{}\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n"),
-		[]byte(""),
+		pktline.Flush,
 	)
 
 	var buf bytes.Buffer
@@ -111,7 +112,7 @@ func (s *SuiteAdvRefs) TestEncodeCapsWithHead(c *C) {
 
 	expected := pktlines(c,
 		[]byte("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n"),
-		[]byte(""),
+		pktline.Flush,
 	)
 
 	var buf bytes.Buffer
@@ -144,7 +145,7 @@ func (s *SuiteAdvRefs) TestEncodeRefs(c *C) {
 		[]byte("1111111111111111111111111111111111111111 refs/tags/v2.6.12-tree\n"),
 		[]byte("2222222222222222222222222222222222222222 refs/tags/v2.6.13-tree\n"),
 		[]byte("3333333333333333333333333333333333333333 refs/tags/v2.7.13-tree\n"),
-		[]byte(""),
+		pktline.Flush,
 	)
 
 	var buf bytes.Buffer
@@ -184,7 +185,7 @@ func (s *SuiteAdvRefs) TestEncodePeeled(c *C) {
 		[]byte("2222222222222222222222222222222222222222 refs/tags/v2.6.13-tree\n"),
 		[]byte("3333333333333333333333333333333333333333 refs/tags/v2.7.13-tree\n"),
 		[]byte("4444444444444444444444444444444444444444 refs/tags/v2.7.13-tree^{}\n"),
-		[]byte(""),
+		pktline.Flush,
 	)
 
 	var buf bytes.Buffer
@@ -215,7 +216,7 @@ func (s *SuiteAdvRefs) TestEncodeShallow(c *C) {
 		[]byte("shallow 2222222222222222222222222222222222222222\n"),
 		[]byte("shallow 3333333333333333333333333333333333333333\n"),
 		[]byte("shallow 4444444444444444444444444444444444444444\n"),
-		[]byte(""),
+		pktline.Flush,
 	)
 
 	var buf bytes.Buffer
@@ -278,7 +279,7 @@ func (s *SuiteAdvRefs) TestEncodeAll(c *C) {
 		[]byte("shallow 2222222222222222222222222222222222222222\n"),
 		[]byte("shallow 3333333333333333333333333333333333333333\n"),
 		[]byte("shallow 4444444444444444444444444444444444444444\n"),
-		[]byte(""),
+		pktline.Flush,
 	)
 
 	var buf bytes.Buffer

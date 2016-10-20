@@ -22,7 +22,11 @@ func (s *SuiteAdvRefs) TestDecodeEOF(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseShortForHash(c *C) {
-	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796", "")
+	input := pktline.New()
+	err := input.AddString(
+		"6ecf0ef2c2dffb796",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -33,7 +37,11 @@ func (s *SuiteAdvRefs) TestParseShortForHash(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseInvalidFirstHash(c *C) {
-	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796alberto2219af86ec6584e5 HEAD\x00multi_ack thin-pack\n", "")
+	input := pktline.New()
+	err := input.AddString(
+		"6ecf0ef2c2dffb796alberto2219af86ec6584e5 HEAD\x00multi_ack thin-pack\n",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -44,7 +52,11 @@ func (s *SuiteAdvRefs) TestParseInvalidFirstHash(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseZeroId(c *C) {
-	input, err := pktline.NewFromStrings("0000000000000000000000000000000000000000 capabilities^{}\x00multi_ack thin-pack\n", "")
+	input := pktline.New()
+	err := input.AddString(
+		"0000000000000000000000000000000000000000 capabilities^{}\x00multi_ack thin-pack\n",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -56,7 +68,11 @@ func (s *SuiteAdvRefs) TestParseZeroId(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseMalformedZeroId(c *C) {
-	input, err := pktline.NewFromStrings("0000000000000000000000000000000000000000 wrong\x00multi_ack thin-pack\n", "")
+	input := pktline.New()
+	err := input.AddString(
+		"0000000000000000000000000000000000000000 wrong\x00multi_ack thin-pack\n",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -67,7 +83,11 @@ func (s *SuiteAdvRefs) TestParseMalformedZeroId(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseShortZeroId(c *C) {
-	input, err := pktline.NewFromStrings("0000000000000000000000000000000000000000 capabi", "")
+	input := pktline.New()
+	err := input.AddString(
+		"0000000000000000000000000000000000000000 capabi",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -78,7 +98,11 @@ func (s *SuiteAdvRefs) TestParseShortZeroId(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseHead(c *C) {
-	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00", "")
+	input := pktline.New()
+	err := input.AddString(
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -91,7 +115,11 @@ func (s *SuiteAdvRefs) TestParseHead(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseFirstIsNotHead(c *C) {
-	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 refs/heads/master\x00", "")
+	input := pktline.New()
+	err := input.AddString(
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 refs/heads/master\x00",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -105,7 +133,11 @@ func (s *SuiteAdvRefs) TestParseFirstIsNotHead(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseShortRef(c *C) {
-	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 H", "")
+	input := pktline.New()
+	err := input.AddString(
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 H",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -116,7 +148,11 @@ func (s *SuiteAdvRefs) TestParseShortRef(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseNoNULL(c *C) {
-	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEADofs-delta multi_ack", "")
+	input := pktline.New()
+	err := input.AddString(
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEADofs-delta multi_ack",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -127,7 +163,11 @@ func (s *SuiteAdvRefs) TestParseNoNULL(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseNoSpaceAfterHash(c *C) {
-	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796033e5a02219af86ec6584e5-HEAD\x00", "")
+	input := pktline.New()
+	err := input.AddString(
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5-HEAD\x00",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -138,7 +178,11 @@ func (s *SuiteAdvRefs) TestParseNoSpaceAfterHash(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseNoCaps(c *C) {
-	input, err := pktline.NewFromStrings("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00", "")
+	input := pktline.New()
+	err := input.AddString(
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -157,21 +201,21 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00",
-				"",
+				pktline.FlushString,
 			},
 			caps: []common.Capability{},
 		},
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00\n",
-				"",
+				pktline.FlushString,
 			},
 			caps: []common.Capability{},
 		},
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta",
-				"",
+				pktline.FlushString,
 			},
 			caps: []common.Capability{
 				{
@@ -183,7 +227,7 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta multi_ack",
-				"",
+				pktline.FlushString,
 			},
 			caps: []common.Capability{
 				{Name: "ofs-delta", Values: []string(nil)},
@@ -193,7 +237,7 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta multi_ack\n",
-				"",
+				pktline.FlushString,
 			},
 			caps: []common.Capability{
 				{Name: "ofs-delta", Values: []string(nil)},
@@ -203,7 +247,7 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:refs/heads/master agent=foo=bar\n",
-				"",
+				pktline.FlushString,
 			},
 			caps: []common.Capability{
 				{Name: "symref", Values: []string{"HEAD:refs/heads/master"}},
@@ -213,7 +257,7 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:refs/heads/master agent=foo=bar agent=new-agent\n",
-				"",
+				pktline.FlushString,
 			},
 			caps: []common.Capability{
 				{Name: "symref", Values: []string{"HEAD:refs/heads/master"}},
@@ -221,7 +265,8 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 			},
 		},
 	} {
-		input, err := pktline.NewFromStrings(test.input...)
+		input := pktline.New()
+		err := input.AddString(test.input...)
 		c.Assert(err, IsNil, Commentf("input = %q", test.input))
 
 		ar := advrefs.New()
@@ -248,7 +293,7 @@ func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
-				"",
+				pktline.FlushString,
 			},
 			refs:   map[string]core.Hash{},
 			peeled: map[string]core.Hash{},
@@ -256,7 +301,7 @@ func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				"1111111111111111111111111111111111111111 ref/foo",
-				"",
+				pktline.FlushString,
 			},
 			refs: map[string]core.Hash{
 				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
@@ -266,7 +311,7 @@ func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				"1111111111111111111111111111111111111111 ref/foo\n",
-				"",
+				pktline.FlushString,
 			},
 			refs: map[string]core.Hash{
 				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
@@ -277,7 +322,7 @@ func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				"1111111111111111111111111111111111111111 ref/foo\n",
 				"2222222222222222222222222222222222222222 ref/bar",
-				"",
+				pktline.FlushString,
 			},
 			refs: map[string]core.Hash{
 				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
@@ -288,7 +333,7 @@ func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				"1111111111111111111111111111111111111111 ref/foo^{}\n",
-				"",
+				pktline.FlushString,
 			},
 			refs: map[string]core.Hash{},
 			peeled: map[string]core.Hash{
@@ -299,7 +344,7 @@ func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				"1111111111111111111111111111111111111111 ref/foo\n",
 				"2222222222222222222222222222222222222222 ref/bar^{}",
-				"",
+				pktline.FlushString,
 			},
 			refs: map[string]core.Hash{
 				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
@@ -319,7 +364,7 @@ func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {
 				"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11^{}\n",
 				"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 				"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
-				"",
+				pktline.FlushString,
 			},
 			refs: map[string]core.Hash{
 				"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
@@ -336,7 +381,8 @@ func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {
 			},
 		},
 	} {
-		input, err := pktline.NewFromStrings(test.input...)
+		input := pktline.New()
+		err := input.AddString(test.input...)
 		c.Assert(err, IsNil)
 
 		comment := Commentf("input = %q", test.input)
@@ -353,10 +399,11 @@ func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseMalformedOtherRefsNoSpace(c *C) {
-	input, err := pktline.NewFromStrings(
+	input := pktline.New()
+	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack thin-pack\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8crefs/tags/v2.6.11\n",
-		"",
+		pktline.FlushString,
 	)
 	c.Assert(err, IsNil)
 
@@ -368,10 +415,11 @@ func (s *SuiteAdvRefs) TestParseMalformedOtherRefsNoSpace(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseMalformedOtherRefsMultipleSpaces(c *C) {
-	input, err := pktline.NewFromStrings(
+	input := pktline.New()
+	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack thin-pack\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags v2.6.11\n",
-		"",
+		pktline.FlushString,
 	)
 	c.Assert(err, IsNil)
 
@@ -393,7 +441,7 @@ func (s *SuiteAdvRefs) TestParseShallow(c *C) {
 				"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 				"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 				"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
-				"",
+				pktline.FlushString,
 			},
 			shallows: []core.Hash{},
 		}, {
@@ -403,7 +451,7 @@ func (s *SuiteAdvRefs) TestParseShallow(c *C) {
 				"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 				"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
 				"shallow 1111111111111111111111111111111111111111\n",
-				"",
+				pktline.FlushString,
 			},
 			shallows: []core.Hash{core.NewHash("1111111111111111111111111111111111111111")},
 		}, {
@@ -414,7 +462,7 @@ func (s *SuiteAdvRefs) TestParseShallow(c *C) {
 				"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
 				"shallow 1111111111111111111111111111111111111111\n",
 				"shallow 2222222222222222222222222222222222222222\n",
-				"",
+				pktline.FlushString,
 			},
 			shallows: []core.Hash{
 				core.NewHash("1111111111111111111111111111111111111111"),
@@ -422,7 +470,8 @@ func (s *SuiteAdvRefs) TestParseShallow(c *C) {
 			},
 		},
 	} {
-		input, err := pktline.NewFromStrings(test.input...)
+		input := pktline.New()
+		err := input.AddString(test.input...)
 		c.Assert(err, IsNil)
 
 		comment := Commentf("input = %q", test.input)
@@ -438,14 +487,16 @@ func (s *SuiteAdvRefs) TestParseShallow(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseInvalidShallowHash(c *C) {
-	input, err := pktline.NewFromStrings(
+	input := pktline.New()
+	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
 		"shallow 11111111alcortes111111111111111111111111\n",
 		"shallow 2222222222222222222222222222222222222222\n",
-		"")
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -456,14 +507,17 @@ func (s *SuiteAdvRefs) TestParseInvalidShallowHash(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseGarbageAfterShallow(c *C) {
-	input, err := pktline.NewFromStrings(
+	input := pktline.New()
+	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
 		"shallow 1111111111111111111111111111111111111111\n",
 		"shallow 2222222222222222222222222222222222222222\n",
-		"b5be40b90dbaa6bd337f3b77de361bfc0723468b refs/tags/v4.4")
+		"b5be40b90dbaa6bd337f3b77de361bfc0723468b refs/tags/v4.4",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -474,13 +528,16 @@ func (s *SuiteAdvRefs) TestParseGarbageAfterShallow(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseMalformedShallowHash(c *C) {
-	input, err := pktline.NewFromStrings(
+	input := pktline.New()
+	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
 		"shallow 1111111111111111111111111111111111111111\n",
-		"shallow 2222222222222222222222222222222222222222 malformed\n")
+		"shallow 2222222222222222222222222222222222222222 malformed\n",
+		pktline.FlushString,
+	)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
@@ -491,10 +548,10 @@ func (s *SuiteAdvRefs) TestParseMalformedShallowHash(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseEOFRefs(c *C) {
-	input := strings.NewReader(
+	input := strings.NewReader("" +
 		"005b6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n" +
-			"003fa6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n" +
-			"00355dc01c595e6c6ec9ccda4f6ffbf614e4d92bb0c7 refs/foo\n")
+		"003fa6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n" +
+		"00355dc01c595e6c6ec9ccda4f6ffbf614e4d92bb0c7 refs/foo\n")
 
 	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)
@@ -504,13 +561,13 @@ func (s *SuiteAdvRefs) TestParseEOFRefs(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestParseEOFShallows(c *C) {
-	input := strings.NewReader(
+	input := strings.NewReader("" +
 		"005b6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n" +
-			"003fa6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n" +
-			"00445dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n" +
-			"0047c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n" +
-			"0035shallow 1111111111111111111111111111111111111111\n" +
-			"0034shallow 222222222222222222222222")
+		"003fa6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n" +
+		"00445dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n" +
+		"0047c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n" +
+		"0035shallow 1111111111111111111111111111111111111111\n" +
+		"0034shallow 222222222222222222222222")
 
 	ar := advrefs.New()
 	d := advrefs.NewDecoder(input)

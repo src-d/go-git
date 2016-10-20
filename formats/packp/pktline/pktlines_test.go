@@ -49,10 +49,25 @@ func (s *SuitePktLine) TestAdd(c *C) {
 		}, {
 			input: [][]byte{
 				[]byte("hello\n"),
+				pktline.Flush,
+			},
+			expected: []byte("000ahello\n0000"),
+		}, {
+			input: [][]byte{
+				[]byte("hello\n"),
 				[]byte("world!\n"),
 				[]byte("foo"),
 			},
 			expected: []byte("000ahello\n000bworld!\n0007foo"),
+		}, {
+			input: [][]byte{
+				[]byte("hello\n"),
+				pktline.Flush,
+				[]byte("world!\n"),
+				[]byte("foo"),
+				pktline.Flush,
+			},
+			expected: []byte("000ahello\n0000000bworld!\n0007foo0000"),
 		}, {
 			input: [][]byte{
 				[]byte(strings.Repeat("a", pktline.MaxPayloadSize)),
@@ -78,29 +93,6 @@ func (s *SuitePktLine) TestAdd(c *C) {
 
 		c.Assert(obtained, DeepEquals, test.expected,
 			Commentf("input %d = %v", i, test.input))
-	}
-}
-
-func (s *SuitePktLine) TestAddErrEmptyPayload(c *C) {
-	for _, input := range [...][][]byte{
-		[][]byte{
-			[]byte{},
-		},
-		[][]byte{
-			[]byte(nil),
-		},
-		[][]byte{
-			[]byte("hello world!"),
-			[]byte{},
-		},
-		[][]byte{
-			[]byte{},
-			[]byte("hello world!"),
-		},
-	} {
-		p := pktline.New()
-		err := p.Add(input...)
-		c.Assert(err, Equals, pktline.ErrEmptyPayload)
 	}
 }
 
@@ -139,10 +131,25 @@ func (s *SuitePktLine) TestAddString(c *C) {
 		}, {
 			input: []string{
 				"hello\n",
+				pktline.FlushString,
+			},
+			expected: []byte("000ahello\n0000"),
+		}, {
+			input: []string{
+				"hello\n",
 				"world!\n",
 				"foo",
 			},
 			expected: []byte("000ahello\n000bworld!\n0007foo"),
+		}, {
+			input: []string{
+				"hello\n",
+				pktline.FlushString,
+				"world!\n",
+				"foo",
+				pktline.FlushString,
+			},
+			expected: []byte("000ahello\n0000000bworld!\n0007foo0000"),
 		}, {
 			input: []string{
 				strings.Repeat("a", pktline.MaxPayloadSize),
@@ -168,18 +175,6 @@ func (s *SuitePktLine) TestAddString(c *C) {
 
 		c.Assert(obtained, DeepEquals, test.expected,
 			Commentf("input %d = %v", i, test.input))
-	}
-}
-
-func (s *SuitePktLine) TestAddStringErrEmptyPayload(c *C) {
-	for _, input := range [...][]string{
-		[]string{""},
-		[]string{"hello world!", ""},
-		[]string{"", "hello world!"},
-	} {
-		p := pktline.New()
-		err := p.AddString(input...)
-		c.Assert(err, Equals, pktline.ErrEmptyPayload)
 	}
 }
 

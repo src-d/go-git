@@ -14,7 +14,11 @@ const (
 )
 
 var (
-	flush = []byte{'0', '0', '0', '0'}
+	flushPktLine = []byte{'0', '0', '0', '0'}
+	// Flush is the payload to use with the Add method to add a flush-pkt.
+	Flush = []byte{}
+	// FlushString is the payload to use with the AddString method to add a flush-pkt.
+	FlushString = ""
 )
 
 // PktLines values represent a succession of pkt-lines.  Values from
@@ -27,9 +31,6 @@ var (
 	// ErrPayloadTooLong is returned by the Add methods when any of the
 	// provided payloads is bigger than MaxPayloadSize.
 	ErrPayloadTooLong = errors.New("payload is too long")
-	// ErrEmptyPayload is returned by the Add methods when an empty
-	// payload is provided.
-	ErrEmptyPayload = errors.New("cannot add empty payloads")
 )
 
 // New returns an empty PktLines (with no payloads) ready to be used.
@@ -41,7 +42,7 @@ func New() *PktLines {
 
 // AddFlush adds a flush-pkt to p.
 func (p *PktLines) AddFlush() {
-	p.r = io.MultiReader(p.r, bytes.NewReader(flush))
+	p.r = io.MultiReader(p.r, bytes.NewReader(flushPktLine))
 }
 
 // Add adds the slices in pp as the payloads of a
@@ -63,6 +64,11 @@ func add(dst *[]io.Reader, e []byte) error {
 		return err
 	}
 
+	if bytes.Equal(e, Flush) {
+		*dst = append(*dst, bytes.NewReader(flushPktLine))
+		return nil
+	}
+
 	n := len(e) + 4
 	*dst = append(*dst, bytes.NewReader(asciiHex16(n)))
 	*dst = append(*dst, bytes.NewReader(e))
@@ -74,8 +80,6 @@ func checkPayloadLength(n int) error {
 	switch {
 	case n < 0:
 		panic("unexpected negative payload length")
-	case n == 0:
-		return ErrEmptyPayload
 	case n > MaxPayloadSize:
 		return ErrPayloadTooLong
 	default:
@@ -125,6 +129,11 @@ func (p *PktLines) AddString(pp ...string) error {
 func addString(dst *[]io.Reader, s string) error {
 	if err := checkPayloadLength(len(s)); err != nil {
 		return err
+	}
+
+	if s == FlushString {
+		*dst = append(*dst, bytes.NewReader(flushPktLine))
+		return nil
 	}
 
 	n := len(s) + 4

@@ -44,14 +44,12 @@ type encoderStateFn func(*Encoder) encoderStateFn
 // Formats a payload using the default formats for its operands and
 // write the corresponding pktline to the encoder writer.
 func (e *Encoder) writePktLine(format string, a ...interface{}) error {
-	payload := fmt.Sprintf(format, a...)
-
-	p, err := pktline.NewFromStrings(payload)
-	if err != nil {
+	p := pktline.New()
+	if err := p.AddString(fmt.Sprintf(format, a...)); err != nil {
 		return err
 	}
 
-	if _, err = io.Copy(e.w, p); err != nil {
+	if _, err := io.Copy(e.w, p); err != nil {
 		return err
 	}
 
@@ -151,7 +149,8 @@ func sortShallows(c []core.Hash) []string {
 }
 
 func encodeFlush(e *Encoder) encoderStateFn {
-	p, _ := pktline.New([]byte{})
+	p := pktline.New()
+	p.AddFlush()
 	if _, e.err = io.Copy(e.w, p); e.err != nil {
 		return nil
 	}

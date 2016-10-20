@@ -29,20 +29,20 @@ func (s *SuiteAdvRefs) TestDecodeEncode(c *C) {
 		{
 			input: []string{
 				"0000000000000000000000000000000000000000 capabilities^{}\x00",
-				"",
+				pktline.FlushString,
 			},
 			expected: []string{
 				"0000000000000000000000000000000000000000 capabilities^{}\x00\n",
-				"",
+				pktline.FlushString,
 			},
 		}, {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00",
-				"",
+				pktline.FlushString,
 			},
 			expected: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00\n",
-				"",
+				pktline.FlushString,
 			},
 		}, {
 			input: []string{
@@ -50,14 +50,14 @@ func (s *SuiteAdvRefs) TestDecodeEncode(c *C) {
 				"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master",
 				"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree",
 				"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}",
-				"",
+				pktline.FlushString,
 			},
 			expected: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n",
 				"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 				"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 				"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
-				"",
+				pktline.FlushString,
 			},
 		}, {
 			input: []string{
@@ -67,7 +67,7 @@ func (s *SuiteAdvRefs) TestDecodeEncode(c *C) {
 				"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
 				"shallow 1111111111111111111111111111111111111111\n",
 				"shallow 2222222222222222222222222222222222222222\n",
-				"",
+				pktline.FlushString,
 			},
 			expected: []string{"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n",
 				"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
@@ -75,7 +75,7 @@ func (s *SuiteAdvRefs) TestDecodeEncode(c *C) {
 				"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
 				"shallow 1111111111111111111111111111111111111111\n",
 				"shallow 2222222222222222222222222222222222222222\n",
-				"",
+				pktline.FlushString,
 			},
 		},
 	} {
@@ -83,11 +83,12 @@ func (s *SuiteAdvRefs) TestDecodeEncode(c *C) {
 		var input io.Reader
 		var comment CommentInterface
 		{
-			r, err := pktline.NewFromStrings(test.input...)
+			p := pktline.New()
+			err := p.AddString(test.input...)
 			c.Assert(err, IsNil, Commentf("input = %v\n", test.input))
 
 			var buf bytes.Buffer
-			tee := io.TeeReader(r, &buf)
+			tee := io.TeeReader(p, &buf)
 
 			inputCopy, err := ioutil.ReadAll(tee)
 			c.Assert(err, IsNil, Commentf("input = %v\n", test.input))
@@ -98,10 +99,11 @@ func (s *SuiteAdvRefs) TestDecodeEncode(c *C) {
 
 		var expected []byte
 		{
-			r, err := pktline.NewFromStrings(test.expected...)
+			p := pktline.New()
+			err := p.AddString(test.expected...)
 			c.Assert(err, IsNil, comment)
 
-			expected, err = ioutil.ReadAll(r)
+			expected, err = ioutil.ReadAll(p)
 			c.Assert(err, IsNil, comment)
 		}
 
