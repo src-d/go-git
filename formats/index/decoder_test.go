@@ -85,3 +85,42 @@ var expectedEntries = []TreeEntry{
 	{Path: "json", Entries: 2, Trees: 0, Hash: core.NewHash("5a877e6a906a2743ad6e45d99c1793642aaf8eda")},
 	{Path: "vendor", Entries: 1, Trees: 0, Hash: core.NewHash("cf4aa3b38974fb7d81f367c0830f7d78d65ab86b")},
 }
+
+func (s *IdxfileSuite) TestDecodeMergeConflict(c *C) {
+	f, err := fixtures.Basic().ByTag("merge-conflict").One().DotGit().Open("index")
+	c.Assert(err, IsNil)
+
+	idx := &Index{}
+	d := NewDecoder(f)
+	err = d.Decode(idx)
+	c.Assert(err, IsNil)
+
+	c.Assert(idx.Version, Equals, uint32(2))
+	c.Assert(idx.EntryCount, Equals, uint32(13))
+
+	expected := []struct {
+		Stage Stage
+		Hash  string
+	}{
+		{AncestorMode, "880cd14280f4b9b6ed3986d6671f907d7cc2a198"},
+		{OurMode, "d499a1a0b79b7d87a35155afd0c1cce78b37a91c"},
+		{TheirMode, "14f8e368114f561c38e134f6e68ea6fea12d77ed"},
+	}
+
+	// stagged files
+	for i, e := range idx.Entries[4:7] {
+		c.Assert(e.Stage, Equals, expected[i].Stage)
+		c.Assert(e.CreatedAt.Unix(), Equals, int64(0))
+		c.Assert(e.CreatedAt.Nanosecond(), Equals, 0)
+		c.Assert(e.ModifiedAt.Unix(), Equals, int64(0))
+		c.Assert(e.ModifiedAt.Nanosecond(), Equals, 0)
+		c.Assert(e.Dev, Equals, uint32(0))
+		c.Assert(e.Inode, Equals, uint32(0))
+		c.Assert(e.UID, Equals, uint32(0))
+		c.Assert(e.GID, Equals, uint32(0))
+		c.Assert(e.Size, Equals, uint32(0))
+		c.Assert(e.Hash.String(), Equals, expected[i].Hash)
+		c.Assert(e.Name, Equals, "go/example.go")
+	}
+
+}

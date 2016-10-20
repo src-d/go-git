@@ -27,6 +27,7 @@ type Entry struct {
 	UID, GID   uint32
 	Size       uint32
 	Flags      uint16
+	Stage      Stage
 	Hash       core.Hash
 	Name       string
 }

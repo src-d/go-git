@@ -23,9 +23,20 @@ var (
 	resolveUndoExtSignature = []byte{'R', 'E', 'U', 'C'}
 )
 
+type Stage int
+
 const (
 	// IndexVersionSupported is the only index version supported.
 	IndexVersionSupported = 2
+
+	// Merged is the default stage, fully merged
+	Merged Stage = 1
+	// AncestorMode is the base revision
+	AncestorMode Stage = 1
+	// OurMode is the first tree revision, ours
+	OurMode Stage = 2
+	// TheirMode is the second tree revision, theirs
+	TheirMode Stage = 3
 
 	nameMask = 0xfff
 )
@@ -110,6 +121,7 @@ func (d *Decoder) readEntry(idx *Index) (*Entry, error) {
 		return nil, err
 	}
 
+	e.Stage = Stage(e.Flags>>12) & 0x3
 	return e, nil
 }
 
