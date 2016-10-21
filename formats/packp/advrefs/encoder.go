@@ -60,11 +60,9 @@ func (e *Encoder) writePktLine(format string, a ...interface{}) error {
 func (e *Encoder) writeFlushPkt() error {
 	p := pktline.New()
 	p.AddFlush()
-	if _, err := io.Copy(e.w, p); err != nil {
-		return err
-	}
+	_, err := io.Copy(e.w, p)
 
-	return nil
+	return err
 }
 
 func encodePrefix(e *Encoder) encoderStateFn {
