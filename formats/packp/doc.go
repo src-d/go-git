@@ -1,6 +1,19 @@
 package packp
 
 /*
+
+A nice way to trace the real data transmitted and received by git, use:
+
+GIT_TRACE_PACKET=true git ls-remote http://github.com/src-d/go-git
+GIT_TRACE_PACKET=true git clone http://github.com/src-d/go-git
+
+Here follows a copy of the current protocol specification at the time of
+this writing.
+
+(Please notice that most http git servers will add a flush-pkt after the
+first pkt-line when using HTTP smart.)
+
+
 Documentation Common to Pack and Http Protocols
 ===============================================
 

@@ -3,6 +3,7 @@ package advrefs
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 
@@ -20,6 +21,9 @@ type Decoder struct {
 	data  *AdvRefs         // parsed data is stored here
 }
 
+// ErrEmpty is returned by Decode when there was no advertised-message at all
+var ErrEmpty = errors.New("empty advertised-ref message")
+
 // NewDecoder returns a new decoder that reads from r.
 //
 // Will not read more data from r than necessary.
@@ -34,7 +38,7 @@ func NewDecoder(r io.Reader) *Decoder {
 func (d *Decoder) Decode(v *AdvRefs) error {
 	d.data = v
 
-	for state := decodeFirstHash; state != nil; {
+	for state := decodePrefix; state != nil; {
 		state = state(d)
 	}
 
@@ -49,20 +53,24 @@ func (d *Decoder) error(format string, a ...interface{}) {
 		fmt.Sprintf(format, a...))
 }
 
-// Reads a new pkt-line from the scanner, copies its payload into p.line
-// and increments p.nLine.  A successful invocation returns true,
+// Reads a new pkt-line from the scanner, makes its payload available as
+// p.line and increments p.nLine.  A successful invocation returns true,
 // otherwise, false is returned and the sticky error is filled out
 // accordingly.  Trims eols at the end of the payloads.
 func (d *Decoder) nextLine() bool {
 	d.nLine++
 
 	if !d.s.Scan() {
-		if err := d.s.Err(); err != nil {
-			d.error("%s", err)
+		if d.err = d.s.Err(); d.err != nil {
 			return false
 		}
-		d.error("EOF")
 
+		if d.nLine == 1 {
+			d.err = ErrEmpty
+			return false
+		}
+
+		d.error("EOF")
 		return false
 	}
 
@@ -72,14 +80,43 @@ func (d *Decoder) nextLine() bool {
 	return true
 }
 
+// The HTTP smart prefix is often followed by a flush-pkt.
+func decodePrefix(d *Decoder) decoderStateFn {
+	if ok := d.nextLine(); !ok {
+		return nil
+	}
+
+	if isPrefix(d.line) {
+		tmp := make([]byte, len(d.line))
+		copy(tmp, d.line)
+		d.data.Prefix = append(d.data.Prefix, tmp)
+		if ok := d.nextLine(); !ok {
+			return nil
+		}
+	}
+
+	if isFlush(d.line) {
+		d.data.Prefix = append(d.data.Prefix, pktline.Flush)
+		if ok := d.nextLine(); !ok {
+			return nil
+		}
+	}
+
+	return decodeFirstHash
+}
+
+func isPrefix(payload []byte) bool {
+	return payload[0] == '#'
+}
+
+func isFlush(payload []byte) bool {
+	return len(payload) == 0
+}
+
 // If the first hash is zero, then a no-refs is comming. Otherwise, a
 // list-of-refs is comming, and the hash will be followed by the first
 // advertised ref.
 func decodeFirstHash(p *Decoder) decoderStateFn {
-	if ok := p.nextLine(); !ok {
-		return nil
-	}
-
 	if len(p.line) < hashSize {
 		p.error("cannot read hash, pkt-line too short")
 		return nil

@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v4/clients/common"
 	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/formats/packp"
 	"gopkg.in/src-d/go-git.v4/formats/packp/advrefs"
 	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 
@@ -75,7 +75,7 @@ func (s *SuiteAdvRefs) TestEncodeHead(c *C) {
 }
 
 func (s *SuiteAdvRefs) TestEncodeCapsNoHead(c *C) {
-	caps := common.NewCapabilities()
+	caps := packp.NewCapabilities()
 	caps.Add("symref", "HEAD:/refs/heads/master")
 	caps.Add("ofs-delta")
 	caps.Add("multi_ack")
@@ -101,7 +101,7 @@ func (s *SuiteAdvRefs) TestEncodeCapsNoHead(c *C) {
 
 func (s *SuiteAdvRefs) TestEncodeCapsWithHead(c *C) {
 	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
-	caps := common.NewCapabilities()
+	caps := packp.NewCapabilities()
 	caps.Add("symref", "HEAD:/refs/heads/master")
 	caps.Add("ofs-delta")
 	caps.Add("multi_ack")
@@ -233,7 +233,7 @@ func (s *SuiteAdvRefs) TestEncodeShallow(c *C) {
 func (s *SuiteAdvRefs) TestEncodeAll(c *C) {
 	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
 
-	caps := common.NewCapabilities()
+	caps := packp.NewCapabilities()
 	caps.Add("symref", "HEAD:/refs/heads/master")
 	caps.Add("ofs-delta")
 	caps.Add("multi_ack")

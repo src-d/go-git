@@ -4,24 +4,28 @@ import (
 	"bytes"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v4/clients/common"
 	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/formats/packp"
 	"gopkg.in/src-d/go-git.v4/formats/packp/advrefs"
 	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 
 	. "gopkg.in/check.v1"
 )
 
-func (s *SuiteAdvRefs) TestDecodeEOF(c *C) {
+type SuiteAdvRefsDecode struct{}
+
+var _ = Suite(&SuiteAdvRefsDecode{})
+
+func (s *SuiteAdvRefsDecode) TestEmpty(c *C) {
 	ar := advrefs.New()
 	var buf bytes.Buffer
 	d := advrefs.NewDecoder(&buf)
 
 	err := d.Decode(ar)
-	c.Assert(err, ErrorMatches, ".*EOF.*")
+	c.Assert(err, Equals, advrefs.ErrEmpty)
 }
 
-func (s *SuiteAdvRefs) TestParseShortForHash(c *C) {
+func (s *SuiteAdvRefs) TestShortForHash(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796",
@@ -36,7 +40,7 @@ func (s *SuiteAdvRefs) TestParseShortForHash(c *C) {
 	c.Assert(err, ErrorMatches, ".*too short")
 }
 
-func (s *SuiteAdvRefs) TestParseInvalidFirstHash(c *C) {
+func (s *SuiteAdvRefs) TestInvalidFirstHash(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796alberto2219af86ec6584e5 HEAD\x00multi_ack thin-pack\n",
@@ -51,7 +55,7 @@ func (s *SuiteAdvRefs) TestParseInvalidFirstHash(c *C) {
 	c.Assert(err, ErrorMatches, ".*invalid hash.*")
 }
 
-func (s *SuiteAdvRefs) TestParseZeroId(c *C) {
+func (s *SuiteAdvRefs) TestZeroId(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"0000000000000000000000000000000000000000 capabilities^{}\x00multi_ack thin-pack\n",
@@ -196,28 +200,28 @@ func (s *SuiteAdvRefs) TestParseNoCaps(c *C) {
 func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 	for _, test := range [...]struct {
 		input []string
-		caps  []common.Capability
+		caps  []packp.Capability
 	}{
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00",
 				pktline.FlushString,
 			},
-			caps: []common.Capability{},
+			caps: []packp.Capability{},
 		},
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00\n",
 				pktline.FlushString,
 			},
-			caps: []common.Capability{},
+			caps: []packp.Capability{},
 		},
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta",
 				pktline.FlushString,
 			},
-			caps: []common.Capability{
+			caps: []packp.Capability{
 				{
 					Name:   "ofs-delta",
 					Values: []string(nil),
@@ -229,7 +233,7 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta multi_ack",
 				pktline.FlushString,
 			},
-			caps: []common.Capability{
+			caps: []packp.Capability{
 				{Name: "ofs-delta", Values: []string(nil)},
 				{Name: "multi_ack", Values: []string(nil)},
 			},
@@ -239,7 +243,7 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta multi_ack\n",
 				pktline.FlushString,
 			},
-			caps: []common.Capability{
+			caps: []packp.Capability{
 				{Name: "ofs-delta", Values: []string(nil)},
 				{Name: "multi_ack", Values: []string(nil)},
 			},
@@ -249,7 +253,7 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:refs/heads/master agent=foo=bar\n",
 				pktline.FlushString,
 			},
-			caps: []common.Capability{
+			caps: []packp.Capability{
 				{Name: "symref", Values: []string{"HEAD:refs/heads/master"}},
 				{Name: "agent", Values: []string{"foo=bar"}},
 			},
@@ -259,7 +263,7 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:refs/heads/master agent=foo=bar agent=new-agent\n",
 				pktline.FlushString,
 			},
-			caps: []common.Capability{
+			caps: []packp.Capability{
 				{Name: "symref", Values: []string{"HEAD:refs/heads/master"}},
 				{Name: "agent", Values: []string{"foo=bar", "new-agent"}},
 			},
@@ -282,6 +286,50 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 				Commentf("input = %q, cap = %q", test.input, fixCap.Name))
 		}
 	}
+}
+
+func (s *SuiteAdvRefs) TestParseWithPrefix(c *C) {
+	payloads := []string{
+		"# this is a prefix\n",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00foo\n",
+		pktline.FlushString,
+	}
+
+	input := pktline.New()
+	err := input.AddString(payloads...)
+	c.Assert(err, IsNil)
+
+	ar := advrefs.New()
+	d := advrefs.NewDecoder(input)
+
+	err = d.Decode(ar)
+	c.Assert(err, IsNil)
+
+	c.Assert(len(ar.Prefix), Equals, 1)
+	c.Assert(ar.Prefix[0], DeepEquals, []byte("# this is a prefix"))
+}
+
+func (s *SuiteAdvRefs) TestParseWithPrefixAndFlush(c *C) {
+	payloads := []string{
+		"# this is a prefix\n",
+		pktline.FlushString,
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00foo\n",
+		pktline.FlushString,
+	}
+
+	input := pktline.New()
+	err := input.AddString(payloads...)
+	c.Assert(err, IsNil)
+
+	ar := advrefs.New()
+	d := advrefs.NewDecoder(input)
+
+	err = d.Decode(ar)
+	c.Assert(err, IsNil)
+
+	c.Assert(len(ar.Prefix), Equals, 2)
+	c.Assert(ar.Prefix[0], DeepEquals, []byte("# this is a prefix"))
+	c.Assert(ar.Prefix[1], DeepEquals, []byte(pktline.FlushString))
 }
 
 func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {

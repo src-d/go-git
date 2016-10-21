@@ -1,12 +1,13 @@
 package advrefs
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"sort"
 
-	"gopkg.in/src-d/go-git.v4/clients/common"
 	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/formats/packp"
 	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 )
 
@@ -32,7 +33,7 @@ func NewEncoder(w io.Writer) *Encoder {
 func (e *Encoder) Encode(v *AdvRefs) error {
 	e.data = v
 
-	for state := encodeFirstLine; state != nil; {
+	for state := encodePrefix; state != nil; {
 		state = state(e)
 	}
 
@@ -54,6 +55,32 @@ func (e *Encoder) writePktLine(format string, a ...interface{}) error {
 	}
 
 	return nil
+}
+
+func (e *Encoder) writeFlushPkt() error {
+	p := pktline.New()
+	p.AddFlush()
+	if _, err := io.Copy(e.w, p); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func encodePrefix(e *Encoder) encoderStateFn {
+	for _, p := range e.data.Prefix {
+		if bytes.Equal(p, pktline.Flush) {
+			if e.err = e.writeFlushPkt(); e.err != nil {
+				return nil
+			}
+			continue
+		}
+		if e.err = e.writePktLine("%s\n", string(p)); e.err != nil {
+			return nil
+		}
+	}
+
+	return encodeFirstLine
 }
 
 // Adds the first pkt-line payload: head hash, head ref and capabilities.
@@ -86,7 +113,7 @@ func formatSeparator(h *core.Hash) string {
 	return head
 }
 
-func formatCaps(c *common.Capabilities) string {
+func formatCaps(c *packp.Capabilities) string {
 	if c == nil {
 		return ""
 	}
@@ -149,11 +176,6 @@ func sortShallows(c []core.Hash) []string {
 }
 
 func encodeFlush(e *Encoder) encoderStateFn {
-	p := pktline.New()
-	p.AddFlush()
-	if _, e.err = io.Copy(e.w, p); e.err != nil {
-		return nil
-	}
-
+	e.err = e.writeFlushPkt()
 	return nil
 }
