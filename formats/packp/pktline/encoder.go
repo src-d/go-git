@@ -2,6 +2,8 @@ package pktline
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 )
 
@@ -22,6 +24,9 @@ var (
 	Flush = []byte{}
 	// FlushString is the payload to use with the EncodeString method to encode a flush-pkt.
 	FlushString = ""
+	// ErrPayloadTooLong is returned by the Encode methods when any of the
+	// provided payloads is bigger than MaxPayloadSize.
+	ErrPayloadTooLong = errors.New("payload is too long")
 )
 
 // NewEncoder returns a new encoder that writes to w.
@@ -65,15 +70,15 @@ func (e *Encoder) Encode(payloads ...[]byte) error {
 	return nil
 }
 
-// EncodeString works similarly as Encode but payloads are specified as strings.
-func (e *Encoder) EncodeString(payloads ...string) error {
-	for _, p := range payloads {
-		if err := e.Encode([]byte(p)); err != nil {
-			return err
-		}
+func checkPayloadLength(n int) error {
+	switch {
+	case n < 0:
+		panic("unexpected negative payload length")
+	case n > MaxPayloadSize:
+		return ErrPayloadTooLong
+	default:
+		return nil
 	}
-
-	return nil
 }
 
 // Returns the hexadecimal ascii representation of the 16 less
@@ -98,4 +103,23 @@ func byteToASCIIHex(n byte) byte {
 	}
 
 	return 'a' - 10 + n
+}
+
+// EncodeString works similarly as Encode but payloads are specified as strings.
+func (e *Encoder) EncodeString(payloads ...string) error {
+	for _, p := range payloads {
+		if err := e.Encode([]byte(p)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Encodef encodes a single pkt-line with the payload formatted as
+// the format specifier and the rest of the arguments suggest.
+func (e *Encoder) Encodef(format string, a ...interface{}) error {
+	return e.EncodeString(
+		fmt.Sprintf(format, a...),
+	)
 }

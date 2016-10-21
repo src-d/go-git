@@ -36,11 +36,12 @@ func (s *SuiteDecoder) TestShortForHash(c *C) {
 }
 
 func toPktLines(c *C, payloads []string) io.Reader {
-	r := pktline.New()
-	err := r.AddString(payloads...)
+	var buf bytes.Buffer
+	e := pktline.NewEncoder(&buf)
+	err := e.EncodeString(payloads...)
 	c.Assert(err, IsNil)
 
-	return r
+	return &buf
 }
 
 func testDecoderErrorMatches(c *C, input io.Reader, pattern string) {
@@ -70,12 +71,13 @@ func (s *SuiteDecoder) TestZeroId(c *C) {
 }
 
 func testDecodeOK(c *C, payloads []string) *advrefs.AdvRefs {
-	r := pktline.New()
-	err := r.AddString(payloads...)
+	var buf bytes.Buffer
+	e := pktline.NewEncoder(&buf)
+	err := e.EncodeString(payloads...)
 	c.Assert(err, IsNil)
 
 	ar := advrefs.New()
-	d := advrefs.NewDecoder(r)
+	d := advrefs.NewDecoder(&buf)
 
 	err = d.Decode(ar)
 	c.Assert(err, IsNil)

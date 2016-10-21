@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -25,20 +24,21 @@ func (s *SuiteDecodeEncode) test(c *C, in []string, exp []string) {
 	var err error
 	var input io.Reader
 	{
-		p := pktline.New()
-		err = p.AddString(in...)
+		var buf bytes.Buffer
+		p := pktline.NewEncoder(&buf)
+		err = p.EncodeString(in...)
 		c.Assert(err, IsNil)
-		input = p
+		input = &buf
 	}
 
 	var expected []byte
 	{
-		p := pktline.New()
-		err := p.AddString(exp...)
+		var buf bytes.Buffer
+		p := pktline.NewEncoder(&buf)
+		err = p.EncodeString(exp...)
 		c.Assert(err, IsNil)
 
-		expected, err = ioutil.ReadAll(p)
-		c.Assert(err, IsNil)
+		expected = buf.Bytes()
 	}
 
 	var obtained []byte

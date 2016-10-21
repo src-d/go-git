@@ -2,7 +2,6 @@ package advrefs_test
 
 import (
 	"bytes"
-	"io/ioutil"
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/core"
@@ -19,14 +18,12 @@ var _ = Suite(&SuiteEncoder{})
 
 // returns a byte slice with the pkt-lines for the given payloads.
 func pktlines(c *C, payloads ...[]byte) []byte {
-	pl := pktline.New()
-	err := pl.Add(payloads...)
+	var buf bytes.Buffer
+	e := pktline.NewEncoder(&buf)
+	err := e.Encode(payloads...)
 	c.Assert(err, IsNil, Commentf("building pktlines for %v\n", payloads))
 
-	ret, err := ioutil.ReadAll(pl)
-	c.Assert(err, IsNil, Commentf("reading form pktlines for %v\n", payloads))
-
-	return ret
+	return buf.Bytes()
 }
 
 func testEncode(c *C, input *advrefs.AdvRefs, expected []byte) {

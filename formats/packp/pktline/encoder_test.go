@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"os"
 	"strings"
+	"testing"
 
 	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
 
 	. "gopkg.in/check.v1"
 )
+
+func Test(t *testing.T) { TestingT(t) }
 
 type SuiteEncoder struct{}
 
@@ -192,6 +195,21 @@ func (s *SuiteEncoder) TestEncodeStringErrPayloadTooLong(c *C) {
 		err := e.EncodeString(input...)
 		c.Assert(err, Equals, pktline.ErrPayloadTooLong, comment)
 	}
+}
+
+func (s *SuiteEncoder) TestEncodef(c *C) {
+	format := " %s %d\n"
+	str := "foo"
+	d := 42
+
+	var buf bytes.Buffer
+	e := pktline.NewEncoder(&buf)
+
+	err := e.Encodef(format, str, d)
+	c.Assert(err, IsNil)
+
+	expected := []byte("000c foo 42\n")
+	c.Assert(buf.Bytes(), DeepEquals, expected)
 }
 
 func ExampleEncoder() {
