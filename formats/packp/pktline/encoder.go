@@ -1,3 +1,4 @@
+// Package pktline implements reading payloads form pkt-lines and encoding pkt-lines from payloads.
 package pktline
 
 import (
