@@ -37,6 +37,18 @@ func bytesFromReader(c *C, r io.Reader) []byte {
 	return b
 }
 
+func test(c *C, input *advrefs.AdvRefs, expected []byte) {
+	var buf bytes.Buffer
+	e := advrefs.NewEncoder(&buf)
+	err := e.Encode(input)
+	c.Assert(err, IsNil)
+	obtained := buf.Bytes()
+
+	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
+
+	c.Assert(obtained, DeepEquals, expected, comment)
+}
+
 func (s *SuiteEncoder) TestZeroValue(c *C) {
 	ar := &advrefs.AdvRefs{}
 
@@ -45,15 +57,7 @@ func (s *SuiteEncoder) TestZeroValue(c *C) {
 		pktline.Flush,
 	)
 
-	var buf bytes.Buffer
-	e := advrefs.NewEncoder(&buf)
-	err := e.Encode(ar)
-	c.Assert(err, IsNil)
-	obtained := buf.Bytes()
-
-	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
-
-	c.Assert(obtained, DeepEquals, expected, comment)
+	test(c, ar, expected)
 }
 
 func (s *SuiteEncoder) TestHead(c *C) {
@@ -67,15 +71,7 @@ func (s *SuiteEncoder) TestHead(c *C) {
 		pktline.Flush,
 	)
 
-	var buf bytes.Buffer
-	e := advrefs.NewEncoder(&buf)
-	err := e.Encode(ar)
-	c.Assert(err, IsNil)
-	obtained := buf.Bytes()
-
-	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
-
-	c.Assert(obtained, DeepEquals, expected, comment)
+	test(c, ar, expected)
 }
 
 func (s *SuiteEncoder) TestCapsNoHead(c *C) {
@@ -92,15 +88,7 @@ func (s *SuiteEncoder) TestCapsNoHead(c *C) {
 		pktline.Flush,
 	)
 
-	var buf bytes.Buffer
-	e := advrefs.NewEncoder(&buf)
-	err := e.Encode(ar)
-	c.Assert(err, IsNil)
-	obtained := buf.Bytes()
-
-	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
-
-	c.Assert(obtained, DeepEquals, expected, comment)
+	test(c, ar, expected)
 }
 
 func (s *SuiteEncoder) TestCapsWithHead(c *C) {
@@ -119,15 +107,7 @@ func (s *SuiteEncoder) TestCapsWithHead(c *C) {
 		pktline.Flush,
 	)
 
-	var buf bytes.Buffer
-	e := advrefs.NewEncoder(&buf)
-	err := e.Encode(ar)
-	c.Assert(err, IsNil)
-	obtained := buf.Bytes()
-
-	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
-
-	c.Assert(obtained, DeepEquals, expected, comment)
+	test(c, ar, expected)
 }
 
 func (s *SuiteEncoder) TestRefs(c *C) {
@@ -152,15 +132,7 @@ func (s *SuiteEncoder) TestRefs(c *C) {
 		pktline.Flush,
 	)
 
-	var buf bytes.Buffer
-	e := advrefs.NewEncoder(&buf)
-	err := e.Encode(ar)
-	c.Assert(err, IsNil)
-	obtained := buf.Bytes()
-
-	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
-
-	c.Assert(obtained, DeepEquals, expected, comment)
+	test(c, ar, expected)
 }
 
 func (s *SuiteEncoder) TestPeeled(c *C) {
@@ -192,15 +164,7 @@ func (s *SuiteEncoder) TestPeeled(c *C) {
 		pktline.Flush,
 	)
 
-	var buf bytes.Buffer
-	e := advrefs.NewEncoder(&buf)
-	err := e.Encode(ar)
-	c.Assert(err, IsNil)
-	obtained := buf.Bytes()
-
-	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
-
-	c.Assert(obtained, DeepEquals, expected, comment)
+	test(c, ar, expected)
 }
 
 func (s *SuiteEncoder) TestShallow(c *C) {
@@ -223,15 +187,7 @@ func (s *SuiteEncoder) TestShallow(c *C) {
 		pktline.Flush,
 	)
 
-	var buf bytes.Buffer
-	e := advrefs.NewEncoder(&buf)
-	err := e.Encode(ar)
-	c.Assert(err, IsNil)
-	obtained := buf.Bytes()
-
-	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
-
-	c.Assert(obtained, DeepEquals, expected, comment)
+	test(c, ar, expected)
 }
 
 func (s *SuiteEncoder) TestAll(c *C) {
@@ -286,15 +242,7 @@ func (s *SuiteEncoder) TestAll(c *C) {
 		pktline.Flush,
 	)
 
-	var buf bytes.Buffer
-	e := advrefs.NewEncoder(&buf)
-	err := e.Encode(ar)
-	c.Assert(err, IsNil)
-	obtained := buf.Bytes()
-
-	comment := Commentf("\nobtained = %s\nexpected = %s\n", string(obtained), string(expected))
-
-	c.Assert(obtained, DeepEquals, expected, comment)
+	test(c, ar, expected)
 }
 
 func (s *SuiteEncoder) TestErrorTooLong(c *C) {
