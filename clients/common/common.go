@@ -2,6 +2,7 @@
 package common
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -126,28 +127,28 @@ func (i *GitUploadPackInfo) String() string {
 }
 
 func (i *GitUploadPackInfo) Bytes() []byte {
-	p := pktline.New()
-	_ = p.AddString("# service=git-upload-pack\n")
+	var buf bytes.Buffer
+	e := pktline.NewEncoder(&buf)
+
+	_ = e.EncodeString("# service=git-upload-pack\n")
+
 	// inserting a flush-pkt here violates the protocol spec, but some
 	// servers do it, like Github.com
-	p.AddFlush()
+	e.Flush()
 
-	firstLine := fmt.Sprintf("%s HEAD\x00%s\n", i.Head().Hash(), i.Capabilities.String())
-	_ = p.AddString(firstLine)
+	_ = e.Encodef("%s HEAD\x00%s\n", i.Head().Hash(), i.Capabilities.String())
 
 	for _, ref := range i.Refs {
 		if ref.Type() != core.HashReference {
 			continue
 		}
 
-		ref := fmt.Sprintf("%s %s\n", ref.Hash(), ref.Name())
-		_ = p.AddString(ref)
+		_ = e.Encodef("%s %s\n", ref.Hash(), ref.Name())
 	}
 
-	p.AddFlush()
-	b, _ := ioutil.ReadAll(p)
+	e.Flush()
 
-	return b
+	return buf.Bytes()
 }
 
 type GitUploadPackRequest struct {
@@ -170,24 +171,23 @@ func (r *GitUploadPackRequest) String() string {
 }
 
 func (r *GitUploadPackRequest) Reader() *strings.Reader {
-	p := pktline.New()
+	var buf bytes.Buffer
+	e := pktline.NewEncoder(&buf)
 
 	for _, want := range r.Wants {
-		_ = p.AddString(fmt.Sprintf("want %s\n", want))
+		_ = e.Encodef("want %s\n", want)
 	}
 
 	for _, have := range r.Haves {
-		_ = p.AddString(fmt.Sprintf("have %s\n", have))
+		_ = e.Encodef("have %s\n", have)
 	}
 
 	if r.Depth != 0 {
-		_ = p.AddString(fmt.Sprintf("deepen %d\n", r.Depth))
+		_ = e.Encodef("deepen %d\n", r.Depth)
 	}
 
-	p.AddFlush()
-	_ = p.AddString("done\n")
+	_ = e.Flush()
+	_ = e.EncodeString("done\n")
 
-	b, _ := ioutil.ReadAll(p)
-
-	return strings.NewReader(string(b))
+	return strings.NewReader(buf.String())
 }
