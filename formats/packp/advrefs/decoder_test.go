@@ -60,6 +60,15 @@ func (s *SuiteDecoder) TestInvalidFirstHash(c *C) {
 	testDecoderErrorMatches(c, r, ".*invalid hash.*")
 }
 
+func (s *SuiteDecoder) TestZeroId(c *C) {
+	payloads := []string{
+		"0000000000000000000000000000000000000000 capabilities^{}\x00multi_ack thin-pack\n",
+		pktline.FlushString,
+	}
+	ar := testDecodeOK(c, payloads)
+	c.Assert(ar.Head, IsNil)
+}
+
 func testDecodeOK(c *C, payloads []string) *advrefs.AdvRefs {
 	r := pktline.New()
 	err := r.AddString(payloads...)
@@ -72,15 +81,6 @@ func testDecodeOK(c *C, payloads []string) *advrefs.AdvRefs {
 	c.Assert(err, IsNil)
 
 	return ar
-}
-
-func (s *SuiteDecoder) TestZeroId(c *C) {
-	payloads := []string{
-		"0000000000000000000000000000000000000000 capabilities^{}\x00multi_ack thin-pack\n",
-		pktline.FlushString,
-	}
-	ar := testDecodeOK(c, payloads)
-	c.Assert(ar.Head, IsNil)
 }
 
 func (s *SuiteDecoder) TestMalformedZeroId(c *C) {
