@@ -15,7 +15,7 @@ func NewEncoder(w io.Writer) *Encoder {
 	}
 }
 
-func (e *Encoder) EncodeFlush() error {
+func (e *Encoder) Flush() error {
 	_, err := e.w.Write(FlushPkt)
 	return err
 }
@@ -27,7 +27,7 @@ func (e *Encoder) Encode(payloads ...[]byte) error {
 		}
 
 		if bytes.Equal(p, Flush) {
-			e.EncodeFlush()
+			e.Flush()
 			continue
 		}
 

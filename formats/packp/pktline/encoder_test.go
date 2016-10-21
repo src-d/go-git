@@ -18,7 +18,7 @@ func (s *SuiteEncoder) TestFlush(c *C) {
 	var buf bytes.Buffer
 	e := pktline.NewEncoder(&buf)
 
-	e.EncodeFlush()
+	e.Flush()
 
 	obtained := buf.Bytes()
 	c.Assert(obtained, DeepEquals, pktline.FlushPkt)
@@ -201,7 +201,7 @@ func ExampleEncoder() {
 	_ = e.Encode([]byte("data\n")) // error checks removed for brevity
 
 	// Encode a flush-pkt.
-	e.EncodeFlush()
+	e.Flush()
 
 	// Encode a couple of byte slices and a flush in one go. Each of
 	// them will end up as payloads of their own pktlines.
