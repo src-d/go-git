@@ -12,11 +12,11 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-type SuiteAdvRefsDecode struct{}
+type SuiteDecoder struct{}
 
-var _ = Suite(&SuiteAdvRefsDecode{})
+var _ = Suite(&SuiteDecoder{})
 
-func (s *SuiteAdvRefsDecode) TestEmpty(c *C) {
+func (s *SuiteDecoder) TestEmpty(c *C) {
 	ar := advrefs.New()
 	var buf bytes.Buffer
 	d := advrefs.NewDecoder(&buf)
@@ -25,7 +25,7 @@ func (s *SuiteAdvRefsDecode) TestEmpty(c *C) {
 	c.Assert(err, Equals, advrefs.ErrEmpty)
 }
 
-func (s *SuiteAdvRefs) TestShortForHash(c *C) {
+func (s *SuiteDecoder) TestShortForHash(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796",
@@ -40,7 +40,7 @@ func (s *SuiteAdvRefs) TestShortForHash(c *C) {
 	c.Assert(err, ErrorMatches, ".*too short")
 }
 
-func (s *SuiteAdvRefs) TestInvalidFirstHash(c *C) {
+func (s *SuiteDecoder) TestInvalidFirstHash(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796alberto2219af86ec6584e5 HEAD\x00multi_ack thin-pack\n",
@@ -55,7 +55,7 @@ func (s *SuiteAdvRefs) TestInvalidFirstHash(c *C) {
 	c.Assert(err, ErrorMatches, ".*invalid hash.*")
 }
 
-func (s *SuiteAdvRefs) TestZeroId(c *C) {
+func (s *SuiteDecoder) TestZeroId(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"0000000000000000000000000000000000000000 capabilities^{}\x00multi_ack thin-pack\n",
@@ -71,7 +71,7 @@ func (s *SuiteAdvRefs) TestZeroId(c *C) {
 	c.Assert(ar.Head, IsNil)
 }
 
-func (s *SuiteAdvRefs) TestParseMalformedZeroId(c *C) {
+func (s *SuiteDecoder) TestMalformedZeroId(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"0000000000000000000000000000000000000000 wrong\x00multi_ack thin-pack\n",
@@ -86,7 +86,7 @@ func (s *SuiteAdvRefs) TestParseMalformedZeroId(c *C) {
 	c.Assert(err, ErrorMatches, ".*malformed zero-id.*")
 }
 
-func (s *SuiteAdvRefs) TestParseShortZeroId(c *C) {
+func (s *SuiteDecoder) TestShortZeroId(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"0000000000000000000000000000000000000000 capabi",
@@ -101,7 +101,7 @@ func (s *SuiteAdvRefs) TestParseShortZeroId(c *C) {
 	c.Assert(err, ErrorMatches, ".*too short zero-id.*")
 }
 
-func (s *SuiteAdvRefs) TestParseHead(c *C) {
+func (s *SuiteDecoder) TestHead(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00",
@@ -118,7 +118,7 @@ func (s *SuiteAdvRefs) TestParseHead(c *C) {
 		core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 }
 
-func (s *SuiteAdvRefs) TestParseFirstIsNotHead(c *C) {
+func (s *SuiteDecoder) TestFirstIsNotHead(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 refs/heads/master\x00",
@@ -136,7 +136,7 @@ func (s *SuiteAdvRefs) TestParseFirstIsNotHead(c *C) {
 		core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 }
 
-func (s *SuiteAdvRefs) TestParseShortRef(c *C) {
+func (s *SuiteDecoder) TestShortRef(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 H",
@@ -151,7 +151,7 @@ func (s *SuiteAdvRefs) TestParseShortRef(c *C) {
 	c.Assert(err, ErrorMatches, ".*too short.*")
 }
 
-func (s *SuiteAdvRefs) TestParseNoNULL(c *C) {
+func (s *SuiteDecoder) TestNoNULL(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEADofs-delta multi_ack",
@@ -166,7 +166,7 @@ func (s *SuiteAdvRefs) TestParseNoNULL(c *C) {
 	c.Assert(err, ErrorMatches, ".*NULL not found.*")
 }
 
-func (s *SuiteAdvRefs) TestParseNoSpaceAfterHash(c *C) {
+func (s *SuiteDecoder) TestNoSpaceAfterHash(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5-HEAD\x00",
@@ -181,7 +181,7 @@ func (s *SuiteAdvRefs) TestParseNoSpaceAfterHash(c *C) {
 	c.Assert(err, ErrorMatches, ".*no space after hash.*")
 }
 
-func (s *SuiteAdvRefs) TestParseNoCaps(c *C) {
+func (s *SuiteDecoder) TestNoCaps(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00",
@@ -197,7 +197,7 @@ func (s *SuiteAdvRefs) TestParseNoCaps(c *C) {
 	c.Assert(ar.Caps.IsEmpty(), Equals, true)
 }
 
-func (s *SuiteAdvRefs) TestParseCaps(c *C) {
+func (s *SuiteDecoder) TestCaps(c *C) {
 	for _, test := range [...]struct {
 		input []string
 		caps  []packp.Capability
@@ -288,7 +288,7 @@ func (s *SuiteAdvRefs) TestParseCaps(c *C) {
 	}
 }
 
-func (s *SuiteAdvRefs) TestParseWithPrefix(c *C) {
+func (s *SuiteDecoder) TestWithPrefix(c *C) {
 	payloads := []string{
 		"# this is a prefix\n",
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00foo\n",
@@ -309,7 +309,7 @@ func (s *SuiteAdvRefs) TestParseWithPrefix(c *C) {
 	c.Assert(ar.Prefix[0], DeepEquals, []byte("# this is a prefix"))
 }
 
-func (s *SuiteAdvRefs) TestParseWithPrefixAndFlush(c *C) {
+func (s *SuiteDecoder) TestWithPrefixAndFlush(c *C) {
 	payloads := []string{
 		"# this is a prefix\n",
 		pktline.FlushString,
@@ -332,7 +332,7 @@ func (s *SuiteAdvRefs) TestParseWithPrefixAndFlush(c *C) {
 	c.Assert(ar.Prefix[1], DeepEquals, []byte(pktline.FlushString))
 }
 
-func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {
+func (s *SuiteDecoder) TestOtherRefs(c *C) {
 	for _, test := range [...]struct {
 		input  []string
 		refs   map[string]core.Hash
@@ -446,7 +446,7 @@ func (s *SuiteAdvRefs) TestParseOtherRefs(c *C) {
 	}
 }
 
-func (s *SuiteAdvRefs) TestParseMalformedOtherRefsNoSpace(c *C) {
+func (s *SuiteDecoder) TestMalformedOtherRefsNoSpace(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack thin-pack\n",
@@ -462,7 +462,7 @@ func (s *SuiteAdvRefs) TestParseMalformedOtherRefsNoSpace(c *C) {
 	c.Assert(err, ErrorMatches, ".*malformed ref data.*")
 }
 
-func (s *SuiteAdvRefs) TestParseMalformedOtherRefsMultipleSpaces(c *C) {
+func (s *SuiteDecoder) TestMalformedOtherRefsMultipleSpaces(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack thin-pack\n",
@@ -478,7 +478,7 @@ func (s *SuiteAdvRefs) TestParseMalformedOtherRefsMultipleSpaces(c *C) {
 	c.Assert(err, ErrorMatches, ".*malformed ref data.*")
 }
 
-func (s *SuiteAdvRefs) TestParseShallow(c *C) {
+func (s *SuiteDecoder) TestShallow(c *C) {
 	for _, test := range [...]struct {
 		input    []string
 		shallows []core.Hash
@@ -534,7 +534,7 @@ func (s *SuiteAdvRefs) TestParseShallow(c *C) {
 	}
 }
 
-func (s *SuiteAdvRefs) TestParseInvalidShallowHash(c *C) {
+func (s *SuiteDecoder) TestInvalidShallowHash(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
@@ -554,7 +554,7 @@ func (s *SuiteAdvRefs) TestParseInvalidShallowHash(c *C) {
 	c.Assert(err, ErrorMatches, ".*invalid hash text.*")
 }
 
-func (s *SuiteAdvRefs) TestParseGarbageAfterShallow(c *C) {
+func (s *SuiteDecoder) TestGarbageAfterShallow(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
@@ -575,7 +575,7 @@ func (s *SuiteAdvRefs) TestParseGarbageAfterShallow(c *C) {
 	c.Assert(err, ErrorMatches, ".*malformed shallow prefix.*")
 }
 
-func (s *SuiteAdvRefs) TestParseMalformedShallowHash(c *C) {
+func (s *SuiteDecoder) TestMalformedShallowHash(c *C) {
 	input := pktline.New()
 	err := input.AddString(
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
@@ -595,7 +595,7 @@ func (s *SuiteAdvRefs) TestParseMalformedShallowHash(c *C) {
 	c.Assert(err, ErrorMatches, ".*malformed shallow hash.*")
 }
 
-func (s *SuiteAdvRefs) TestParseEOFRefs(c *C) {
+func (s *SuiteDecoder) TestEOFRefs(c *C) {
 	input := strings.NewReader("" +
 		"005b6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n" +
 		"003fa6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n" +
@@ -608,7 +608,7 @@ func (s *SuiteAdvRefs) TestParseEOFRefs(c *C) {
 	c.Assert(err, ErrorMatches, ".*invalid pkt-len.*")
 }
 
-func (s *SuiteAdvRefs) TestParseEOFShallows(c *C) {
+func (s *SuiteDecoder) TestEOFShallows(c *C) {
 	input := strings.NewReader("" +
 		"005b6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n" +
 		"003fa6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n" +

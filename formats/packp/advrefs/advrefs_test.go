@@ -17,11 +17,11 @@ import (
 
 func Test(t *testing.T) { TestingT(t) }
 
-type SuiteAdvRefs struct{}
+type SuiteDecodeEncode struct{}
 
-var _ = Suite(&SuiteAdvRefs{})
+var _ = Suite(&SuiteDecodeEncode{})
 
-func (s *SuiteAdvRefs) testEncodeDecode(c *C, in []string, exp []string) {
+func (s *SuiteDecodeEncode) test(c *C, in []string, exp []string) {
 	var err error
 	var input io.Reader
 	{
@@ -61,7 +61,7 @@ func (s *SuiteAdvRefs) testEncodeDecode(c *C, in []string, exp []string) {
 			in, string(obtained), string(expected)))
 }
 
-func (s *SuiteAdvRefs) TestEncodeDecodeNoHead(c *C) {
+func (s *SuiteDecodeEncode) TestNoHead(c *C) {
 	input := []string{
 		"0000000000000000000000000000000000000000 capabilities^{}\x00",
 		pktline.FlushString,
@@ -72,10 +72,10 @@ func (s *SuiteAdvRefs) TestEncodeDecodeNoHead(c *C) {
 		pktline.FlushString,
 	}
 
-	s.testEncodeDecode(c, input, expected)
+	s.test(c, input, expected)
 }
 
-func (s *SuiteAdvRefs) TestEncodeDecodeNoHeadSmart(c *C) {
+func (s *SuiteDecodeEncode) TestNoHeadSmart(c *C) {
 	input := []string{
 		"# service=git-upload-pack\n",
 		"0000000000000000000000000000000000000000 capabilities^{}\x00",
@@ -88,10 +88,10 @@ func (s *SuiteAdvRefs) TestEncodeDecodeNoHeadSmart(c *C) {
 		pktline.FlushString,
 	}
 
-	s.testEncodeDecode(c, input, expected)
+	s.test(c, input, expected)
 }
 
-func (s *SuiteAdvRefs) TestEncodeDecodeNoHeadSmartBug(c *C) {
+func (s *SuiteDecodeEncode) TestNoHeadSmartBug(c *C) {
 	input := []string{
 		"# service=git-upload-pack\n",
 		pktline.FlushString,
@@ -106,10 +106,10 @@ func (s *SuiteAdvRefs) TestEncodeDecodeNoHeadSmartBug(c *C) {
 		pktline.FlushString,
 	}
 
-	s.testEncodeDecode(c, input, expected)
+	s.test(c, input, expected)
 }
 
-func (s *SuiteAdvRefs) TestEncodeDecodeRefs(c *C) {
+func (s *SuiteDecodeEncode) TestRefs(c *C) {
 	input := []string{
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master",
@@ -126,10 +126,10 @@ func (s *SuiteAdvRefs) TestEncodeDecodeRefs(c *C) {
 		pktline.FlushString,
 	}
 
-	s.testEncodeDecode(c, input, expected)
+	s.test(c, input, expected)
 }
 
-func (s *SuiteAdvRefs) TestEncodeDecodePeeled(c *C) {
+func (s *SuiteDecodeEncode) TestPeeled(c *C) {
 	input := []string{
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack",
 		"7777777777777777777777777777777777777777 refs/tags/v2.6.12-tree\n",
@@ -150,10 +150,10 @@ func (s *SuiteAdvRefs) TestEncodeDecodePeeled(c *C) {
 		pktline.FlushString,
 	}
 
-	s.testEncodeDecode(c, input, expected)
+	s.test(c, input, expected)
 }
 
-func (s *SuiteAdvRefs) TestEncodeDecodeAll(c *C) {
+func (s *SuiteDecodeEncode) TestAll(c *C) {
 	input := []string{
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
@@ -178,10 +178,10 @@ func (s *SuiteAdvRefs) TestEncodeDecodeAll(c *C) {
 		pktline.FlushString,
 	}
 
-	s.testEncodeDecode(c, input, expected)
+	s.test(c, input, expected)
 }
 
-func (s *SuiteAdvRefs) TestEncodeDecodeAllSmart(c *C) {
+func (s *SuiteDecodeEncode) TestAllSmart(c *C) {
 	input := []string{
 		"# service=git-upload-pack\n",
 		pktline.FlushString,
@@ -210,10 +210,10 @@ func (s *SuiteAdvRefs) TestEncodeDecodeAllSmart(c *C) {
 		pktline.FlushString,
 	}
 
-	s.testEncodeDecode(c, input, expected)
+	s.test(c, input, expected)
 }
 
-func (s *SuiteAdvRefs) TestEncodeDecodeAllSmartBug(c *C) {
+func (s *SuiteDecodeEncode) TestAllSmartBug(c *C) {
 	input := []string{
 		"# service=git-upload-pack\n",
 		pktline.FlushString,
@@ -242,7 +242,7 @@ func (s *SuiteAdvRefs) TestEncodeDecodeAllSmartBug(c *C) {
 		pktline.FlushString,
 	}
 
-	s.testEncodeDecode(c, input, expected)
+	s.test(c, input, expected)
 }
 
 func ExampleDecoder_Decode() {

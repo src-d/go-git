@@ -14,6 +14,10 @@ import (
 	. "gopkg.in/check.v1"
 )
 
+type SuiteEncoder struct{}
+
+var _ = Suite(&SuiteEncoder{})
+
 // returns a byte slice with the pkt-lines for the given payloads.
 func pktlines(c *C, payloads ...[]byte) []byte {
 	pl := pktline.New()
@@ -33,7 +37,7 @@ func bytesFromReader(c *C, r io.Reader) []byte {
 	return b
 }
 
-func (s *SuiteAdvRefs) TestEncodeZeroValue(c *C) {
+func (s *SuiteEncoder) TestZeroValue(c *C) {
 	ar := &advrefs.AdvRefs{}
 
 	expected := pktlines(c,
@@ -52,7 +56,7 @@ func (s *SuiteAdvRefs) TestEncodeZeroValue(c *C) {
 	c.Assert(obtained, DeepEquals, expected, comment)
 }
 
-func (s *SuiteAdvRefs) TestEncodeHead(c *C) {
+func (s *SuiteEncoder) TestHead(c *C) {
 	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
 	ar := &advrefs.AdvRefs{
 		Head: &hash,
@@ -74,7 +78,7 @@ func (s *SuiteAdvRefs) TestEncodeHead(c *C) {
 	c.Assert(obtained, DeepEquals, expected, comment)
 }
 
-func (s *SuiteAdvRefs) TestEncodeCapsNoHead(c *C) {
+func (s *SuiteEncoder) TestCapsNoHead(c *C) {
 	caps := packp.NewCapabilities()
 	caps.Add("symref", "HEAD:/refs/heads/master")
 	caps.Add("ofs-delta")
@@ -99,7 +103,7 @@ func (s *SuiteAdvRefs) TestEncodeCapsNoHead(c *C) {
 	c.Assert(obtained, DeepEquals, expected, comment)
 }
 
-func (s *SuiteAdvRefs) TestEncodeCapsWithHead(c *C) {
+func (s *SuiteEncoder) TestCapsWithHead(c *C) {
 	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
 	caps := packp.NewCapabilities()
 	caps.Add("symref", "HEAD:/refs/heads/master")
@@ -126,7 +130,7 @@ func (s *SuiteAdvRefs) TestEncodeCapsWithHead(c *C) {
 	c.Assert(obtained, DeepEquals, expected, comment)
 }
 
-func (s *SuiteAdvRefs) TestEncodeRefs(c *C) {
+func (s *SuiteEncoder) TestRefs(c *C) {
 	refs := map[string]core.Hash{
 		"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
 		"refs/tags/v2.6.12-tree": core.NewHash("1111111111111111111111111111111111111111"),
@@ -159,7 +163,7 @@ func (s *SuiteAdvRefs) TestEncodeRefs(c *C) {
 	c.Assert(obtained, DeepEquals, expected, comment)
 }
 
-func (s *SuiteAdvRefs) TestEncodePeeled(c *C) {
+func (s *SuiteEncoder) TestPeeled(c *C) {
 	refs := map[string]core.Hash{
 		"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
 		"refs/tags/v2.6.12-tree": core.NewHash("1111111111111111111111111111111111111111"),
@@ -199,7 +203,7 @@ func (s *SuiteAdvRefs) TestEncodePeeled(c *C) {
 	c.Assert(obtained, DeepEquals, expected, comment)
 }
 
-func (s *SuiteAdvRefs) TestEncodeShallow(c *C) {
+func (s *SuiteEncoder) TestShallow(c *C) {
 	shallows := []core.Hash{
 		core.NewHash("1111111111111111111111111111111111111111"),
 		core.NewHash("4444444444444444444444444444444444444444"),
@@ -230,7 +234,7 @@ func (s *SuiteAdvRefs) TestEncodeShallow(c *C) {
 	c.Assert(obtained, DeepEquals, expected, comment)
 }
 
-func (s *SuiteAdvRefs) TestEncodeAll(c *C) {
+func (s *SuiteEncoder) TestAll(c *C) {
 	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
 
 	caps := packp.NewCapabilities()
@@ -293,7 +297,7 @@ func (s *SuiteAdvRefs) TestEncodeAll(c *C) {
 	c.Assert(obtained, DeepEquals, expected, comment)
 }
 
-func (s *SuiteAdvRefs) TestEncodeErrorTooLong(c *C) {
+func (s *SuiteEncoder) TestErrorTooLong(c *C) {
 	refs := map[string]core.Hash{
 		strings.Repeat("a", pktline.MaxPayloadSize): core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
 	}
