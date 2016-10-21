@@ -2,7 +2,6 @@ package test
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -33,20 +32,6 @@ func (s *FilesystemSuite) TestCreateDepthAbsolute(c *C) {
 	f, err := s.Fs.Create("/bar/foo")
 	c.Assert(err, IsNil)
 	c.Assert(f.Filename(), Equals, "bar/foo")
-}
-
-func (s *FilesystemSuite) TestCreateAndWrite(c *C) {
-	f, err := s.Fs.Create("foo")
-	c.Assert(err, IsNil)
-	l, err := f.Write([]byte("foo"))
-	c.Assert(err, IsNil)
-	c.Assert(l, Equals, 3)
-
-	_, err = f.Seek(0, io.SeekStart)
-	c.Assert(err, IsNil)
-	wrote, err := ioutil.ReadAll(f)
-	c.Assert(err, IsNil)
-	c.Assert(wrote, DeepEquals, []byte("foo"))
 }
 
 func (s *FilesystemSuite) TestCreateOverwrite(c *C) {

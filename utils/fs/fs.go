@@ -8,13 +8,15 @@ import (
 )
 
 var (
-	ErrClosed       = errors.New("File: Writing on closed file.")
+	ErrClosed       = errors.New("file: Writing on closed file.")
 	ErrReadOnly     = errors.New("this is a read-only filesystem")
 	ErrNotSupported = errors.New("feature not supported")
 )
 
 type Filesystem interface {
+	//Create opens a file in write-only mode.
 	Create(filename string) (File, error)
+	//Open opens a file in read-only mode.
 	Open(filename string) (File, error)
 	Stat(filename string) (FileInfo, error)
 	ReadDir(path string) ([]FileInfo, error)
