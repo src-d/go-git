@@ -230,17 +230,20 @@ func ExampleEncoder() {
 		pktline.Flush,
 	)
 
-	// You can also encode strings.
+	// You can also encode strings:
 	_ = e.EncodeString(
 		"foo\n",
 		"bar\n",
 		pktline.FlushString,
 	)
+
+	// You can also format and encode a payload:
+	_ = e.Encodef(" %s %d\n", "foo", 42)
 	// Output:
 	// 0009data
 	// 0000000ahello
 	// 000bworld!
 	// 00000008foo
 	// 0008bar
-	// 0000
+	// 0000000c foo 42
 }
