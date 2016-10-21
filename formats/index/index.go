@@ -1,6 +1,7 @@
 package index
 
 import (
+	"os"
 	"time"
 
 	"gopkg.in/src-d/go-git.v3/core"
@@ -23,13 +24,17 @@ type Entry struct {
 	CreatedAt  time.Time
 	ModifiedAt time.Time
 	Dev, Inode uint32
-	Mode       uint32
+	Mode       os.FileMode
 	UID, GID   uint32
 	Size       uint32
 	Flags      uint16
 	Stage      Stage
-	Hash       core.Hash
-	Name       string
+
+	SkipWorktree bool
+	IntentToAdd  bool
+
+	Hash core.Hash
+	Name string
 }
 
 // Tree contains pre-computed hashes for trees that can be derived from the

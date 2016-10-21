@@ -11,6 +11,9 @@ import (
 )
 
 var (
+	// IndexVersionSupported is the range of supported index versions
+	IndexVersionSupported = struct{ Min, Max uint32 }{Min: 2, Max: 4}
+
 	// ErrUnsupportedVersion is returned by Decode when the idxindex file
 	// version is not supported.
 	ErrUnsupportedVersion = errors.New("Unsuported version")
@@ -26,9 +29,6 @@ var (
 type Stage int
 
 const (
-	// IndexVersionSupported is the only index version supported.
-	IndexVersionSupported = 2
-
 	// Merged is the default stage, fully merged
 	Merged Stage = 1
 	// AncestorMode is the base revision
@@ -38,7 +38,12 @@ const (
 	// TheirMode is the second tree revision, theirs
 	TheirMode Stage = 3
 
-	nameMask = 0xfff
+	EntryExtended = 0x4000
+	EntryValid    = 0x8000
+
+	nameMask         = 0xfff
+	intentToAddMask  = 1 << 13
+	skipWorkTreeMask = 1 << 14
 )
 
 type Decoder struct {
@@ -102,12 +107,25 @@ func (d *Decoder) readEntry(idx *Index) (*Entry, error) {
 		&e.Flags,
 	}
 
-	if err := readBinary(d.r, flow); err != nil {
+	if err := readBinary(d.r, flow...); err != nil {
 		return nil, err
 	}
 
+	read := 62
 	e.CreatedAt = time.Unix(int64(msec), int64(mnsec))
 	e.ModifiedAt = time.Unix(int64(sec), int64(nsec))
+	e.Stage = Stage(e.Flags>>12) & 0x3
+
+	if e.Flags&EntryExtended != 0 {
+		read += 2
+		var extended uint16
+		if err := readBinary(d.r, &extended); err != nil {
+			return nil, err
+		}
+
+		e.IntentToAdd = extended&intentToAddMask != 0
+		e.SkipWorktree = extended&skipWorkTreeMask != 0
+	}
 
 	if err := d.readEntryName(e); err != nil {
 		return nil, err
@@ -115,13 +133,12 @@ func (d *Decoder) readEntry(idx *Index) (*Entry, error) {
 
 	// Index entries are padded out to the next 8 byte alignment
 	// for historical reasons related to how C Git read the files.
-	entrySize := 62 + len(e.Name)
+	entrySize := read + len(e.Name)
 	padLen := 8 - entrySize%8
 	if _, err := io.CopyN(ioutil.Discard, d.r, int64(padLen)); err != nil {
 		return nil, err
 	}
 
-	e.Stage = Stage(e.Flags>>12) & 0x3
 	return e, nil
 }
 
@@ -192,14 +209,14 @@ func validateHeader(r io.Reader) (version uint32, err error) {
 		return 0, err
 	}
 
-	if version != IndexVersionSupported {
+	if version < IndexVersionSupported.Min || version > IndexVersionSupported.Max {
 		return 0, ErrUnsupportedVersion
 	}
 
 	return
 }
 
-func readBinary(r io.Reader, data []interface{}) error {
+func readBinary(r io.Reader, data ...interface{}) error {
 	for _, v := range data {
 		err := binary.Read(r, binary.BigEndian, v)
 		if err != nil {

@@ -52,6 +52,7 @@ func (s *IdxfileSuite) TestDecodeEntries(c *C) {
 	c.Assert(e.Size, Equals, uint32(189))
 	c.Assert(e.Hash.String(), Equals, "32858aad3c383ed1ff0a0f9bdf231d54a00c9e88")
 	c.Assert(e.Name, Equals, ".gitignore")
+	c.Assert(e.Mode.String(), Equals, "-rw-r--r--")
 
 	e = idx.Entries[1]
 	c.Assert(e.Name, Equals, "CHANGELOG")
@@ -123,4 +124,21 @@ func (s *IdxfileSuite) TestDecodeMergeConflict(c *C) {
 		c.Assert(e.Name, Equals, "go/example.go")
 	}
 
+}
+
+func (s *IdxfileSuite) TestDecodeExtendedV3(c *C) {
+	f, err := fixtures.Basic().ByTag("intent-to-add").One().DotGit().Open("index")
+	c.Assert(err, IsNil)
+
+	idx := &Index{}
+	d := NewDecoder(f)
+	err = d.Decode(idx)
+	c.Assert(err, IsNil)
+
+	c.Assert(idx.Version, Equals, uint32(3))
+	c.Assert(idx.EntryCount, Equals, uint32(11))
+
+	c.Assert(idx.Entries[6].Name, Equals, "intent-to-add")
+	c.Assert(idx.Entries[6].IntentToAdd, Equals, true)
+	c.Assert(idx.Entries[6].SkipWorktree, Equals, false)
 }
