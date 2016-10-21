@@ -5,21 +5,41 @@ import (
 	"io"
 )
 
+// An Encoder writes pkt-lines to an output stream.
 type Encoder struct {
 	w io.Writer
 }
 
+const (
+	// MaxPayloadSize is the maximum payload size of a pkt-line in bytes.
+	MaxPayloadSize = 65516
+)
+
+var (
+	// FlushPkt are the contents of a flush-pkt pkt-line.
+	FlushPkt = []byte{'0', '0', '0', '0'}
+	// Flush is the payload to use with the Encode method to encode a flush-pkt.
+	Flush = []byte{}
+	// FlushString is the payload to use with the EncodeString method to encode a flush-pkt.
+	FlushString = ""
+)
+
+// NewEncoder returns a new encoder that writes to w.
 func NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{
 		w: w,
 	}
 }
 
+// Flush encodes a flush-pkt to the output stream.
 func (e *Encoder) Flush() error {
 	_, err := e.w.Write(FlushPkt)
 	return err
 }
 
+// Encode encodes a pkt-line with the payload specified and write it to
+// the output stream.  If several payloads are specified, each of them
+// will get streamed in their own pkt-lines.
 func (e *Encoder) Encode(payloads ...[]byte) error {
 	for _, p := range payloads {
 		if err := checkPayloadLength(len(p)); err != nil {
@@ -27,7 +47,9 @@ func (e *Encoder) Encode(payloads ...[]byte) error {
 		}
 
 		if bytes.Equal(p, Flush) {
-			e.Flush()
+			if err := e.Flush(); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -43,6 +65,7 @@ func (e *Encoder) Encode(payloads ...[]byte) error {
 	return nil
 }
 
+// EncodeString works similarly as Encode but payloads are specified as strings.
 func (e *Encoder) EncodeString(payloads ...string) error {
 	for _, p := range payloads {
 		if err := e.Encode([]byte(p)); err != nil {

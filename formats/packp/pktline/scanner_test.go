@@ -44,7 +44,8 @@ func (s *SuiteScanner) TestEmptyReader(c *C) {
 func (s *SuiteScanner) TestFlush(c *C) {
 	var buf bytes.Buffer
 	e := pktline.NewEncoder(&buf)
-	e.Flush()
+	err := e.Flush()
+	c.Assert(err, IsNil)
 
 	sc := pktline.NewScanner(&buf)
 	c.Assert(sc.Scan(), Equals, true)
@@ -185,7 +186,8 @@ func sectionsExample(c *C, nSections, nLines int) io.Reader {
 		}
 		err := e.EncodeString(ss...)
 		c.Assert(err, IsNil)
-		e.Flush()
+		err = e.Flush()
+		c.Assert(err, IsNil)
 	}
 
 	return &buf
