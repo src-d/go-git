@@ -47,7 +47,8 @@ const (
 )
 
 type Decoder struct {
-	r io.Reader
+	r         io.Reader
+	lastEntry *Entry
 }
 
 // NewDecoder returns a new decoder that reads from r.
@@ -83,6 +84,7 @@ func (d *Decoder) readEntries(idx *Index) error {
 			return err
 		}
 
+		d.lastEntry = e
 		idx.Entries = append(idx.Entries, *e)
 	}
 
@@ -127,30 +129,76 @@ func (d *Decoder) readEntry(idx *Index) (*Entry, error) {
 		e.SkipWorktree = extended&skipWorkTreeMask != 0
 	}
 
-	if err := d.readEntryName(e); err != nil {
+	if err := d.readEntryName(idx, e); err != nil {
 		return nil, err
+
 	}
 
-	// Index entries are padded out to the next 8 byte alignment
-	// for historical reasons related to how C Git read the files.
-	entrySize := read + len(e.Name)
-	padLen := 8 - entrySize%8
-	if _, err := io.CopyN(ioutil.Discard, d.r, int64(padLen)); err != nil {
-		return nil, err
-	}
-
-	return e, nil
+	return e, d.padEntry(idx, e, read)
 }
 
-func (d *Decoder) readEntryName(e *Entry) error {
+func (d *Decoder) readEntryName(idx *Index, e *Entry) error {
+	var name string
+	var err error
+
+	switch idx.Version {
+	case 2, 3:
+		name, err = d.doReadEntryName(e)
+	case 4:
+		name, err = d.doReadEntryNameV4()
+	}
+
+	if err != nil {
+		return err
+	}
+
+	e.Name = name
+	return nil
+}
+
+func (d *Decoder) doReadEntryNameV4() (string, error) {
+	l, err := readVariableWidthInt(d.r)
+	if err != nil {
+		return "", err
+	}
+
+	var base string
+	if d.lastEntry != nil {
+		base = d.lastEntry.Name[:len(d.lastEntry.Name)-int(l)]
+	}
+
+	name, err := readUntil(d.r, 0)
+	if err != nil {
+		return "", err
+	}
+
+	return base + string(name), nil
+}
+
+func (d *Decoder) doReadEntryName(e *Entry) (string, error) {
 	pLen := e.Flags & nameMask
 
 	name := make([]byte, int64(pLen))
 	if err := binary.Read(d.r, binary.BigEndian, &name); err != nil {
+		return "", err
+	}
+
+	return string(name), nil
+}
+
+// Index entries are padded out to the next 8 byte alignment
+// for historical reasons related to how C Git read the files.
+func (d *Decoder) padEntry(idx *Index, e *Entry, read int) error {
+	if idx.Version == 4 {
+		return nil
+	}
+
+	entrySize := read + len(e.Name)
+	padLen := 8 - entrySize%8
+	if _, err := io.CopyN(ioutil.Discard, d.r, int64(padLen)); err != nil {
 		return err
 	}
 
-	e.Name = string(name)
 	return nil
 }
 
@@ -216,37 +264,6 @@ func validateHeader(r io.Reader) (version uint32, err error) {
 	return
 }
 
-func readBinary(r io.Reader, data ...interface{}) error {
-	for _, v := range data {
-		err := binary.Read(r, binary.BigEndian, v)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func readUntil(r io.Reader, delim byte) ([]byte, error) {
-	var buf [1]byte
-	value := make([]byte, 0, 16)
-	for {
-		if _, err := r.Read(buf[:]); err != nil {
-			if err == io.EOF {
-				return nil, err
-			}
-
-			return nil, err
-		}
-
-		if buf[0] == delim {
-			return value, nil
-		}
-
-		value = append(value, buf[0])
-	}
-}
-
 type TreeExtensionDecoder struct {
 	r io.Reader
 }
@@ -305,4 +322,68 @@ func (d *TreeExtensionDecoder) readEntry() (*TreeEntry, error) {
 	}
 
 	return e, nil
+}
+
+func readBinary(r io.Reader, data ...interface{}) error {
+	for _, v := range data {
+		err := binary.Read(r, binary.BigEndian, v)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func readUntil(r io.Reader, delim byte) ([]byte, error) {
+	var buf [1]byte
+	value := make([]byte, 0, 16)
+	for {
+		if _, err := r.Read(buf[:]); err != nil {
+			if err == io.EOF {
+				return nil, err
+			}
+
+			return nil, err
+		}
+
+		if buf[0] == delim {
+			return value, nil
+		}
+
+		value = append(value, buf[0])
+	}
+}
+
+//     dheader[pos] = ofs & 127;
+//     while (ofs >>= 7)
+//         dheader[--pos] = 128 | (--ofs & 127);
+//
+func readVariableWidthInt(r io.Reader) (int64, error) {
+	var c byte
+	if err := readBinary(r, &c); err != nil {
+		return 0, err
+	}
+
+	var v = int64(c & maskLength)
+	for moreBytesInLength(c) {
+		v++
+		if err := readBinary(r, &c); err != nil {
+			return 0, err
+		}
+
+		v = (v << lengthBits) + int64(c&maskLength)
+	}
+
+	return v, nil
+}
+
+const (
+	maskContinue = uint8(128) // 1000 000
+	maskLength   = uint8(127) // 0111 1111
+	lengthBits   = uint8(7)   // subsequent bytes has 7 bits to store the length
+)
+
+func moreBytesInLength(c byte) bool {
+	return c&maskContinue > 0
 }

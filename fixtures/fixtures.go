@@ -45,6 +45,15 @@ var fixtures = Fixtures{{
 	URL:        "https://github.com/git-fixtures/basic.git",
 	DotGitHash: core.NewHash("4870d54b5b04e43da8cf99ceec179d9675494af8"),
 }, {
+	Tags:       []string{".git", "intent-to-add"},
+	URL:        "https://github.com/git-fixtures/basic.git",
+	DotGitHash: core.NewHash("4e7600af05c3356e8b142263e127b76f010facfc"),
+}, {
+	Tags:       []string{".git", "index-v4"},
+	URL:        "https://github.com/git-fixtures/basic.git",
+	DotGitHash: core.NewHash("935e5ac17c41c309c356639816ea0694a568c484"),
+}, {
+
 	Tags:         []string{"packfile", ".git", "unpacked", "multi-packfile"},
 	URL:          "https://github.com/src-d/go-git.git",
 	Head:         core.NewHash("e8788ad9165781196e917292d6055cba1d78664e"),

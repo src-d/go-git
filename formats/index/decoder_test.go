@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v4/core"
 	"gopkg.in/src-d/go-git.v4/fixtures"
 )
 
@@ -137,6 +137,33 @@ func (s *IdxfileSuite) TestDecodeExtendedV3(c *C) {
 
 	c.Assert(idx.Version, Equals, uint32(3))
 	c.Assert(idx.EntryCount, Equals, uint32(11))
+
+	c.Assert(idx.Entries[6].Name, Equals, "intent-to-add")
+	c.Assert(idx.Entries[6].IntentToAdd, Equals, true)
+	c.Assert(idx.Entries[6].SkipWorktree, Equals, false)
+}
+
+func (s *IdxfileSuite) TestDecodeV4(c *C) {
+	f, err := fixtures.Basic().ByTag("index-v4").One().DotGit().Open("index")
+	c.Assert(err, IsNil)
+
+	idx := &Index{}
+	d := NewDecoder(f)
+	err = d.Decode(idx)
+	c.Assert(err, IsNil)
+
+	c.Assert(idx.Version, Equals, uint32(4))
+	c.Assert(idx.EntryCount, Equals, uint32(11))
+
+	names := []string{
+		".gitignore", "CHANGELOG", "LICENSE", "binary.jpg", "go/example.go",
+		"haskal/haskal.hs", "intent-to-add", "json/long.json",
+		"json/short.json", "php/crappy.php", "vendor/foo.go",
+	}
+
+	for i, e := range idx.Entries {
+		c.Assert(e.Name, Equals, names[i])
+	}
 
 	c.Assert(idx.Entries[6].Name, Equals, "intent-to-add")
 	c.Assert(idx.Entries[6].IntentToAdd, Equals, true)

@@ -4,7 +4,7 @@ import (
 	"os"
 	"time"
 
-	"gopkg.in/src-d/go-git.v3/core"
+	"gopkg.in/src-d/go-git.v4/core"
 )
 
 // Index contains the information about which objects are currently checked out
