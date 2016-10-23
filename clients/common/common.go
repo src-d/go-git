@@ -98,23 +98,46 @@ func (i *GitUploadPackInfo) Decode(r io.Reader) error {
 	}
 
 	i.Capabilities = ar.Caps
+
+	if err := i.addRefs(ar); err != nil {
+		return core.NewUnexpectedError(err)
+	}
+
+	return nil
+}
+
+func (i *GitUploadPackInfo) addRefs(ar *advrefs.AdvRefs) error {
 	i.Refs = make(memory.ReferenceStorage, 0)
 	for name, hash := range ar.Refs {
 		ref := core.NewReferenceFromStrings(name, hash.String())
 		i.Refs.Set(ref)
 	}
 
-	if hasHeadSymref(ar) {
-		target := i.Capabilities.SymbolicReference(string(core.HEAD))
-		head := core.NewSymbolicReference(core.HEAD, core.ReferenceName(target))
-		i.Refs.Set(head)
+	return i.addSymbolicRefs(ar)
+}
+
+func (i *GitUploadPackInfo) addSymbolicRefs(ar *advrefs.AdvRefs) error {
+	if !hasSymrefs(ar) {
+		return nil
+	}
+
+	for _, symref := range ar.Caps.Get("symref").Values {
+		chunks := strings.Split(symref, ":")
+		if len(chunks) != 2 {
+			err := fmt.Errorf("bad number of `:` in symref value (%q)", symref)
+			return core.NewUnexpectedError(err)
+		}
+		name := core.ReferenceName(chunks[0])
+		target := core.ReferenceName(chunks[1])
+		ref := core.NewSymbolicReference(name, target)
+		i.Refs.Set(ref)
 	}
 
 	return nil
 }
 
-func hasHeadSymref(ar *advrefs.AdvRefs) bool {
-	return ar.Caps.Supports("symref") && ar.Head != nil
+func hasSymrefs(ar *advrefs.AdvRefs) bool {
+	return ar.Caps.Supports("symref")
 }
 
 func (i *GitUploadPackInfo) Head() *core.Reference {
