@@ -26,8 +26,8 @@ var (
 // advertised-refs message.  Values from this type are not zero-value
 // safe, use the New function instead.
 //
-// When using this messages over HTTP, you have to add a pktline before
-// the whole thing with the following payload:
+// When using this messages over (smart) HTTP, you have to add a pktline
+// before the whole thing with the following payload:
 //
 // '# service=$servicename" LF
 //
