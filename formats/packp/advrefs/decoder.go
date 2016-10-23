@@ -216,8 +216,7 @@ func decodeOtherRefs(p *Decoder) decoderStateFn {
 	}
 
 	if bytes.HasPrefix(p.line, shallow) {
-		p.line = bytes.TrimPrefix(p.line, shallow)
-		return decodeHalfReadShallow
+		return decodeShallow
 	}
 
 	if len(p.line) == 0 {
@@ -253,8 +252,14 @@ func readRef(data []byte) (string, core.Hash, error) {
 	return string(chunks[1]), core.NewHash(string(chunks[0])), nil
 }
 
-// Reads a hash from a shallow pkt-line
-func decodeHalfReadShallow(p *Decoder) decoderStateFn {
+// Keeps reading shallows until a flush-pkt is found
+func decodeShallow(p *Decoder) decoderStateFn {
+	if !bytes.HasPrefix(p.line, shallow) {
+		p.error("malformed shallow prefix")
+		return nil
+	}
+	p.line = bytes.TrimPrefix(p.line, shallow)
+
 	if len(p.line) != hashSize {
 		p.error(fmt.Sprintf(
 			"malformed shallow hash: wrong length, expected 40 bytes, read %d bytes",
@@ -271,11 +276,6 @@ func decodeHalfReadShallow(p *Decoder) decoderStateFn {
 
 	p.data.Shallows = append(p.data.Shallows, h)
 
-	return decodeShallow
-}
-
-// Keeps reading shallows until a flush-pkt is found
-func decodeShallow(p *Decoder) decoderStateFn {
 	if ok := p.nextLine(); !ok {
 		return nil
 	}
@@ -284,11 +284,5 @@ func decodeShallow(p *Decoder) decoderStateFn {
 		return nil // succesfull parse of the advertised-refs message
 	}
 
-	if !bytes.HasPrefix(p.line, shallow) {
-		p.error("malformed shallow prefix")
-		return nil
-	}
-	p.line = bytes.TrimPrefix(p.line, shallow)
-
-	return decodeHalfReadShallow
+	return decodeShallow
 }
