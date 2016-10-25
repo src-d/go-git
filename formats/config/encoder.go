@@ -17,19 +17,19 @@ func NewEncoder(w io.Writer) *Encoder {
 
 // Encode writes the config in git config format to the stream of the encoder.
 func (e *Encoder) Encode(cfg *Config) error {
-	for _, s := range cfg.sections {
-		if len(s.options) > 0 {
-			fmt.Fprintf(e, "[%s]\n", s.name)
-			for _, o := range s.options {
-				fmt.Fprintf(e, "\t%s = %s\n", o.key, o.value)
+	for _, s := range cfg.Sections {
+		if len(s.Options) > 0 {
+			fmt.Fprintf(e, "[%s]\n", s.Name)
+			for _, o := range s.Options {
+				fmt.Fprintf(e, "\t%s = %s\n", o.Key, o.Value)
 			}
 		}
-		for _, ss := range s.subsections {
-			if len(ss.options) > 0 {
+		for _, ss := range s.Subsections {
+			if len(ss.Options) > 0 {
 				//TODO: escape
-				fmt.Fprintf(e, "[%s \"%s\"]\n", s.name, ss.name)
-				for _, o := range ss.options {
-					fmt.Fprintf(e, "\t%s = %s\n", o.key, o.value)
+				fmt.Fprintf(e, "[%s \"%s\"]\n", s.Name, ss.Name)
+				for _, o := range ss.Options {
+					fmt.Fprintf(e, "\t%s = %s\n", o.Key, o.Value)
 				}
 			}
 		}
