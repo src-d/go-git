@@ -278,6 +278,10 @@ func (d *TreeExtensionDecoder) Decode(t *Tree) error {
 			return err
 		}
 
+		if e == nil {
+			continue
+		}
+
 		t.Entries = append(t.Entries, *e)
 	}
 }
@@ -285,7 +289,7 @@ func (d *TreeExtensionDecoder) Decode(t *Tree) error {
 func (d *TreeExtensionDecoder) readEntry() (*TreeEntry, error) {
 	e := &TreeEntry{}
 
-	path, err := readUntil(d.r, 0)
+	path, err := readUntil(d.r, '\x00')
 	if err != nil {
 		return nil, err
 	}
@@ -302,8 +306,13 @@ func (d *TreeExtensionDecoder) readEntry() (*TreeEntry, error) {
 		return nil, err
 	}
 
-	e.Entries = i
+	// An entry can be in an invalidated state and is represented by having a
+	// negative number in the entry_count field.
+	if i == -1 {
+		return nil, nil
+	}
 
+	e.Entries = i
 	trees, err := readUntil(d.r, 10)
 	if err != nil {
 		return nil, err
