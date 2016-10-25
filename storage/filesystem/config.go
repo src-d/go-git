@@ -1,8 +1,6 @@
 package filesystem
 
 import (
-	"fmt"
-
 	"gopkg.in/src-d/go-git.v4/config"
 	gitconfig "gopkg.in/src-d/go-git.v4/formats/config"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem/internal/dotgit"
@@ -48,12 +46,45 @@ func (c *ConfigStorage) Remotes() ([]*config.RemoteConfig, error) {
 }
 
 func (c *ConfigStorage) SetRemote(r *config.RemoteConfig) error {
-	return nil
-	return fmt.Errorf("set remote - not implemented yet")
+	cfg, err := c.read()
+	if err != nil {
+		return err
+	}
+
+	s := cfg.Section(remoteSection).Subsection(r.Name)
+	s.Name = r.Name
+	s.SetOption(urlKey, r.URL)
+	opts := []*gitconfig.Option{}
+	for _, o := range s.Options {
+		if !o.IsKey(fetchKey) {
+			opts = append(opts, o)
+		}
+	}
+	s.Options = opts
+	for _, rs := range r.Fetch {
+		s.AddOption(fetchKey, rs.String())
+	}
+
+	return c.write(cfg)
 }
 
 func (c *ConfigStorage) DeleteRemote(name string) error {
-	return fmt.Errorf("delete - remote not implemented yet")
+	cfg, err := c.read()
+	if err != nil {
+		return err
+	}
+
+	s := cfg.Section(remoteSection)
+	subsections := []*gitconfig.Subsection{}
+	for _, ss := range s.Subsections {
+		if ss.Name != name {
+			subsections = append(subsections, ss)
+		}
+	}
+
+	s.Subsections = subsections
+
+	return c.write(cfg)
 }
 
 func (c *ConfigStorage) read() (*gitconfig.Config, error) {
@@ -72,6 +103,23 @@ func (c *ConfigStorage) read() (*gitconfig.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func (c *ConfigStorage) write(cfg *gitconfig.Config) error {
+	f, err := c.dir.Config()
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	e := gitconfig.NewEncoder(f)
+	err = e.Encode(cfg)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func parseRemote(s *gitconfig.Subsection) *config.RemoteConfig {
