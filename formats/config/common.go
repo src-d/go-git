@@ -1,9 +1,12 @@
-// Package config implements decoding and encoding of git config files.
+// Package config implements decoding, encoding and
+// manipulation git config files.
+//
 // Reference: https://git-scm.com/docs/git-config
 package config
 
 import "strings"
 
+// New creates a new config instance.
 func New() *Config {
 	return &Config{}
 }
@@ -26,10 +29,14 @@ type Subsection struct {
 }
 
 type Option struct {
+	// Key preserving original caseness.
+	// Use IsKey instead to compare key regardless of caseness.
 	Key   string
+	// Original value as string, could be not notmalized.
 	Value string
 }
 
+// A reference to a included configuration.
 type Include struct {
 	Path   string
 	Config *Config
