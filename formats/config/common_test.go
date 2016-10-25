@@ -10,91 +10,94 @@ import (
 
 func Test(t *testing.T) { TestingT(t) }
 
-type Fixture struct {
-	Text   string
-	Raw    string
-	Config *config.Config
+type CommonSuite struct {
 }
 
-var fixtures = []*Fixture{
-	{
-		Raw:    "",
-		Text:   "",
-		Config: config.New(),
-	},
-	{
-		Raw:    ";Comments only",
-		Text:   "",
-		Config: config.New(),
-	},
-	{
-		Raw:    "#Comments only",
-		Text:   "",
-		Config: config.New(),
-	},
-	{
-		Raw:    "[core]\nrepositoryformatversion=0",
-		Text:   "[core]\n\trepositoryformatversion = 0\n",
-		Config: config.New().AddOption("core", "", "repositoryformatversion", "0"),
-	},
-	{
-		Raw:    "[core]\n\trepositoryformatversion = 0\n",
-		Text:   "[core]\n\trepositoryformatversion = 0\n",
-		Config: config.New().AddOption("core", "", "repositoryformatversion", "0"),
-	},
-	{
-		Raw:    ";Commment\n[core]\n;Comment\nrepositoryformatversion = 0\n",
-		Text:   "[core]\n\trepositoryformatversion = 0\n",
-		Config: config.New().AddOption("core", "", "repositoryformatversion", "0"),
-	},
-	{
-		Raw:    "#Commment\n#Comment\n[core]\n#Comment\nrepositoryformatversion = 0\n",
-		Text:   "[core]\n\trepositoryformatversion = 0\n",
-		Config: config.New().AddOption("core", "", "repositoryformatversion", "0"),
-	},
-	{
-		Raw: `
-			[sect1]
-			opt1 = value1
-			[sect1 "subsect1"]
-			opt2 = value2
-		`,
-		Text: `[sect1]
-	opt1 = value1
-[sect1 "subsect1"]
-	opt2 = value2
-`,
-		Config: config.New().
-			AddOption("sect1", "", "opt1", "value1").
-			AddOption("sect1", "subsect1", "opt2", "value2"),
-	},
-	{
-		Raw: `
-			[sect1]
-			opt1 = value1
-			[sect1 "subsect1"]
-			opt2 = value2
-			[sect1]
-			opt1 = value1b
-			[sect1 "subsect1"]
-			opt2 = value2b
-			[sect1 "subsect2"]
-			opt2 = value2
-		`,
-		Text: `[sect1]
-	opt1 = value1
-	opt1 = value1b
-[sect1 "subsect1"]
-	opt2 = value2
-	opt2 = value2b
-[sect1 "subsect2"]
-	opt2 = value2
-`,
-		Config: config.New().
-			AddOption("sect1", "", "opt1", "value1").
-			AddOption("sect1", "", "opt1", "value1b").
-			AddOption("sect1", "subsect1", "opt2", "value2").
-			AddOption("sect1", "subsect1", "opt2", "value2b").
-			AddOption("sect1", "subsect2", "opt2", "value2"),
-	},
+var _ = Suite(&CommonSuite{})
+
+func (s *CommonSuite) TestConfig_SetOption(c *C) {
+	obtained := config.New().SetOption("section", "", "key1", "value1")
+	expected := &config.Config{
+		Sections: []*config.Section{
+			{
+				Name: "section",
+				Options: []*config.Option{
+					{Key: "key1", Value: "value1"},
+				},
+			},
+		},
+	}
+	c.Assert(obtained, DeepEquals, expected)
+	obtained = obtained.SetOption("section", "", "key1", "value1")
+	c.Assert(obtained, DeepEquals, expected)
+
+	obtained = config.New().SetOption("section", "subsection", "key1", "value1")
+	expected = &config.Config{
+		Sections: []*config.Section{
+			{
+				Name: "section",
+				Subsections: []*config.Subsection{
+					{
+						Name: "subsection",
+						Options: []*config.Option{
+							{Key: "key1", Value: "value1"},
+						},
+					},
+				},
+			},
+		},
+	}
+	c.Assert(obtained, DeepEquals, expected)
+	obtained = obtained.SetOption("section", "subsection", "key1", "value1")
+	c.Assert(obtained, DeepEquals, expected)
+}
+
+func (s *CommonSuite) TestConfig_AddOption(c *C) {
+	obtained := config.New().AddOption("section", "", "key1", "value1")
+	expected := &config.Config{
+		Sections: []*config.Section{
+			{
+				Name: "section",
+				Options: []*config.Option{
+					{Key: "key1", Value: "value1"},
+				},
+			},
+		},
+	}
+	c.Assert(obtained, DeepEquals, expected)
+}
+
+func (s *CommonSuite) TestSection_Option(c *C) {
+	sect := &config.Section{
+		Options: []*config.Option{
+			{Key: "key1", Value: "value1"},
+			{Key: "key2", Value: "value2"},
+			{Key: "key1", Value: "value3"},
+		},
+	}
+	c.Assert(sect.Option("otherkey"), Equals, "")
+	c.Assert(sect.Option("key2"), Equals, "value2")
+	c.Assert(sect.Option("key1"), Equals, "value3")
+}
+
+func (s *CommonSuite) TestSubsection_Option(c *C) {
+	sect := &config.Subsection{
+		Options: []*config.Option{
+			{Key: "key1", Value: "value1"},
+			{Key: "key2", Value: "value2"},
+			{Key: "key1", Value: "value3"},
+		},
+	}
+	c.Assert(sect.Option("otherkey"), Equals, "")
+	c.Assert(sect.Option("key2"), Equals, "value2")
+	c.Assert(sect.Option("key1"), Equals, "value3")
+}
+
+func (s *CommonSuite) TestOption_IsKey(c *C) {
+	c.Assert((&config.Option{Key: "key"}).IsKey("key"), Equals, true)
+	c.Assert((&config.Option{Key: "key"}).IsKey("KEY"), Equals, true)
+	c.Assert((&config.Option{Key: "KEY"}).IsKey("key"), Equals, true)
+	c.Assert((&config.Option{Key: "key"}).IsKey("other"), Equals, false)
+	c.Assert((&config.Option{Key: "key"}).IsKey(""), Equals, false)
+	c.Assert((&config.Option{Key: ""}).IsKey("key"), Equals, false)
 }

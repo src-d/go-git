@@ -75,18 +75,16 @@ func (s *Section) Subsection(name string) *Subsection {
 }
 
 func (s *Section) Option(key string) string {
-	for i := len(s.Options) - 1; i >= 0; i-- {
-		o := s.Options[i]
-		if o.IsKey(key) {
-			return o.Value
-		}
-	}
-	return ""
+	return getOption(s.Options, key)
 }
 
 func (s *Subsection) Option(key string) string {
-	for i := len(s.Options) - 1; i >= 0; i-- {
-		o := s.Options[i]
+	return getOption(s.Options, key)
+}
+
+func getOption(opts []*Option, key string) string {
+	for i := len(opts) - 1; i >= 0; i-- {
+		o := opts[i]
 		if o.IsKey(key) {
 			return o.Value
 		}
