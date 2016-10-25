@@ -143,6 +143,31 @@ func (s *IdxfileSuite) TestDecodeExtendedV3(c *C) {
 	c.Assert(idx.Entries[6].SkipWorktree, Equals, false)
 }
 
+func (s *IdxfileSuite) TestDecodeResolveUndo(c *C) {
+	f, err := fixtures.Basic().ByTag("resolve-undo").One().DotGit().Open("index")
+	c.Assert(err, IsNil)
+
+	idx := &Index{}
+	d := NewDecoder(f)
+	err = d.Decode(idx)
+	c.Assert(err, IsNil)
+
+	c.Assert(idx.Version, Equals, uint32(2))
+	c.Assert(idx.EntryCount, Equals, uint32(8))
+
+	ru := idx.ResolveUndo
+	c.Assert(ru.Entries, HasLen, 2)
+	c.Assert(ru.Entries[0].Path, Equals, "go/example.go")
+	c.Assert(ru.Entries[0].Stages, HasLen, 3)
+	c.Assert(ru.Entries[0].Stages[AncestorMode], Not(Equals), core.ZeroHash)
+	c.Assert(ru.Entries[0].Stages[OurMode], Not(Equals), core.ZeroHash)
+	c.Assert(ru.Entries[0].Stages[TheirMode], Not(Equals), core.ZeroHash)
+	c.Assert(ru.Entries[1].Path, Equals, "haskal/haskal.hs")
+	c.Assert(ru.Entries[1].Stages, HasLen, 2)
+	c.Assert(ru.Entries[1].Stages[OurMode], Not(Equals), core.ZeroHash)
+	c.Assert(ru.Entries[1].Stages[TheirMode], Not(Equals), core.ZeroHash)
+}
+
 func (s *IdxfileSuite) TestDecodeV4(c *C) {
 	f, err := fixtures.Basic().ByTag("index-v4").One().DotGit().Open("index")
 	c.Assert(err, IsNil)

@@ -7,14 +7,28 @@ import (
 	"gopkg.in/src-d/go-git.v4/core"
 )
 
+type Stage int
+
+const (
+	// Merged is the default stage, fully merged
+	Merged Stage = 1
+	// AncestorMode is the base revision
+	AncestorMode Stage = 1
+	// OurMode is the first tree revision, ours
+	OurMode Stage = 2
+	// TheirMode is the second tree revision, theirs
+	TheirMode Stage = 3
+)
+
 // Index contains the information about which objects are currently checked out
 // in the worktree, having information about the working files. Changes in
 // worktree are detected using this Index. The Index is also used during merges
 type Index struct {
-	Version    uint32
-	EntryCount uint32
-	Entries    []Entry
-	Cache      *Tree
+	Version     uint32
+	EntryCount  uint32
+	Entries     []Entry
+	Cache       *Tree
+	ResolveUndo *ResolveUndo
 }
 
 // Entry represents a single file (or stage of a file) in the cache. An entry
@@ -55,4 +69,18 @@ type TreeEntry struct {
 	// Hash object name for the object that would result from writing this span
 	// of index as a tree.
 	Hash core.Hash
+}
+
+// ResolveUndo when a conflict is resolved (e.g. with "git add path"), these
+// higher stage entries will be removed and a stage-0 entry with proper
+// resolution is added. When these higher stage entries are removed, they are
+// saved in the resolve undo extension
+type ResolveUndo struct {
+	Entries []ResolveUndoEntry
+}
+
+// ResolveUndoEntry contains the information about a conflict when is resolved
+type ResolveUndoEntry struct {
+	Path   string
+	Stages map[Stage]core.Hash
 }

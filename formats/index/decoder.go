@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"strconv"
 	"time"
+
+	"gopkg.in/src-d/go-git.v4/core"
 )
 
 var (
@@ -26,18 +28,7 @@ var (
 	resolveUndoExtSignature = []byte{'R', 'E', 'U', 'C'}
 )
 
-type Stage int
-
 const (
-	// Merged is the default stage, fully merged
-	Merged Stage = 1
-	// AncestorMode is the base revision
-	AncestorMode Stage = 1
-	// OurMode is the first tree revision, ours
-	OurMode Stage = 2
-	// TheirMode is the second tree revision, theirs
-	TheirMode Stage = 3
-
 	EntryExtended = 0x4000
 	EntryValid    = 0x8000
 
@@ -215,7 +206,7 @@ func (d *Decoder) readExtensions(idx *Index) error {
 		return nil
 	}
 
-	return nil
+	return err
 }
 
 func (d *Decoder) readExtension(idx *Index) error {
@@ -238,6 +229,14 @@ func (d *Decoder) readExtension(idx *Index) error {
 		}
 
 		idx.Cache = t
+	case bytes.Equal(s, resolveUndoExtSignature):
+		ru := &ResolveUndo{}
+		rud := &ResolveUndoDecoder{&io.LimitedReader{R: d.r, N: int64(len)}}
+		if err := rud.Decode(ru); err != nil {
+			return err
+		}
+
+		idx.ResolveUndo = ru
 	}
 
 	return nil
@@ -322,6 +321,73 @@ func (d *TreeExtensionDecoder) readEntry() (*TreeEntry, error) {
 	}
 
 	return e, nil
+}
+
+type ResolveUndoDecoder struct {
+	r io.Reader
+}
+
+func (d *ResolveUndoDecoder) Decode(ru *ResolveUndo) error {
+	for {
+		e, err := d.readEntry()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+
+			return err
+		}
+
+		ru.Entries = append(ru.Entries, *e)
+	}
+}
+
+func (d *ResolveUndoDecoder) readEntry() (*ResolveUndoEntry, error) {
+	e := &ResolveUndoEntry{
+		Stages: make(map[Stage]core.Hash, 0),
+	}
+
+	path, err := readUntil(d.r, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	e.Path = string(path)
+
+	for i := 0; i < 3; i++ {
+		if err := d.readStage(e, Stage(i+1)); err != nil {
+			return nil, err
+		}
+	}
+
+	for s := range e.Stages {
+		var hash core.Hash
+		if err := binary.Read(d.r, binary.BigEndian, hash[:]); err != nil {
+			return nil, err
+		}
+
+		e.Stages[s] = hash
+	}
+
+	return e, nil
+}
+
+func (d *ResolveUndoDecoder) readStage(e *ResolveUndoEntry, s Stage) error {
+	ascii, err := readUntil(d.r, 0)
+	if err != nil {
+		return err
+	}
+
+	stage, err := strconv.ParseInt(string(ascii), 8, 64)
+	if err != nil {
+		return err
+	}
+
+	if stage != 0 {
+		e.Stages[s] = core.ZeroHash
+	}
+
+	return nil
 }
 
 func readBinary(r io.Reader, data ...interface{}) error {

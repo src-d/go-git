@@ -45,6 +45,10 @@ var fixtures = Fixtures{{
 	URL:        "https://github.com/git-fixtures/basic.git",
 	DotGitHash: core.NewHash("4870d54b5b04e43da8cf99ceec179d9675494af8"),
 }, {
+	Tags:       []string{".git", "resolve-undo"},
+	URL:        "https://github.com/git-fixtures/basic.git",
+	DotGitHash: core.NewHash("df6781fd40b8f4911d70ce71f8387b991615cd6d"),
+}, {
 	Tags:       []string{".git", "intent-to-add"},
 	URL:        "https://github.com/git-fixtures/basic.git",
 	DotGitHash: core.NewHash("4e7600af05c3356e8b142263e127b76f010facfc"),
@@ -170,6 +174,8 @@ func (f *Fixture) DotGit() fs.Filesystem {
 	fn := filepath.Join(RootFolder, DataFolder, fmt.Sprintf("git-%s.tgz", f.DotGitHash))
 	path, err := tgz.Extract(fn)
 	if err != nil {
+		fmt.Println(os.Getwd())
+		fmt.Println(filepath.Clean(fn))
 		panic(err)
 	}
 
