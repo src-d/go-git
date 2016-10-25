@@ -89,6 +89,16 @@ func (s *Config) AddOption(section string, subsection string, key string, value 
 	return s
 }
 
+func (s *Config) SetOption(section string, subsection string, key string, value string) *Config {
+	if subsection == "" {
+		s.Section(section).SetOption(key, value)
+	} else {
+		s.Section(section).Subsection(subsection).SetOption(key, value)
+	}
+
+	return s
+}
+
 func (s *Section) AddOption(key string, value string) *Section {
 	s.options = append(s.options, &Option{key, value})
 	return s

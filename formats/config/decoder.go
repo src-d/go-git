@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"errors"
 	"gopkg.in/gcfg.v1/scanner"
 	"gopkg.in/gcfg.v1/token"
 	"gopkg.in/warnings.v0"
@@ -35,7 +36,7 @@ func (d *Decoder) Decode(config *Config) error {
 	fset := token.NewFileSet()
 	file := fset.AddFile("", fset.Base(), len(src))
 	c := warnings.NewCollector(func(error) bool {
-		return false
+		return true
 	})
 
 	err = decode(c, config, fset, file, src)
@@ -50,6 +51,7 @@ func (d *Decoder) Decode(config *Config) error {
 func decode(c *warnings.Collector, config *Config, fset *token.FileSet,
 	file *token.File, src []byte) error {
 
+	var err error
 	var s scanner.Scanner
 	var errs scanner.ErrorList
 	s.Init(file, src, func(p token.Position, m string) { errs.Add(p, m) }, 0)
@@ -89,7 +91,12 @@ func decode(c *warnings.Collector, config *Config, fset *token.FileSet,
 				}
 			}
 			if tok == token.STRING {
-				sectsub = unquote(lit)
+				sectsub, err = unquote(lit)
+				if err != nil {
+					if err := c.Collect(err); err != nil {
+						return err
+					}
+				}
 				if sectsub == "" {
 					if err := c.Collect(errfn("empty subsection name")); err != nil {
 						return err
@@ -154,7 +161,12 @@ func decode(c *warnings.Collector, config *Config, fset *token.FileSet,
 						return err
 					}
 				}
-				v = unquote(lit)
+				v, err = unquote(lit)
+				if err != nil {
+					if err := c.Collect(err); err != nil {
+						return err
+					}
+				}
 				pos, tok, lit = s.Scan()
 				if errs.Len() > 0 {
 					if err := c.Collect(errs.Err()); err != nil {
@@ -187,7 +199,7 @@ var unescape = map[rune]rune{'\\': '\\', '"': '"', 'n': '\n', 't': '\t'}
 
 // no error: invalid literals should be caught by scanner
 // https://github.com/go-gcfg/gcfg/blob/5b9f94ee80b2331c3982477bd84be8edd857df33/read.go#L18
-func unquote(s string) string {
+func unquote(s string) (string, error) {
 	u, q, esc := make([]rune, 0, len(s)), false, false
 	for _, c := range s {
 		if esc {
@@ -200,7 +212,7 @@ func unquote(s string) string {
 				esc = false
 				continue
 			}
-			panic("invalid escape sequence")
+			return "", errors.New("invalid escape sequence")
 		}
 		switch c {
 		case '"':
@@ -212,10 +224,10 @@ func unquote(s string) string {
 		}
 	}
 	if q {
-		panic("missing end quote")
+		return "", errors.New("missing end quote")
 	}
 	if esc {
-		panic("invalid escape sequence")
+		return "", errors.New("invalid escape sequence")
 	}
-	return string(u)
+	return string(u), nil
 }

@@ -8,14 +8,14 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-type DecodeSuite struct {
+type DecoderSuite struct {
 }
 
-var _ = Suite(&DecodeSuite{})
+var _ = Suite(&DecoderSuite{})
 
-func (s *DecodeSuite) TestDecode(c *C) {
+func (s *DecoderSuite) TestDecode(c *C) {
 	for idx, fixture := range fixtures {
-		r := bytes.NewReader([]byte(fixture.Text))
+		r := bytes.NewReader([]byte(fixture.Raw))
 		d := config.NewDecoder(r)
 		cfg := &config.Config{}
 		err := d.Decode(cfg)
