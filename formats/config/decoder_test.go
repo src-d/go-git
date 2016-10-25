@@ -14,12 +14,12 @@ type DecodeSuite struct {
 var _ = Suite(&DecodeSuite{})
 
 func (s *DecodeSuite) TestDecode(c *C) {
-	for name, fixture := range fixtures {
+	for idx, fixture := range fixtures {
 		r := bytes.NewReader([]byte(fixture.Text))
 		d := config.NewDecoder(r)
 		cfg := &config.Config{}
 		err := d.Decode(cfg)
-		c.Assert(err, IsNil, Commentf("decoder error for fixture: %s", name))
-		c.Assert(cfg, DeepEquals, fixture.Config, Commentf("bad result for fixture: %s", name))
+		c.Assert(err, IsNil, Commentf("decoder error for fixture: %d", idx))
+		c.Assert(cfg, DeepEquals, fixture.Config, Commentf("bad result for fixture: %d", idx))
 	}
 }
