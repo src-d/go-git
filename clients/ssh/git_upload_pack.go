@@ -2,12 +2,10 @@
 package ssh
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/clients/common"
@@ -25,6 +23,8 @@ var (
 	ErrUploadPackAnswerFormat = errors.New("git-upload-pack bad answer format")
 	ErrUnsupportedVCS         = errors.New("only git is supported")
 	ErrUnsupportedRepo        = errors.New("only github.com is supported")
+
+	nak = []byte("0008NAK\n")
 )
 
 // GitUploadPackService holds the service information.
@@ -135,11 +135,10 @@ func (s *GitUploadPackService) Disconnect() (err error) {
 	return s.client.Close()
 }
 
-// Fetch retrieves the GitUploadPack form the repository.
-// You must be connected to the repository before using this method
-// (using the ConnectWithAuth() method).
-// TODO: fetch should really reuse the info session instead of openning a new
-// one
+// Fetch returns a packfile for a given upload request.  It opens a new
+// SSH session on a connected GitUploadPackService, sends the given
+// upload request to the server and returns a reader for the received
+// packfile.  Closing the returned reader will close the SSH session.
 func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (rc io.ReadCloser, err error) {
 	if !s.connected {
 		return nil, ErrNotConnected
@@ -147,69 +146,85 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (rc io.Read
 
 	session, err := s.client.NewSession()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot open SSH session: %s", err)
 	}
-
-	defer func() {
-		// the session can be closed by the other endpoint,
-		// therefore we must ignore a close error.
-		_ = session.Close()
-	}()
 
 	si, err := session.StdinPipe()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot pipe remote stdin: %s", err)
 	}
 
 	so, err := session.StdoutPipe()
 	if err != nil {
-		return nil, err
-	}
-
-	if err := session.Start(s.getCommand()); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot pipe remote stdout: %s", err)
 	}
 
 	go func() {
-		fmt.Fprintln(si, r.String())
-		err = si.Close()
+		// TODO FIXME: don't ignore the error from the remote execution of the command.
+		// Instead return a way to check this error to our caller.
+		_ = session.Run(s.getCommand())
 	}()
 
-	// TODO: investigate this *ExitError type (command fails or
-	// doesn't complete successfully), as it is happenning all
-	// the time, but everything seems to work fine.
-	if err := session.Wait(); err != nil {
-		if _, ok := err.(*ssh.ExitError); !ok {
-			return nil, err
-		}
-	}
-
-	// read until the header of the second answer
-	soBuf := bufio.NewReader(so)
-	token := "0000"
-	for {
-		var line string
-		line, err = soBuf.ReadString('\n')
-		if err == io.EOF {
-			return nil, ErrUploadPackAnswerFormat
-		}
-		if line[0:len(token)] == token {
+	// skip until the first flush-pkt (skip the advrefs)
+	// TODO: use advrefs, when https://github.com/src-d/go-git/pull/92 is accepted
+	sc := pktline.NewScanner(so)
+	for sc.Scan() {
+		if len(sc.Bytes()) == 0 {
 			break
 		}
 	}
-
-	data, err := ioutil.ReadAll(soBuf)
-	if err != nil {
-		return nil, err
+	if err := sc.Err(); err != nil {
+		return nil, fmt.Errorf("scanning advertised-refs message: %s", err)
 	}
 
-	buf := bytes.NewBuffer(data)
-	return ioutil.NopCloser(buf), nil
+	// send the upload request
+	_, err = io.Copy(si, r.Reader())
+	if err != nil {
+		return nil, fmt.Errorf("sending upload-req message: %s", err)
+	}
+
+	if err := si.Close(); err != nil {
+		return nil, fmt.Errorf("closing input: %s", err)
+	}
+
+	// TODO support multi_ack mode
+	// TODO support multi_ack_detailed mode
+	// TODO support acks for common objects
+	// TODO build a proper state machine for all these processing options
+	buf := make([]byte, len(nak))
+	if _, err := io.ReadFull(so, buf); err != nil {
+		return nil, fmt.Errorf("looking for NAK: %s", err)
+	}
+	if !bytes.Equal(buf, nak) {
+		return nil, fmt.Errorf("NAK answer not found")
+	}
+
+	return &fetchSession{
+		Reader:  so,
+		session: session,
+	}, nil
+}
+
+type fetchSession struct {
+	io.Reader
+	session *ssh.Session
+	done    chan error
+}
+
+func (f *fetchSession) Close() error {
+	if err := f.session.Close(); err != nil {
+		if err != io.EOF {
+			return err
+		}
+		// ignore io.EOF error, this means the other end closed the session before us
+	}
+
+	return nil
 }
 
 func (s *GitUploadPackService) getCommand() string {
 	directory := s.endpoint.Path
 	directory = directory[1:len(directory)]
 
-	return fmt.Sprintf("git-upload-pack %s", directory)
+	return fmt.Sprintf("git-upload-pack '%s'", directory)
 }
