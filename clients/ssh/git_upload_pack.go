@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/clients/common"
+	"gopkg.in/src-d/go-git.v4/formats/packp/advrefs"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -164,16 +165,8 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (rc io.Read
 		_ = session.Run(s.getCommand())
 	}()
 
-	// skip until the first flush-pkt (skip the advrefs)
-	// TODO: use advrefs, when https://github.com/src-d/go-git/pull/92 is accepted
-	sc := pktline.NewScanner(so)
-	for sc.Scan() {
-		if len(sc.Bytes()) == 0 {
-			break
-		}
-	}
-	if err := sc.Err(); err != nil {
-		return nil, fmt.Errorf("scanning advertised-refs message: %s", err)
+	if err := skipAdvRef(so); err != nil {
+		return nil, fmt.Errorf("skipping advertised-refs: %s", err)
 	}
 
 	// send the upload request
@@ -202,6 +195,13 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (rc io.Read
 		Reader:  so,
 		session: session,
 	}, nil
+}
+
+func skipAdvRef(so io.Reader) error {
+	d := advrefs.NewDecoder(so)
+	ar := advrefs.New()
+
+	return d.Decode(ar)
 }
 
 type fetchSession struct {
