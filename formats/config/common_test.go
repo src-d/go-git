@@ -92,12 +92,3 @@ func (s *CommonSuite) TestSubsection_Option(c *C) {
 	c.Assert(sect.Option("key2"), Equals, "value2")
 	c.Assert(sect.Option("key1"), Equals, "value3")
 }
-
-func (s *CommonSuite) TestOption_IsKey(c *C) {
-	c.Assert((&config.Option{Key: "key"}).IsKey("key"), Equals, true)
-	c.Assert((&config.Option{Key: "key"}).IsKey("KEY"), Equals, true)
-	c.Assert((&config.Option{Key: "KEY"}).IsKey("key"), Equals, true)
-	c.Assert((&config.Option{Key: "key"}).IsKey("other"), Equals, false)
-	c.Assert((&config.Option{Key: "key"}).IsKey(""), Equals, false)
-	c.Assert((&config.Option{Key: ""}).IsKey("key"), Equals, false)
-}
