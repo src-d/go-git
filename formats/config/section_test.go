@@ -1,8 +1,6 @@
-package config_test
+package config
 
 import (
-	"gopkg.in/src-d/go-git.v4/formats/config"
-
 	. "gopkg.in/check.v1"
 )
 
@@ -11,8 +9,8 @@ type SectionSuite struct{}
 var _ = Suite(&SectionSuite{})
 
 func (s *SectionSuite) TestSection_Option(c *C) {
-	sect := &config.Section{
-		Options: []*config.Option{
+	sect := &Section{
+		Options: []*Option{
 			{Key: "key1", Value: "value1"},
 			{Key: "key2", Value: "value2"},
 			{Key: "key1", Value: "value3"},
@@ -24,8 +22,8 @@ func (s *SectionSuite) TestSection_Option(c *C) {
 }
 
 func (s *SectionSuite) TestSubsection_Option(c *C) {
-	sect := &config.Subsection{
-		Options: []*config.Option{
+	sect := &Subsection{
+		Options: []*Option{
 			{Key: "key1", Value: "value1"},
 			{Key: "key2", Value: "value2"},
 			{Key: "key1", Value: "value3"},
@@ -37,8 +35,8 @@ func (s *SectionSuite) TestSubsection_Option(c *C) {
 }
 
 func (s *SectionSuite) TestSection_RemoveOption(c *C) {
-	sect := &config.Section{
-		Options: []*config.Option{
+	sect := &Section{
+		Options: []*Option{
 			{Key: "key1", Value: "value1"},
 			{Key: "key2", Value: "value2"},
 			{Key: "key1", Value: "value3"},
@@ -46,8 +44,8 @@ func (s *SectionSuite) TestSection_RemoveOption(c *C) {
 	}
 	c.Assert(sect.RemoveOption("otherkey"), DeepEquals, sect)
 
-	expected := &config.Section{
-		Options: []*config.Option{
+	expected := &Section{
+		Options: []*Option{
 			{Key: "key2", Value: "value2"},
 		},
 	}
@@ -55,8 +53,8 @@ func (s *SectionSuite) TestSection_RemoveOption(c *C) {
 }
 
 func (s *SectionSuite) TestSubsection_RemoveOption(c *C) {
-	sect := &config.Subsection{
-		Options: []*config.Option{
+	sect := &Subsection{
+		Options: []*Option{
 			{Key: "key1", Value: "value1"},
 			{Key: "key2", Value: "value2"},
 			{Key: "key1", Value: "value3"},
@@ -64,8 +62,8 @@ func (s *SectionSuite) TestSubsection_RemoveOption(c *C) {
 	}
 	c.Assert(sect.RemoveOption("otherkey"), DeepEquals, sect)
 
-	expected := &config.Subsection{
-		Options: []*config.Option{
+	expected := &Subsection{
+		Options: []*Option{
 			{Key: "key2", Value: "value2"},
 		},
 	}
