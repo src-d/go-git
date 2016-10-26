@@ -97,7 +97,7 @@ func (i *GitUploadPackInfo) Decode(r io.Reader) error {
 		return core.NewUnexpectedError(err)
 	}
 
-	i.Capabilities = ar.Caps
+	i.Capabilities = ar.Capabilities
 
 	if err := i.addRefs(ar); err != nil {
 		return core.NewUnexpectedError(err)
@@ -108,7 +108,7 @@ func (i *GitUploadPackInfo) Decode(r io.Reader) error {
 
 func (i *GitUploadPackInfo) addRefs(ar *advrefs.AdvRefs) error {
 	i.Refs = make(memory.ReferenceStorage, 0)
-	for name, hash := range ar.Refs {
+	for name, hash := range ar.References {
 		ref := core.NewReferenceFromStrings(name, hash.String())
 		i.Refs.Set(ref)
 	}
@@ -121,7 +121,7 @@ func (i *GitUploadPackInfo) addSymbolicRefs(ar *advrefs.AdvRefs) error {
 		return nil
 	}
 
-	for _, symref := range ar.Caps.Get("symref").Values {
+	for _, symref := range ar.Capabilities.Get("symref").Values {
 		chunks := strings.Split(symref, ":")
 		if len(chunks) != 2 {
 			err := fmt.Errorf("bad number of `:` in symref value (%q)", symref)
@@ -137,7 +137,7 @@ func (i *GitUploadPackInfo) addSymbolicRefs(ar *advrefs.AdvRefs) error {
 }
 
 func hasSymrefs(ar *advrefs.AdvRefs) bool {
-	return ar.Caps.Supports("symref")
+	return ar.Capabilities.Supports("symref")
 }
 
 func (i *GitUploadPackInfo) Head() *core.Reference {

@@ -177,7 +177,7 @@ func decodeFirstRef(l *Decoder) decoderStateFn {
 	if bytes.Equal(ref, []byte(head)) {
 		l.data.Head = &l.hash
 	} else {
-		l.data.Refs[string(ref)] = l.hash
+		l.data.References[string(ref)] = l.hash
 	}
 
 	return decodeCaps
@@ -190,7 +190,7 @@ func decodeCaps(p *Decoder) decoderStateFn {
 
 	for _, c := range bytes.Split(p.line, sp) {
 		name, values := readCapability(c)
-		p.data.Caps.Add(name, values...)
+		p.data.Capabilities.Add(name, values...)
 	}
 
 	return decodeOtherRefs
@@ -223,7 +223,7 @@ func decodeOtherRefs(p *Decoder) decoderStateFn {
 		return nil
 	}
 
-	saveTo := p.data.Refs
+	saveTo := p.data.References
 	if bytes.HasSuffix(p.line, peeled) {
 		p.line = bytes.TrimSuffix(p.line, peeled)
 		saveTo = p.data.Peeled
@@ -242,20 +242,20 @@ func decodeOtherRefs(p *Decoder) decoderStateFn {
 // Reads a ref-name
 func readRef(data []byte) (string, core.Hash, error) {
 	chunks := bytes.Split(data, sp)
-	if len(chunks) == 1 {
+	switch {
+	case len(chunks) == 1:
 		return "", core.ZeroHash, fmt.Errorf("malformed ref data: no space was found")
-	}
-	if len(chunks) > 2 {
+	case len(chunks) > 2:
 		return "", core.ZeroHash, fmt.Errorf("malformed ref data: more than one space found")
+	default:
+		return string(chunks[1]), core.NewHash(string(chunks[0])), nil
 	}
-
-	return string(chunks[1]), core.NewHash(string(chunks[0])), nil
 }
 
 // Keeps reading shallows until a flush-pkt is found
 func decodeShallow(p *Decoder) decoderStateFn {
 	if !bytes.HasPrefix(p.line, shallow) {
-		p.error("malformed shallow prefix")
+		p.error("malformed shallow prefix, found %q... instead", p.line[:len(shallow)])
 		return nil
 	}
 	p.line = bytes.TrimPrefix(p.line, shallow)

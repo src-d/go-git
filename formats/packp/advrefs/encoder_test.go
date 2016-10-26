@@ -64,12 +64,12 @@ func (s *SuiteEncoder) TestHead(c *C) {
 }
 
 func (s *SuiteEncoder) TestCapsNoHead(c *C) {
-	caps := packp.NewCapabilities()
-	caps.Add("symref", "HEAD:/refs/heads/master")
-	caps.Add("ofs-delta")
-	caps.Add("multi_ack")
+	capabilities := packp.NewCapabilities()
+	capabilities.Add("symref", "HEAD:/refs/heads/master")
+	capabilities.Add("ofs-delta")
+	capabilities.Add("multi_ack")
 	ar := &advrefs.AdvRefs{
-		Caps: caps,
+		Capabilities: capabilities,
 	}
 
 	expected := pktlines(c,
@@ -82,13 +82,13 @@ func (s *SuiteEncoder) TestCapsNoHead(c *C) {
 
 func (s *SuiteEncoder) TestCapsWithHead(c *C) {
 	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
-	caps := packp.NewCapabilities()
-	caps.Add("symref", "HEAD:/refs/heads/master")
-	caps.Add("ofs-delta")
-	caps.Add("multi_ack")
+	capabilities := packp.NewCapabilities()
+	capabilities.Add("symref", "HEAD:/refs/heads/master")
+	capabilities.Add("ofs-delta")
+	capabilities.Add("multi_ack")
 	ar := &advrefs.AdvRefs{
-		Head: &hash,
-		Caps: caps,
+		Head:         &hash,
+		Capabilities: capabilities,
 	}
 
 	expected := pktlines(c,
@@ -100,7 +100,7 @@ func (s *SuiteEncoder) TestCapsWithHead(c *C) {
 }
 
 func (s *SuiteEncoder) TestRefs(c *C) {
-	refs := map[string]core.Hash{
+	references := map[string]core.Hash{
 		"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
 		"refs/tags/v2.6.12-tree": core.NewHash("1111111111111111111111111111111111111111"),
 		"refs/tags/v2.7.13-tree": core.NewHash("3333333333333333333333333333333333333333"),
@@ -108,7 +108,7 @@ func (s *SuiteEncoder) TestRefs(c *C) {
 		"refs/tags/v2.6.11-tree": core.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
 	}
 	ar := &advrefs.AdvRefs{
-		Refs: refs,
+		References: references,
 	}
 
 	expected := pktlines(c,
@@ -125,7 +125,7 @@ func (s *SuiteEncoder) TestRefs(c *C) {
 }
 
 func (s *SuiteEncoder) TestPeeled(c *C) {
-	refs := map[string]core.Hash{
+	references := map[string]core.Hash{
 		"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
 		"refs/tags/v2.6.12-tree": core.NewHash("1111111111111111111111111111111111111111"),
 		"refs/tags/v2.7.13-tree": core.NewHash("3333333333333333333333333333333333333333"),
@@ -137,8 +137,8 @@ func (s *SuiteEncoder) TestPeeled(c *C) {
 		"refs/tags/v2.6.12-tree": core.NewHash("5555555555555555555555555555555555555555"),
 	}
 	ar := &advrefs.AdvRefs{
-		Refs:   refs,
-		Peeled: peeled,
+		References: references,
+		Peeled:     peeled,
 	}
 
 	expected := pktlines(c,
@@ -182,12 +182,12 @@ func (s *SuiteEncoder) TestShallow(c *C) {
 func (s *SuiteEncoder) TestAll(c *C) {
 	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
 
-	caps := packp.NewCapabilities()
-	caps.Add("symref", "HEAD:/refs/heads/master")
-	caps.Add("ofs-delta")
-	caps.Add("multi_ack")
+	capabilities := packp.NewCapabilities()
+	capabilities.Add("symref", "HEAD:/refs/heads/master")
+	capabilities.Add("ofs-delta")
+	capabilities.Add("multi_ack")
 
-	refs := map[string]core.Hash{
+	references := map[string]core.Hash{
 		"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
 		"refs/tags/v2.6.12-tree": core.NewHash("1111111111111111111111111111111111111111"),
 		"refs/tags/v2.7.13-tree": core.NewHash("3333333333333333333333333333333333333333"),
@@ -208,11 +208,11 @@ func (s *SuiteEncoder) TestAll(c *C) {
 	}
 
 	ar := &advrefs.AdvRefs{
-		Head:     &hash,
-		Caps:     caps,
-		Refs:     refs,
-		Peeled:   peeled,
-		Shallows: shallows,
+		Head:         &hash,
+		Capabilities: capabilities,
+		References:   references,
+		Peeled:       peeled,
+		Shallows:     shallows,
 	}
 
 	expected := pktlines(c,
@@ -235,11 +235,11 @@ func (s *SuiteEncoder) TestAll(c *C) {
 }
 
 func (s *SuiteEncoder) TestErrorTooLong(c *C) {
-	refs := map[string]core.Hash{
+	references := map[string]core.Hash{
 		strings.Repeat("a", pktline.MaxPayloadSize): core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
 	}
 	ar := &advrefs.AdvRefs{
-		Refs: refs,
+		References: references,
 	}
 
 	var buf bytes.Buffer

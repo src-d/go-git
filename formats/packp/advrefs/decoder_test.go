@@ -120,7 +120,7 @@ func (s *SuiteDecoder) TestFirstIsNotHead(c *C) {
 	}
 	ar := testDecodeOK(c, payloads)
 	c.Assert(ar.Head, IsNil)
-	c.Assert(ar.Refs["refs/heads/master"], Equals,
+	c.Assert(ar.References["refs/heads/master"], Equals,
 		core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 }
 
@@ -157,34 +157,34 @@ func (s *SuiteDecoder) TestNoCaps(c *C) {
 		pktline.FlushString,
 	}
 	ar := testDecodeOK(c, payloads)
-	c.Assert(ar.Caps.IsEmpty(), Equals, true)
+	c.Assert(ar.Capabilities.IsEmpty(), Equals, true)
 }
 
 func (s *SuiteDecoder) TestCaps(c *C) {
 	for _, test := range [...]struct {
-		input []string
-		caps  []packp.Capability
+		input        []string
+		capabilities []packp.Capability
 	}{
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00",
 				pktline.FlushString,
 			},
-			caps: []packp.Capability{},
+			capabilities: []packp.Capability{},
 		},
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00\n",
 				pktline.FlushString,
 			},
-			caps: []packp.Capability{},
+			capabilities: []packp.Capability{},
 		},
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta",
 				pktline.FlushString,
 			},
-			caps: []packp.Capability{
+			capabilities: []packp.Capability{
 				{
 					Name:   "ofs-delta",
 					Values: []string(nil),
@@ -196,7 +196,7 @@ func (s *SuiteDecoder) TestCaps(c *C) {
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta multi_ack",
 				pktline.FlushString,
 			},
-			caps: []packp.Capability{
+			capabilities: []packp.Capability{
 				{Name: "ofs-delta", Values: []string(nil)},
 				{Name: "multi_ack", Values: []string(nil)},
 			},
@@ -206,7 +206,7 @@ func (s *SuiteDecoder) TestCaps(c *C) {
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta multi_ack\n",
 				pktline.FlushString,
 			},
-			caps: []packp.Capability{
+			capabilities: []packp.Capability{
 				{Name: "ofs-delta", Values: []string(nil)},
 				{Name: "multi_ack", Values: []string(nil)},
 			},
@@ -216,7 +216,7 @@ func (s *SuiteDecoder) TestCaps(c *C) {
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:refs/heads/master agent=foo=bar\n",
 				pktline.FlushString,
 			},
-			caps: []packp.Capability{
+			capabilities: []packp.Capability{
 				{Name: "symref", Values: []string{"HEAD:refs/heads/master"}},
 				{Name: "agent", Values: []string{"foo=bar"}},
 			},
@@ -226,18 +226,18 @@ func (s *SuiteDecoder) TestCaps(c *C) {
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:refs/heads/master agent=foo=bar agent=new-agent\n",
 				pktline.FlushString,
 			},
-			caps: []packp.Capability{
+			capabilities: []packp.Capability{
 				{Name: "symref", Values: []string{"HEAD:refs/heads/master"}},
 				{Name: "agent", Values: []string{"foo=bar", "new-agent"}},
 			},
 		},
 	} {
 		ar := testDecodeOK(c, test.input)
-		for _, fixCap := range test.caps {
-			c.Assert(ar.Caps.Supports(fixCap.Name), Equals, true,
-				Commentf("input = %q, cap = %q", test.input, fixCap.Name))
-			c.Assert(ar.Caps.Get(fixCap.Name).Values, DeepEquals, fixCap.Values,
-				Commentf("input = %q, cap = %q", test.input, fixCap.Name))
+		for _, fixCap := range test.capabilities {
+			c.Assert(ar.Capabilities.Supports(fixCap.Name), Equals, true,
+				Commentf("input = %q, capability = %q", test.input, fixCap.Name))
+			c.Assert(ar.Capabilities.Get(fixCap.Name).Values, DeepEquals, fixCap.Values,
+				Commentf("input = %q, capability = %q", test.input, fixCap.Name))
 		}
 	}
 }
@@ -268,37 +268,37 @@ func (s *SuiteDecoder) TestWithPrefixAndFlush(c *C) {
 
 func (s *SuiteDecoder) TestOtherRefs(c *C) {
 	for _, test := range [...]struct {
-		input  []string
-		refs   map[string]core.Hash
-		peeled map[string]core.Hash
+		input      []string
+		references map[string]core.Hash
+		peeled     map[string]core.Hash
 	}{
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				pktline.FlushString,
 			},
-			refs:   map[string]core.Hash{},
-			peeled: map[string]core.Hash{},
+			references: make(map[string]core.Hash),
+			peeled:     make(map[string]core.Hash),
 		}, {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				"1111111111111111111111111111111111111111 ref/foo",
 				pktline.FlushString,
 			},
-			refs: map[string]core.Hash{
+			references: map[string]core.Hash{
 				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
 			},
-			peeled: map[string]core.Hash{},
+			peeled: make(map[string]core.Hash),
 		}, {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				"1111111111111111111111111111111111111111 ref/foo\n",
 				pktline.FlushString,
 			},
-			refs: map[string]core.Hash{
+			references: map[string]core.Hash{
 				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
 			},
-			peeled: map[string]core.Hash{},
+			peeled: make(map[string]core.Hash),
 		}, {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
@@ -306,18 +306,18 @@ func (s *SuiteDecoder) TestOtherRefs(c *C) {
 				"2222222222222222222222222222222222222222 ref/bar",
 				pktline.FlushString,
 			},
-			refs: map[string]core.Hash{
+			references: map[string]core.Hash{
 				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
 				"ref/bar": core.NewHash("2222222222222222222222222222222222222222"),
 			},
-			peeled: map[string]core.Hash{},
+			peeled: make(map[string]core.Hash),
 		}, {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				"1111111111111111111111111111111111111111 ref/foo^{}\n",
 				pktline.FlushString,
 			},
-			refs: map[string]core.Hash{},
+			references: make(map[string]core.Hash),
 			peeled: map[string]core.Hash{
 				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
 			},
@@ -328,7 +328,7 @@ func (s *SuiteDecoder) TestOtherRefs(c *C) {
 				"2222222222222222222222222222222222222222 ref/bar^{}",
 				pktline.FlushString,
 			},
-			refs: map[string]core.Hash{
+			references: map[string]core.Hash{
 				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
 			},
 			peeled: map[string]core.Hash{
@@ -348,7 +348,7 @@ func (s *SuiteDecoder) TestOtherRefs(c *C) {
 				"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
 				pktline.FlushString,
 			},
-			refs: map[string]core.Hash{
+			references: map[string]core.Hash{
 				"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
 				"refs/pull/10/head":      core.NewHash("51b8b4fb32271d39fbdd760397406177b2b0fd36"),
 				"refs/pull/100/head":     core.NewHash("02b5a6031ba7a8cbfde5d65ff9e13ecdbc4a92ca"),
@@ -365,7 +365,7 @@ func (s *SuiteDecoder) TestOtherRefs(c *C) {
 	} {
 		ar := testDecodeOK(c, test.input)
 		comment := Commentf("input = %v\n", test.input)
-		c.Assert(ar.Refs, DeepEquals, test.refs, comment)
+		c.Assert(ar.References, DeepEquals, test.references, comment)
 		c.Assert(ar.Peeled, DeepEquals, test.peeled, comment)
 	}
 }

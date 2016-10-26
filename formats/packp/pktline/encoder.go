@@ -48,22 +48,7 @@ func (e *Encoder) Flush() error {
 // will get streamed in their own pkt-lines.
 func (e *Encoder) Encode(payloads ...[]byte) error {
 	for _, p := range payloads {
-		if err := checkPayloadLength(len(p)); err != nil {
-			return err
-		}
-
-		if bytes.Equal(p, Flush) {
-			if err := e.Flush(); err != nil {
-				return err
-			}
-			continue
-		}
-
-		n := len(p) + 4
-		if _, err := e.w.Write(asciiHex16(n)); err != nil {
-			return err
-		}
-		if _, err := e.w.Write(p); err != nil {
+		if err := e.encodeLine(p); err != nil {
 			return err
 		}
 	}
@@ -71,15 +56,27 @@ func (e *Encoder) Encode(payloads ...[]byte) error {
 	return nil
 }
 
-func checkPayloadLength(n int) error {
-	switch {
-	case n < 0:
-		panic("unexpected negative payload length")
-	case n > MaxPayloadSize:
+func (e *Encoder) encodeLine(p []byte) error {
+	if len(p) > MaxPayloadSize {
 		return ErrPayloadTooLong
-	default:
+	}
+
+	if bytes.Equal(p, Flush) {
+		if err := e.Flush(); err != nil {
+			return err
+		}
 		return nil
 	}
+
+	n := len(p) + 4
+	if _, err := e.w.Write(asciiHex16(n)); err != nil {
+		return err
+	}
+	if _, err := e.w.Write(p); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Returns the hexadecimal ascii representation of the 16 less

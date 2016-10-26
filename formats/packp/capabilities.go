@@ -22,7 +22,7 @@ type Capability struct {
 // NewCapabilities returns a new Capabilities struct
 func NewCapabilities() *Capabilities {
 	return &Capabilities{
-		m: make(map[string]*Capability, 0),
+		m: make(map[string]*Capability),
 	}
 }
 

@@ -38,21 +38,21 @@ var (
 // any data you want to send before the actual pktlines.  It will also
 // be filled up with whatever is found on the line.
 type AdvRefs struct {
-	Prefix   [][]byte // payloads of the prefix
-	Head     *core.Hash
-	Caps     *packp.Capabilities
-	Refs     map[string]core.Hash
-	Peeled   map[string]core.Hash
-	Shallows []core.Hash
+	Prefix       [][]byte // payloads of the prefix
+	Head         *core.Hash
+	Capabilities *packp.Capabilities
+	References   map[string]core.Hash
+	Peeled       map[string]core.Hash
+	Shallows     []core.Hash
 }
 
 // New returns a pointer to a new AdvRefs value, ready to be used.
 func New() *AdvRefs {
 	return &AdvRefs{
-		Prefix:   [][]byte{},
-		Caps:     packp.NewCapabilities(),
-		Refs:     map[string]core.Hash{},
-		Peeled:   map[string]core.Hash{},
-		Shallows: []core.Hash{},
+		Prefix:       [][]byte{},
+		Capabilities: packp.NewCapabilities(),
+		References:   make(map[string]core.Hash),
+		Peeled:       make(map[string]core.Hash),
+		Shallows:     []core.Hash{},
 	}
 }

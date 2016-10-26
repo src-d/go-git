@@ -61,10 +61,10 @@ func encodePrefix(e *Encoder) encoderStateFn {
 // Also handle the special case when no HEAD ref is found.
 func encodeFirstLine(e *Encoder) encoderStateFn {
 	head := formatHead(e.data.Head)
-	sep := formatSeparator(e.data.Head)
-	caps := formatCaps(e.data.Caps)
+	separator := formatSeparator(e.data.Head)
+	capabilities := formatCaps(e.data.Capabilities)
 
-	if e.err = e.pe.Encodef("%s %s\x00%s\n", head, sep, caps); e.err != nil {
+	if e.err = e.pe.Encodef("%s %s\x00%s\n", head, separator, capabilities); e.err != nil {
 		return nil
 	}
 
@@ -100,9 +100,9 @@ func formatCaps(c *packp.Capabilities) string {
 // Adds the (sorted) refs: hash SP refname EOL
 // and their peeled refs if any.
 func encodeRefs(e *Encoder) encoderStateFn {
-	refs := sortRefs(e.data.Refs)
+	refs := sortRefs(e.data.References)
 	for _, r := range refs {
-		hash, _ := e.data.Refs[r]
+		hash, _ := e.data.References[r]
 		if e.err = e.pe.Encodef("%s %s\n", hash.String(), r); e.err != nil {
 			return nil
 		}

@@ -267,11 +267,11 @@ func ExampleDecoder_Decode() {
 
 	// Do something interesting with the AdvRefs, e.g. print its contents.
 	fmt.Println("head =", ar.Head)
-	fmt.Println("caps =", ar.Caps.String())
+	fmt.Println("capabilities =", ar.Capabilities.String())
 	fmt.Println("...")
 	fmt.Println("shallows =", ar.Shallows)
 	// Output: head = a6930aaee06755d1bdcfd943fbf614e4d92bb0c7
-	// caps = multi_ack ofs-delta symref=HEAD:/refs/heads/master
+	// capabilities = multi_ack ofs-delta symref=HEAD:/refs/heads/master
 	// ...
 	// shallows = [5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c]
 }
@@ -285,13 +285,13 @@ func ExampleEncoder_Encode() {
 	ar.Head = &head
 
 	// ...add some server capabilities...
-	ar.Caps.Add("symref", "HEAD:/refs/heads/master")
-	ar.Caps.Add("ofs-delta")
-	ar.Caps.Add("multi_ack")
+	ar.Capabilities.Add("symref", "HEAD:/refs/heads/master")
+	ar.Capabilities.Add("ofs-delta")
+	ar.Capabilities.Add("multi_ack")
 
 	// ...add a couple of references...
-	ar.Refs["refs/heads/master"] = core.NewHash("2222222222222222222222222222222222222222")
-	ar.Refs["refs/tags/v1"] = core.NewHash("3333333333333333333333333333333333333333")
+	ar.References["refs/heads/master"] = core.NewHash("2222222222222222222222222222222222222222")
+	ar.References["refs/tags/v1"] = core.NewHash("3333333333333333333333333333333333333333")
 
 	// ...including a peeled ref...
 	ar.Peeled["refs/tags/v1"] = core.NewHash("4444444444444444444444444444444444444444")
