@@ -7,7 +7,7 @@ import (
 type Option struct {
 	// Key preserving original caseness.
 	// Use IsKey instead to compare key regardless of caseness.
-	Key   string
+	Key string
 	// Original value as string, could be not notmalized.
 	Value string
 }
@@ -54,10 +54,19 @@ func (opts Options) GetAll(key string) []string {
 	return result
 }
 
+func (opts Options) withoutOption(key string) Options {
+	result := Options{}
+	for _, o := range opts {
+		if !o.IsKey(key) {
+			result = append(result, o)
+		}
+	}
+	return result
+}
+
 func (opts Options) withAddedOption(key string, value string) Options {
 	return append(opts, &Option{key, value})
 }
-
 
 func (opts Options) withSettedOption(key string, value string) Options {
 	for i := len(opts) - 1; i >= 0; i-- {

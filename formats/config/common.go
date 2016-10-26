@@ -62,3 +62,31 @@ func (s *Config) SetOption(section string, subsection string, key string, value 
 
 	return s
 }
+
+func (c *Config) RemoveSection(name string) *Config {
+	result := Sections{}
+	for _, s := range c.Sections {
+		if !s.IsName(name) {
+			result = append(result, s)
+		}
+	}
+
+	c.Sections = result
+	return c
+}
+
+func (c *Config) RemoveSubsection(section string, subsection string) *Config {
+	for _, s := range c.Sections {
+		if s.IsName(section) {
+			result := Subsections{}
+			for _, ss := range s.Subsections {
+				if !ss.IsName(subsection) {
+					result = append(result, ss)
+				}
+			}
+			s.Subsections = result
+		}
+	}
+
+	return c
+}

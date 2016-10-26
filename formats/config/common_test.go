@@ -67,28 +67,23 @@ func (s *CommonSuite) TestConfig_AddOption(c *C) {
 	c.Assert(obtained, DeepEquals, expected)
 }
 
-func (s *CommonSuite) TestSection_Option(c *C) {
-	sect := &config.Section{
-		Options: []*config.Option{
-			{Key: "key1", Value: "value1"},
-			{Key: "key2", Value: "value2"},
-			{Key: "key1", Value: "value3"},
-		},
-	}
-	c.Assert(sect.Option("otherkey"), Equals, "")
-	c.Assert(sect.Option("key2"), Equals, "value2")
-	c.Assert(sect.Option("key1"), Equals, "value3")
+func (s *CommonSuite) TestConfig_RemoveSection(c *C) {
+	sect := config.New().
+		AddOption("section1", "", "key1", "value1").
+		AddOption("section2", "", "key1", "value1")
+	expected := config.New().
+		AddOption("section1", "", "key1", "value1")
+	c.Assert(sect.RemoveSection("other"), DeepEquals, sect)
+	c.Assert(sect.RemoveSection("section2"), DeepEquals, expected)
 }
 
-func (s *CommonSuite) TestSubsection_Option(c *C) {
-	sect := &config.Subsection{
-		Options: []*config.Option{
-			{Key: "key1", Value: "value1"},
-			{Key: "key2", Value: "value2"},
-			{Key: "key1", Value: "value3"},
-		},
-	}
-	c.Assert(sect.Option("otherkey"), Equals, "")
-	c.Assert(sect.Option("key2"), Equals, "value2")
-	c.Assert(sect.Option("key1"), Equals, "value3")
+func (s *CommonSuite) TestConfig_RemoveSubsection(c *C) {
+	sect := config.New().
+		AddOption("section1", "sub1", "key1", "value1").
+		AddOption("section1", "sub2", "key1", "value1")
+	expected := config.New().
+		AddOption("section1", "sub1", "key1", "value1")
+	c.Assert(sect.RemoveSubsection("section1", "other"), DeepEquals, sect)
+	c.Assert(sect.RemoveSubsection("other", "other"), DeepEquals, sect)
+	c.Assert(sect.RemoveSubsection("section1", "sub2"), DeepEquals, expected)
 }

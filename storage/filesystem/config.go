@@ -54,13 +54,7 @@ func (c *ConfigStorage) SetRemote(r *config.RemoteConfig) error {
 	s := cfg.Section(remoteSection).Subsection(r.Name)
 	s.Name = r.Name
 	s.SetOption(urlKey, r.URL)
-	opts := []*gitconfig.Option{}
-	for _, o := range s.Options {
-		if !o.IsKey(fetchKey) {
-			opts = append(opts, o)
-		}
-	}
-	s.Options = opts
+	s.RemoveOption(fetchKey)
 	for _, rs := range r.Fetch {
 		s.AddOption(fetchKey, rs.String())
 	}
@@ -74,15 +68,7 @@ func (c *ConfigStorage) DeleteRemote(name string) error {
 		return err
 	}
 
-	s := cfg.Section(remoteSection)
-	subsections := []*gitconfig.Subsection{}
-	for _, ss := range s.Subsections {
-		if ss.Name != name {
-			subsections = append(subsections, ss)
-		}
-	}
-
-	s.Subsections = subsections
+	cfg = cfg.RemoveSubsection(remoteSection, name)
 
 	return c.write(cfg)
 }
@@ -124,12 +110,10 @@ func (c *ConfigStorage) write(cfg *gitconfig.Config) error {
 
 func parseRemote(s *gitconfig.Subsection) *config.RemoteConfig {
 	fetch := []config.RefSpec{}
-	for _, o := range s.Options {
-		if o.IsKey(fetchKey) {
-			rs := config.RefSpec(o.Value)
-			if rs.IsValid() {
-				fetch = append(fetch, rs)
-			}
+	for _, f := range s.Options.GetAll(fetchKey) {
+		rs := config.RefSpec(f)
+		if rs.IsValid() {
+			fetch = append(fetch, rs)
 		}
 	}
 

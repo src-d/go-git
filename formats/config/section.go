@@ -48,8 +48,18 @@ func (s *Section) SetOption(key string, value string) *Section {
 	return s
 }
 
+func (s *Section) RemoveOption(key string) *Section {
+	s.Options = s.Options.withoutOption(key)
+	return s
+}
+
 func (s *Subsection) SetOption(key string, value string) *Subsection {
 	s.Options = s.Options.withSettedOption(key, value)
+	return s
+}
+
+func (s *Subsection) RemoveOption(key string) *Subsection {
+	s.Options = s.Options.withoutOption(key)
 	return s
 }
 
