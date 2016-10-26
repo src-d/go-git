@@ -87,6 +87,7 @@ func (d *Decoder) readEntry(idx *Index) (*Entry, error) {
 
 	var msec, mnsec, sec, nsec uint32
 
+	flowSize := 62
 	flow := []interface{}{
 		&msec, &mnsec,
 		&sec, &nsec,
@@ -104,25 +105,24 @@ func (d *Decoder) readEntry(idx *Index) (*Entry, error) {
 		return nil, err
 	}
 
-	read := 62
+	read := flowSize
 	e.CreatedAt = time.Unix(int64(msec), int64(mnsec))
 	e.ModifiedAt = time.Unix(int64(sec), int64(nsec))
 	e.Stage = Stage(e.Flags>>12) & 0x3
 
 	if e.Flags&EntryExtended != 0 {
-		read += 2
 		var extended uint16
 		if err := readBinary(d.r, &extended); err != nil {
 			return nil, err
 		}
 
+		read += 2
 		e.IntentToAdd = extended&intentToAddMask != 0
 		e.SkipWorktree = extended&skipWorkTreeMask != 0
 	}
 
 	if err := d.readEntryName(idx, e); err != nil {
 		return nil, err
-
 	}
 
 	return e, d.padEntry(idx, e, read)
@@ -137,6 +137,8 @@ func (d *Decoder) readEntryName(idx *Index, e *Entry) error {
 		name, err = d.doReadEntryName(e)
 	case 4:
 		name, err = d.doReadEntryNameV4()
+	default:
+		return ErrUnsupportedVersion
 	}
 
 	if err != nil {
@@ -158,7 +160,7 @@ func (d *Decoder) doReadEntryNameV4() (string, error) {
 		base = d.lastEntry.Name[:len(d.lastEntry.Name)-int(l)]
 	}
 
-	name, err := readUntil(d.r, 0)
+	name, err := readUntil(d.r, '\x00')
 	if err != nil {
 		return "", err
 	}
@@ -211,7 +213,7 @@ func (d *Decoder) readExtensions(idx *Index) error {
 
 func (d *Decoder) readExtension(idx *Index) error {
 	var s = make([]byte, 4)
-	if _, err := d.r.Read(s); err != nil {
+	if _, err := io.ReadFull(d.r, s); err != nil {
 		return err
 	}
 
@@ -223,7 +225,7 @@ func (d *Decoder) readExtension(idx *Index) error {
 	switch {
 	case bytes.Equal(s, treeExtSignature):
 		t := &Tree{}
-		td := &TreeExtensionDecoder{&io.LimitedReader{R: d.r, N: int64(len)}}
+		td := &treeExtensionDecoder{&io.LimitedReader{R: d.r, N: int64(len)}}
 		if err := td.Decode(t); err != nil {
 			return err
 		}
@@ -231,7 +233,7 @@ func (d *Decoder) readExtension(idx *Index) error {
 		idx.Cache = t
 	case bytes.Equal(s, resolveUndoExtSignature):
 		ru := &ResolveUndo{}
-		rud := &ResolveUndoDecoder{&io.LimitedReader{R: d.r, N: int64(len)}}
+		rud := &resolveUndoDecoder{&io.LimitedReader{R: d.r, N: int64(len)}}
 		if err := rud.Decode(ru); err != nil {
 			return err
 		}
@@ -244,7 +246,7 @@ func (d *Decoder) readExtension(idx *Index) error {
 
 func validateHeader(r io.Reader) (version uint32, err error) {
 	var s = make([]byte, 4)
-	if _, err := r.Read(s); err != nil {
+	if _, err := io.ReadFull(r, s); err != nil {
 		return 0, err
 	}
 
@@ -263,11 +265,11 @@ func validateHeader(r io.Reader) (version uint32, err error) {
 	return
 }
 
-type TreeExtensionDecoder struct {
+type treeExtensionDecoder struct {
 	r io.Reader
 }
 
-func (d *TreeExtensionDecoder) Decode(t *Tree) error {
+func (d *treeExtensionDecoder) Decode(t *Tree) error {
 	for {
 		e, err := d.readEntry()
 		if err != nil {
@@ -286,7 +288,7 @@ func (d *TreeExtensionDecoder) Decode(t *Tree) error {
 	}
 }
 
-func (d *TreeExtensionDecoder) readEntry() (*TreeEntry, error) {
+func (d *treeExtensionDecoder) readEntry() (*TreeEntry, error) {
 	e := &TreeEntry{}
 
 	path, err := readUntil(d.r, '\x00')
@@ -313,7 +315,7 @@ func (d *TreeExtensionDecoder) readEntry() (*TreeEntry, error) {
 	}
 
 	e.Entries = i
-	trees, err := readUntil(d.r, 10)
+	trees, err := readUntil(d.r, '\n')
 	if err != nil {
 		return nil, err
 	}
@@ -332,11 +334,11 @@ func (d *TreeExtensionDecoder) readEntry() (*TreeEntry, error) {
 	return e, nil
 }
 
-type ResolveUndoDecoder struct {
+type resolveUndoDecoder struct {
 	r io.Reader
 }
 
-func (d *ResolveUndoDecoder) Decode(ru *ResolveUndo) error {
+func (d *resolveUndoDecoder) Decode(ru *ResolveUndo) error {
 	for {
 		e, err := d.readEntry()
 		if err != nil {
@@ -351,12 +353,12 @@ func (d *ResolveUndoDecoder) Decode(ru *ResolveUndo) error {
 	}
 }
 
-func (d *ResolveUndoDecoder) readEntry() (*ResolveUndoEntry, error) {
+func (d *resolveUndoDecoder) readEntry() (*ResolveUndoEntry, error) {
 	e := &ResolveUndoEntry{
 		Stages: make(map[Stage]core.Hash, 0),
 	}
 
-	path, err := readUntil(d.r, 0)
+	path, err := readUntil(d.r, '\x00')
 	if err != nil {
 		return nil, err
 	}
@@ -381,8 +383,8 @@ func (d *ResolveUndoDecoder) readEntry() (*ResolveUndoEntry, error) {
 	return e, nil
 }
 
-func (d *ResolveUndoDecoder) readStage(e *ResolveUndoEntry, s Stage) error {
-	ascii, err := readUntil(d.r, 0)
+func (d *resolveUndoDecoder) readStage(e *ResolveUndoEntry, s Stage) error {
+	ascii, err := readUntil(d.r, '\x00')
 	if err != nil {
 		return err
 	}
