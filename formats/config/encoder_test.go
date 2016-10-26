@@ -8,8 +8,7 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-type EncoderSuite struct {
-}
+type EncoderSuite struct{}
 
 var _ = Suite(&EncoderSuite{})
 

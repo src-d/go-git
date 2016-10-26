@@ -10,8 +10,7 @@ import (
 
 func Test(t *testing.T) { TestingT(t) }
 
-type CommonSuite struct {
-}
+type CommonSuite struct{}
 
 var _ = Suite(&CommonSuite{})
 

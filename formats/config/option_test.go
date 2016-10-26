@@ -6,8 +6,7 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-type OptionSuite struct {
-}
+type OptionSuite struct{}
 
 var _ = Suite(&OptionSuite{})
 
