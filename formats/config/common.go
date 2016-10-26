@@ -25,6 +25,10 @@ type Include struct {
 
 type Comment string
 
+const (
+	NoSubsection = ""
+)
+
 func (c *Config) Section(name string) *Section {
 	for i := len(c.Sections) - 1; i >= 0; i-- {
 		s := c.Sections[i]
@@ -39,7 +43,9 @@ func (c *Config) Section(name string) *Section {
 
 // AddOption is a convenience method to add an option to a given
 // section and subsection.
-// If subsection is empty, then it's taken as no subsection.
+//
+// Use the NoSubsection constant for the subsection argument
+// if no subsection is wanted.
 func (s *Config) AddOption(section string, subsection string, key string, value string) *Config {
 	if subsection == "" {
 		s.Section(section).AddOption(key, value)
@@ -52,7 +58,9 @@ func (s *Config) AddOption(section string, subsection string, key string, value 
 
 // SetOption is a convenience method to set an option to a given
 // section and subsection.
-// If subsection is empty, then it's taken as no subsection.
+//
+// Use the NoSubsection constant for the subsection argument
+// if no subsection is wanted.
 func (s *Config) SetOption(section string, subsection string, key string, value string) *Config {
 	if subsection == "" {
 		s.Section(section).SetOption(key, value)
