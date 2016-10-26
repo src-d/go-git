@@ -1,7 +1,3 @@
-// Package config implements decoding, encoding and
-// manipulation git config files.
-//
-// Reference: https://git-scm.com/docs/git-config
 package config
 
 // New creates a new config instance.
