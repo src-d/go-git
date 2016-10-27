@@ -25,6 +25,7 @@ func main() {
 	// references and configuration is saved to aerospike
 	s, err := aerospike.NewStorage(client, "test", url)
 	checkIfError(err)
+	defer s.Close()
 
 	// A new repository instance using as storage the custom implementation
 	r, err := git.NewRepository(s)

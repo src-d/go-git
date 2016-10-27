@@ -26,4 +26,5 @@ func (s *OSSuite) SetUpTest(c *C) {
 func (s *OSSuite) TearDownTest(c *C) {
 	err := stdos.RemoveAll(s.path)
 	c.Assert(err, IsNil)
+	c.Assert(s.FilesystemSuite.Fs.Close(), IsNil)
 }

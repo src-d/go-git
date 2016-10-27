@@ -145,6 +145,10 @@ func (fs *OS) Base() string {
 	return fs.base
 }
 
+func (fs *OS) Close() error {
+	return nil
+}
+
 // osFile represents a file in the os filesystem
 type osFile struct {
 	filename string

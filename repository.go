@@ -336,3 +336,10 @@ func (r *Repository) Ref(name core.ReferenceName, resolved bool) (*core.Referenc
 func (r *Repository) Refs() (core.ReferenceIter, error) {
 	return r.s.ReferenceStorage().Iter()
 }
+
+// Close closes the underlying Storage.
+// Default storage backends as created by NewMemoryRepository
+// and NewFilesystemRepository do not require closing.
+func (r *Repository) Close() error {
+	return r.s.Close()
+}

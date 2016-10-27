@@ -10,6 +10,7 @@ import (
 
 // Storage storage of objects and references
 type Storage interface {
+	io.Closer
 	ConfigStorage() config.ConfigStorage
 	ObjectStorage() core.ObjectStorage
 	ReferenceStorage() core.ReferenceStorage

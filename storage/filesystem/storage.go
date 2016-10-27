@@ -48,3 +48,7 @@ func (s *Storage) ConfigStorage() config.ConfigStorage {
 	s.c = &ConfigStorage{dir: s.dir}
 	return s.c
 }
+
+func (s *Storage) Close() error {
+	return s.fs.Close()
+}

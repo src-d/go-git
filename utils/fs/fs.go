@@ -14,6 +14,7 @@ var (
 )
 
 type Filesystem interface {
+	io.Closer
 	//Create opens a file in write-only mode.
 	Create(filename string) (File, error)
 	//Open opens a file in read-only mode.
