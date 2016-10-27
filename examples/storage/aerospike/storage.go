@@ -60,6 +60,11 @@ func (s *Storage) ConfigStorage() config.ConfigStorage {
 	return s.cs
 }
 
+func (s *Storage) Close() error {
+	s.client.Close()
+	return nil
+}
+
 type ObjectStorage struct {
 	client *driver.Client
 	ns     string

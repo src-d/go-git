@@ -1,10 +1,12 @@
-package memory
+package memory_test
 
 import (
 	"testing"
 
-	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v4/storage/test"
+	"gopkg.in/src-d/go-git.v4/storage/memory"
+
+	. "gopkg.in/check.v1"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -16,16 +18,15 @@ type StorageSuite struct {
 var _ = Suite(&StorageSuite{})
 
 func (s *StorageSuite) SetUpTest(c *C) {
-	storage := NewStorage()
-	s.BaseStorageSuite = test.NewBaseStorageSuite(
-		storage.ObjectStorage(),
-		storage.ReferenceStorage(),
-		storage.ConfigStorage(),
-	)
+	s.BaseStorageSuite = test.NewBaseStorageSuite(memory.NewStorage())
+}
+
+func (s *StorageSuite) TearDownTest(c *C) {
+	c.Assert(s.BaseStorageSuite.Storage.Close(), IsNil)
 }
 
 func (s *StorageSuite) TestStorageObjectStorage(c *C) {
-	storage := NewStorage()
+	storage := memory.NewStorage()
 	o := storage.ObjectStorage()
 	e := storage.ObjectStorage()
 
@@ -33,7 +34,7 @@ func (s *StorageSuite) TestStorageObjectStorage(c *C) {
 }
 
 func (s *StorageSuite) TestStorageReferenceStorage(c *C) {
-	storage := NewStorage()
+	storage := memory.NewStorage()
 	o := storage.ReferenceStorage()
 	e := storage.ReferenceStorage()
 
@@ -41,7 +42,7 @@ func (s *StorageSuite) TestStorageReferenceStorage(c *C) {
 }
 
 func (s *StorageSuite) TestStorageConfigStorage(c *C) {
-	storage := NewStorage()
+	storage := memory.NewStorage()
 	o := storage.ConfigStorage()
 	e := storage.ConfigStorage()
 

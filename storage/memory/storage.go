@@ -64,6 +64,10 @@ func (s *Storage) ReferenceStorage() core.ReferenceStorage {
 	return s.r
 }
 
+func (s *Storage) Close() error {
+	return nil
+}
+
 type ConfigStorage struct {
 	RemotesConfig map[string]*config.RemoteConfig
 }

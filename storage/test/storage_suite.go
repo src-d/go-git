@@ -7,6 +7,7 @@ import (
 	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4"
 )
 
 type TestObject struct {
@@ -16,6 +17,7 @@ type TestObject struct {
 }
 
 type BaseStorageSuite struct {
+	Storage          git.Storage
 	ObjectStorage    core.ObjectStorage
 	ReferenceStorage core.ReferenceStorage
 	ConfigStore      config.ConfigStorage
@@ -24,11 +26,7 @@ type BaseStorageSuite struct {
 	testObjects map[core.ObjectType]TestObject
 }
 
-func NewBaseStorageSuite(
-	os core.ObjectStorage,
-	rs core.ReferenceStorage,
-	cs config.ConfigStorage,
-) BaseStorageSuite {
+func NewBaseStorageSuite(s git.Storage) BaseStorageSuite {
 	commit := &core.MemoryObject{}
 	commit.SetType(core.CommitObject)
 	tree := &core.MemoryObject{}
@@ -39,9 +37,10 @@ func NewBaseStorageSuite(
 	tag.SetType(core.TagObject)
 
 	return BaseStorageSuite{
-		ObjectStorage:    os,
-		ReferenceStorage: rs,
-		ConfigStore:      cs,
+		Storage:          s,
+		ObjectStorage:    s.ObjectStorage(),
+		ReferenceStorage: s.ReferenceStorage(),
+		ConfigStore:      s.ConfigStorage(),
 
 		validTypes: []core.ObjectType{
 			core.CommitObject,
