@@ -137,5 +137,5 @@ func (s *RemoteSuite) TestFetchError(c *C) {
 	req.Want(core.NewHash("1111111111111111111111111111111111111111"))
 
 	_, err := r.Fetch(req)
-	c.Assert(err, Not(IsNil)) // TODO return verbose errors
+	c.Assert(err, Not(IsNil))
 }

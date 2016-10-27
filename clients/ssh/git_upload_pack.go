@@ -159,10 +159,9 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (rc io.Read
 		return nil, fmt.Errorf("cannot pipe remote stdout: %s", err)
 	}
 
+	done := make(chan error)
 	go func() {
-		// TODO FIXME: don't ignore the error from the remote execution of the command.
-		// Instead return a way to check this error to our caller.
-		_ = session.Run(s.getCommand())
+		done <- session.Run(s.getCommand())
 	}()
 
 	if err := skipAdvRef(so); err != nil {
@@ -194,6 +193,7 @@ func (s *GitUploadPackService) Fetch(r *common.GitUploadPackRequest) (rc io.Read
 	return &fetchSession{
 		Reader:  so,
 		session: session,
+		done:    done,
 	}, nil
 }
 
@@ -210,12 +210,25 @@ type fetchSession struct {
 	done    chan error
 }
 
-func (f *fetchSession) Close() error {
-	if err := f.session.Close(); err != nil {
-		if err != io.EOF {
-			return err
-		}
-		// ignore io.EOF error, this means the other end closed the session before us
+// Close closes the session and collects the output state of the remote
+// SSH command.
+//
+// If both the remote command and the closing of the session completes
+// susccessfully it returns nil.
+//
+// If the remote command completes unsuccessfully or is interrupted by a
+// signal, it returns the corresponding *ExitError.
+//
+// Otherwise, if clossing the SSH session fails it returns the close
+// error.  Closing the session when the other has already close it is
+// not cosidered an error.
+func (f *fetchSession) Close() (err error) {
+	if err := <-f.done; err != nil {
+		return err
+	}
+
+	if err := f.session.Close(); err != nil && err != io.EOF {
+		return err
 	}
 
 	return nil
