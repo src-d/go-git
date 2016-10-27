@@ -120,13 +120,23 @@ func (r *Remote) getWantedReferences(spec []config.RefSpec) ([]*core.Reference, 
 		return refs, err
 	}
 
+	wantTags := true
+	for _, s := range spec {
+		if !s.IsWildcard() {
+			wantTags = false
+			break
+		}
+	}
+
 	return refs, iter.ForEach(func(ref *core.Reference) error {
 		if ref.Type() != core.HashReference {
 			return nil
 		}
 
 		if !config.MatchAny(spec, ref.Name()) {
-			return nil
+			if !ref.IsTag() || !wantTags {
+				return nil
+			}
 		}
 
 		_, err := r.s.ObjectStorage().Get(core.CommitObject, ref.Hash())
@@ -190,8 +200,8 @@ func (r *Remote) updateObjectStorage(reader io.Reader) error {
 }
 
 func (r *Remote) updateLocalReferenceStorage(specs []config.RefSpec, refs []*core.Reference) error {
-	for _, ref := range refs {
-		for _, spec := range specs {
+	for _, spec := range specs {
+		for _, ref := range refs {
 			if !spec.Match(ref.Name()) {
 				continue
 			}
@@ -208,7 +218,32 @@ func (r *Remote) updateLocalReferenceStorage(specs []config.RefSpec, refs []*cor
 		}
 	}
 
-	return nil
+	return r.buildFetchedTags()
+}
+
+func (r *Remote) buildFetchedTags() error {
+	iter, err := r.Refs()
+	if err != nil {
+		return err
+	}
+
+	os := r.s.ObjectStorage()
+	return iter.ForEach(func(ref *core.Reference) error {
+		if !ref.IsTag() {
+			return nil
+		}
+
+		_, err := os.Get(core.AnyObject, ref.Hash())
+		if err == core.ErrObjectNotFound {
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
+
+		return r.s.ReferenceStorage().Set(ref)
+	})
 }
 
 // Head returns the Reference of the HEAD
