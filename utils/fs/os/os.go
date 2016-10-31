@@ -21,7 +21,8 @@ func NewOS(baseDir string) *OS {
 	}
 }
 
-// Create creates a new GlusterFSFile
+// Create creates a file and opens it with standard permissions
+// and modes O_RDWR, O_CREATE and O_TRUNC.
 func (fs *OS) Create(filename string) (File, error) {
 	fullpath := path.Join(fs.base, filename)
 
@@ -30,6 +31,30 @@ func (fs *OS) Create(filename string) (File, error) {
 	}
 
 	f, err := os.Create(fullpath)
+	if err != nil {
+		return nil, err
+	}
+
+	filename, err = filepath.Rel(fs.base, fullpath)
+	if err != nil {
+		return nil, err
+	}
+
+	return newOSFile(filename, f), nil
+}
+
+// OpenFile is equivalent to standard os.OpenFile.
+// If flag os.O_CREATE is set, all parent directories will be created.
+func (fs *OS) OpenFile(filename string, flag int, perm os.FileMode) (File, error) {
+	fullpath := path.Join(fs.base, filename)
+
+	if flag|os.O_CREATE != 0 {
+		if err := fs.createDir(fullpath); err != nil {
+			return nil, err
+		}
+	}
+
+	f, err := os.OpenFile(fullpath, flag, perm)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +107,7 @@ func (fs *OS) Rename(from, to string) error {
 	return os.Rename(from, to)
 }
 
-// Open opens the named file for reading. If successful, methods on the returned
-// file can be used for reading only.
+// Open opens a file in read-only mode.
 func (fs *OS) Open(filename string) (File, error) {
 	fullpath := fs.Join(fs.base, filename)
 	f, err := os.Open(fullpath)
@@ -147,15 +171,13 @@ func (fs *OS) Base() string {
 
 // osFile represents a file in the os filesystem
 type osFile struct {
-	filename string
-	closed   bool
-	file     *os.File
+	BaseFile
+	file *os.File
 }
 
 func newOSFile(filename string, file *os.File) File {
 	return &osFile{
-		filename: filename,
-		closed:   false,
+		BaseFile: BaseFile{BaseFilename: filename},
 		file:     file,
 	}
 }
@@ -173,21 +195,11 @@ func (f *osFile) Write(p []byte) (int, error) {
 }
 
 func (f *osFile) Close() error {
-	f.closed = true
+	f.BaseFile.Closed = true
 
 	return f.file.Close()
 }
 
 func (f *osFile) ReadAt(p []byte, off int64) (n int, err error) {
 	return f.file.ReadAt(p, off)
-}
-
-//Filename returns the filename from the File
-func (f *osFile) Filename() string {
-	return f.filename
-}
-
-//IsClosed returns if te file is closed
-func (f *osFile) IsClosed() bool {
-	return f.closed
 }
