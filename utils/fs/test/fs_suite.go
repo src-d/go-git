@@ -14,6 +14,24 @@ func Test(t *testing.T) { TestingT(t) }
 
 type FilesystemSuite struct {
 	Fs Filesystem
+
+	SkippedTests map[string]string
+}
+
+func (s *FilesystemSuite) SetUpTest(c *C) {
+	if s.SkippedTests == nil {
+		return
+	}
+
+	name := c.TestName()
+	parts := strings.Split(name, ".")
+	name = parts[len(parts)-1]
+	reason, ok := s.SkippedTests[name]
+	if !ok {
+		return
+	}
+
+	c.Skip(reason)
 }
 
 func (s *FilesystemSuite) TestCreate(c *C) {
