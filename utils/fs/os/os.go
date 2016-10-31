@@ -6,7 +6,7 @@ import (
 	"path"
 	"path/filepath"
 
-	. "gopkg.in/src-d/go-git.v4/utils/fs"
+	"gopkg.in/src-d/go-git.v4/utils/fs"
 )
 
 // OS a filesystem base on the os filesystem
@@ -23,7 +23,7 @@ func NewOS(baseDir string) *OS {
 
 // Create creates a file and opens it with standard permissions
 // and modes O_RDWR, O_CREATE and O_TRUNC.
-func (fs *OS) Create(filename string) (File, error) {
+func (fs *OS) Create(filename string) (fs.File, error) {
 	fullpath := path.Join(fs.base, filename)
 
 	if err := fs.createDir(fullpath); err != nil {
@@ -45,7 +45,7 @@ func (fs *OS) Create(filename string) (File, error) {
 
 // OpenFile is equivalent to standard os.OpenFile.
 // If flag os.O_CREATE is set, all parent directories will be created.
-func (fs *OS) OpenFile(filename string, flag int, perm os.FileMode) (File, error) {
+func (fs *OS) OpenFile(filename string, flag int, perm os.FileMode) (fs.File, error) {
 	fullpath := path.Join(fs.base, filename)
 
 	if flag|os.O_CREATE != 0 {
@@ -80,15 +80,15 @@ func (fs *OS) createDir(fullpath string) error {
 
 // ReadDir returns the filesystem info for all the archives under the specified
 // path.
-func (fs *OS) ReadDir(path string) ([]FileInfo, error) {
-	fullpath := fs.Join(fs.base, path)
+func (ofs *OS) ReadDir(path string) ([]fs.FileInfo, error) {
+	fullpath := ofs.Join(ofs.base, path)
 
 	l, err := ioutil.ReadDir(fullpath)
 	if err != nil {
 		return nil, err
 	}
 
-	var s = make([]FileInfo, len(l))
+	var s = make([]fs.FileInfo, len(l))
 	for i, f := range l {
 		s[i] = f
 	}
@@ -108,7 +108,7 @@ func (fs *OS) Rename(from, to string) error {
 }
 
 // Open opens a file in read-only mode.
-func (fs *OS) Open(filename string) (File, error) {
+func (fs *OS) Open(filename string) (fs.File, error) {
 	fullpath := fs.Join(fs.base, filename)
 	f, err := os.Open(fullpath)
 	if err != nil {
@@ -119,7 +119,7 @@ func (fs *OS) Open(filename string) (File, error) {
 }
 
 // Stat returns the FileInfo structure describing file.
-func (fs *OS) Stat(filename string) (FileInfo, error) {
+func (fs *OS) Stat(filename string) (fs.FileInfo, error) {
 	fullpath := fs.Join(fs.base, filename)
 	return os.Stat(fullpath)
 }
@@ -129,7 +129,7 @@ func (fs *OS) Remove(filename string) error {
 	return os.Remove(fullpath)
 }
 
-func (fs *OS) TempFile(dir, prefix string) (File, error) {
+func (fs *OS) TempFile(dir, prefix string) (fs.File, error) {
 	fullpath := fs.Join(fs.base, dir)
 	if err := fs.createDir(fullpath + string(os.PathSeparator)); err != nil {
 		return nil, err
@@ -160,7 +160,7 @@ func (fs *OS) Join(elem ...string) string {
 
 // Dir returns a new Filesystem from the same type of fs using as baseDir the
 // given path
-func (fs *OS) Dir(path string) Filesystem {
+func (fs *OS) Dir(path string) fs.Filesystem {
 	return NewOS(fs.Join(fs.base, path))
 }
 
@@ -171,13 +171,13 @@ func (fs *OS) Base() string {
 
 // osFile represents a file in the os filesystem
 type osFile struct {
-	BaseFile
+	fs.BaseFile
 	file *os.File
 }
 
-func newOSFile(filename string, file *os.File) File {
+func newOSFile(filename string, file *os.File) fs.File {
 	return &osFile{
-		BaseFile: BaseFile{BaseFilename: filename},
+		BaseFile: fs.BaseFile{BaseFilename: filename},
 		file:     file,
 	}
 }
