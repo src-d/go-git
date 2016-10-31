@@ -24,23 +24,7 @@ func NewOS(baseDir string) *OS {
 // Create creates a file and opens it with standard permissions
 // and modes O_RDWR, O_CREATE and O_TRUNC.
 func (fs *OS) Create(filename string) (fs.File, error) {
-	fullpath := path.Join(fs.base, filename)
-
-	if err := fs.createDir(fullpath); err != nil {
-		return nil, err
-	}
-
-	f, err := os.Create(fullpath)
-	if err != nil {
-		return nil, err
-	}
-
-	filename, err = filepath.Rel(fs.base, fullpath)
-	if err != nil {
-		return nil, err
-	}
-
-	return newOSFile(filename, f), nil
+	return fs.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 }
 
 // OpenFile is equivalent to standard os.OpenFile.
@@ -109,13 +93,7 @@ func (fs *OS) Rename(from, to string) error {
 
 // Open opens a file in read-only mode.
 func (fs *OS) Open(filename string) (fs.File, error) {
-	fullpath := fs.Join(fs.base, filename)
-	f, err := os.Open(fullpath)
-	if err != nil {
-		return nil, err
-	}
-
-	return newOSFile(filename, f), nil
+	return fs.OpenFile(filename, os.O_RDONLY, 0)
 }
 
 // Stat returns the FileInfo structure describing file.
