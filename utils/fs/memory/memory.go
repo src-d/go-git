@@ -16,8 +16,9 @@ const separator = '/'
 
 // Memory a very convenient filesystem based on memory files
 type Memory struct {
-	base string
-	s    *storage
+	base      string
+	s         *storage
+	tempCount int
 }
 
 //New returns a new Memory filesystem
@@ -29,7 +30,7 @@ func New() *Memory {
 }
 
 func (fs *Memory) Create(filename string) (fs.File, error) {
-	return fs.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	return fs.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 }
 
 func (fs *Memory) Open(filename string) (fs.File, error) {
@@ -39,7 +40,7 @@ func (fs *Memory) Open(filename string) (fs.File, error) {
 func (fs *Memory) OpenFile(filename string, flag int, perm os.FileMode) (fs.File, error) {
 	fullpath := fs.Join(fs.base, filename)
 	f, ok := fs.s.files[fullpath]
-	if !ok && flag&os.O_CREATE == 0 {
+	if !ok && !isCreate(flag) {
 		return nil, os.ErrNotExist
 	}
 
@@ -49,14 +50,14 @@ func (fs *Memory) OpenFile(filename string, flag int, perm os.FileMode) (fs.File
 	}
 
 	n := newFile(fs.base, fullpath, flag)
-	n.c = f.c
+	n.content = f.content
 
-	if flag&os.O_APPEND != 0 {
-		n.p = n.c.size
+	if isAppend(flag) {
+		n.position = int64(n.content.Len())
 	}
 
-	if flag&os.O_TRUNC != 0 {
-		n.c.Truncate()
+	if isTruncate(flag) {
+		n.content.Truncate()
 	}
 
 	return n, nil
@@ -66,12 +67,12 @@ func (fs *Memory) Stat(filename string) (fs.FileInfo, error) {
 	fullpath := fs.Join(fs.base, filename)
 
 	if _, ok := fs.s.files[filename]; ok {
-		return newFileInfo(fs.base, fullpath, fs.s.files[filename].c.size), nil
+		return newFileInfo(fs.base, fullpath, fs.s.files[filename].content.Len()), nil
 	}
 
 	info, err := fs.ReadDir(filename)
 	if err == nil && len(info) != 0 {
-		return newFileInfo(fs.base, fullpath, int64(len(info))), nil
+		return newFileInfo(fs.base, fullpath, len(info)), nil
 	}
 
 	return nil, os.ErrNotExist
@@ -80,7 +81,7 @@ func (fs *Memory) Stat(filename string) (fs.FileInfo, error) {
 func (fs *Memory) ReadDir(base string) (entries []fs.FileInfo, err error) {
 	base = fs.Join(fs.base, base)
 
-	dirs := make(map[string]bool, 0)
+	appendedDirs := make(map[string]bool, 0)
 	for fullpath, f := range fs.s.files {
 		if !strings.HasPrefix(fullpath, base) {
 			continue
@@ -89,28 +90,44 @@ func (fs *Memory) ReadDir(base string) (entries []fs.FileInfo, err error) {
 		fullpath, _ = filepath.Rel(base, fullpath)
 		parts := strings.Split(fullpath, string(separator))
 
-		if len(parts) != 1 {
-			dirs[parts[0]] = true
+		if len(parts) == 1 {
+			entries = append(entries, newFileInfo(fs.base, fullpath, f.content.Len()))
 			continue
 		}
 
-		entries = append(entries, newFileInfo(fs.base, fullpath, f.c.size))
-	}
+		if _, ok := appendedDirs[parts[0]]; ok {
+			continue
+		}
 
-	for path := range dirs {
-		entries = append(entries, &fileInfo{
-			name:  path,
-			isDir: true,
-		})
+		entries = append(entries, &fileInfo{name: parts[0], isDir: true})
+		appendedDirs[parts[0]] = true
 	}
 
 	return
 }
 
+var maxTempFiles = 1024 * 4
+
 func (fs *Memory) TempFile(dir, prefix string) (fs.File, error) {
-	filename := fmt.Sprintf("%s_%d", prefix, time.Now().UnixNano())
-	fullpath := fs.Join(fs.base, dir, filename)
+	var fullpath string
+	for {
+		if fs.tempCount >= maxTempFiles {
+			return nil, errors.New("max. number of tempfiles reached")
+		}
+
+		fullpath = fs.getTempFilename(dir, prefix)
+		if _, ok := fs.s.files[fullpath]; !ok {
+			break
+		}
+	}
+
 	return fs.Create(fullpath)
+}
+
+func (fs *Memory) getTempFilename(dir, prefix string) string {
+	fs.tempCount++
+	filename := fmt.Sprintf("%s_%d_%d", prefix, fs.tempCount, time.Now().UnixNano())
+	return fs.Join(fs.base, dir, filename)
 }
 
 func (fs *Memory) Rename(from, to string) error {
@@ -129,34 +146,13 @@ func (fs *Memory) Rename(from, to string) error {
 }
 
 func (fs *Memory) Remove(filename string) error {
-	if _, err := fs.Stat(filename); err != nil {
-		return err
+	fullpath := fs.Join(fs.base, filename)
+	if _, ok := fs.s.files[fullpath]; !ok {
+		return os.ErrNotExist
 	}
 
-	fullpath := fs.Join(fs.base, filename)
 	delete(fs.s.files, fullpath)
 	return nil
-}
-
-func (fs *Memory) clean(path string) string {
-	if len(path) <= 1 {
-		if path != string(separator) {
-			return path
-		}
-
-		return ""
-	}
-
-	if path[0] == separator {
-		path = path[1:]
-	}
-
-	l := len(path)
-	if path[l-1] == separator {
-		path = path[:l-1]
-	}
-
-	return path
 }
 
 func (fs *Memory) Join(elem ...string) string {
@@ -177,18 +173,18 @@ func (fs *Memory) Base() string {
 type file struct {
 	fs.BaseFile
 
-	c     *content
-	p     int64
-	flags int
+	content  *content
+	position int64
+	flag     int
 }
 
-func newFile(base, fullpath string, flags int) *file {
+func newFile(base, fullpath string, flag int) *file {
 	filename, _ := filepath.Rel(base, fullpath)
 
 	return &file{
 		BaseFile: fs.BaseFile{BaseFilename: filename},
-		c:        &content{},
-		flags:    flags,
+		content:  &content{},
+		flag:     flag,
 	}
 }
 
@@ -197,31 +193,31 @@ func (f *file) Read(b []byte) (int, error) {
 		return 0, fs.ErrClosed
 	}
 
-	if f.flags&os.O_RDWR != 0 && f.flags&os.O_RDONLY != 0 {
+	if !isReadAndWrite(f.flag) && !isReadOnly(f.flag) {
 		return 0, errors.New("read not supported")
 	}
 
-	n, err := f.c.ReadAt(b, f.p)
-	f.p += int64(n)
+	n, err := f.content.ReadAt(b, f.position)
+	f.position += int64(n)
 
 	return n, err
 }
 
 func (f *file) Seek(offset int64, whence int) (int64, error) {
-	switch whence {
-	case io.SeekCurrent:
-		if offset == 0 {
-			return f.p, nil
-		}
-
-		f.p += offset
-	case io.SeekStart:
-		f.p = offset
-	case io.SeekEnd:
-		f.p = f.c.size - offset
+	if f.IsClosed() {
+		return 0, fs.ErrClosed
 	}
 
-	return f.p, nil
+	switch whence {
+	case io.SeekCurrent:
+		f.position += offset
+	case io.SeekStart:
+		f.position = offset
+	case io.SeekEnd:
+		f.position = int64(f.content.Len()) - offset
+	}
+
+	return f.position, nil
 }
 
 func (f *file) Write(p []byte) (int, error) {
@@ -229,17 +225,21 @@ func (f *file) Write(p []byte) (int, error) {
 		return 0, fs.ErrClosed
 	}
 
-	if f.flags&os.O_RDWR != 0 && f.flags&os.O_WRONLY != 0 {
-		return 0, errors.New("read not supported")
+	if !isReadAndWrite(f.flag) && !isWriteOnly(f.flag) {
+		return 0, errors.New("write not supported")
 	}
 
-	n, err := f.c.WriteAt(p, f.p)
-	f.p += int64(n)
+	n, err := f.content.WriteAt(p, f.position)
+	f.position += int64(n)
 
 	return n, err
 }
 
 func (f *file) Close() error {
+	if f.IsClosed() {
+		return errors.New("file already closed")
+	}
+
 	f.Closed = true
 	return nil
 }
@@ -251,11 +251,11 @@ func (f *file) Open() error {
 
 type fileInfo struct {
 	name  string
-	size  int64
+	size  int
 	isDir bool
 }
 
-func newFileInfo(base, fullpath string, size int64) *fileInfo {
+func newFileInfo(base, fullpath string, size int) *fileInfo {
 	filename, _ := filepath.Rel(base, fullpath)
 
 	return &fileInfo{
@@ -269,7 +269,7 @@ func (fi *fileInfo) Name() string {
 }
 
 func (fi *fileInfo) Size() int64 {
-	return fi.size
+	return int64(fi.size)
 }
 
 func (fi *fileInfo) Mode() os.FileMode {
@@ -294,40 +294,61 @@ type storage struct {
 
 type content struct {
 	bytes []byte
-	size  int64
 }
 
 func (c *content) WriteAt(p []byte, off int64) (int, error) {
-	l := len(p)
-	if int(off)+l > len(c.bytes) {
-		buf := make([]byte, 2*len(c.bytes)+l)
-		copy(buf, c.bytes)
-		c.bytes = buf
+	prev := len(c.bytes)
+	c.bytes = append(c.bytes[:off], p...)
+	if len(c.bytes) < prev {
+		c.bytes = c.bytes[:prev]
 	}
 
-	n := copy(c.bytes[off:], p)
-	if off+int64(n) > c.size {
-		c.size = off + int64(n)
-	}
-
-	return n, nil
+	return len(p), nil
 }
 
 func (c *content) ReadAt(b []byte, off int64) (int, error) {
-	if off >= c.size {
+	size := int64(len(c.bytes))
+	if off >= size {
 		return 0, io.EOF
 	}
 
 	l := int64(len(b))
-	if off+l > c.size {
-		l = c.size - off
+	if off+l > size {
+		l = size - off
 	}
 
-	n := copy(b, c.bytes[off:l])
+	n := copy(b, c.bytes[off:off+l])
 	return n, nil
 }
 
 func (c *content) Truncate() {
-	c.bytes = []byte{}
-	c.size = 0
+	c.bytes = make([]byte, 0)
+}
+
+func (c *content) Len() int {
+	return len(c.bytes)
+}
+
+func isCreate(flag int) bool {
+	return flag&os.O_CREATE != 0
+}
+
+func isAppend(flag int) bool {
+	return flag&os.O_APPEND != 0
+}
+
+func isTruncate(flag int) bool {
+	return flag&os.O_TRUNC != 0
+}
+
+func isReadAndWrite(flag int) bool {
+	return flag&os.O_RDWR != 0
+}
+
+func isReadOnly(flag int) bool {
+	return flag == os.O_RDONLY
+}
+
+func isWriteOnly(flag int) bool {
+	return flag&os.O_WRONLY != 0
 }
