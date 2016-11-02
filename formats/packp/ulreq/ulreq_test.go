@@ -1,4 +1,4 @@
-package ulreq_test
+package ulreq
 
 import (
 	"fmt"
@@ -9,7 +9,6 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/core"
 	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
-	"gopkg.in/src-d/go-git.v4/formats/packp/ulreq"
 
 	. "gopkg.in/check.v1"
 )
@@ -18,7 +17,7 @@ func Test(t *testing.T) { TestingT(t) }
 
 func ExampleEncoder_Encode() {
 	// Create an empty UlReq with the contents you want...
-	ur := ulreq.New()
+	ur := New()
 
 	// Add a couple of wants
 	ur.Wants = append(ur.Wants, core.NewHash("3333333333333333333333333333333333333333"))
@@ -35,10 +34,10 @@ func ExampleEncoder_Encode() {
 
 	// And retrict the answer of the server to commits newer than "2015-01-02 03:04:05 UTC"
 	since := time.Date(2015, time.January, 2, 3, 4, 5, 0, time.UTC)
-	ur.Depth = ulreq.DepthSince(since)
+	ur.Depth = DepthSince(since)
 
 	// Create a new Encode for the stdout...
-	e := ulreq.NewEncoder(os.Stdout)
+	e := NewEncoder(os.Stdout)
 	// ...and encode the upload-request to it.
 	_ = e.Encode(ur) // ignoring errors for brevity
 	// Output:
@@ -66,10 +65,10 @@ func ExampleDecoder_Decode() {
 	input := strings.NewReader(raw)
 
 	// Create the Decoder reading from our input.
-	d := ulreq.NewDecoder(input)
+	d := NewDecoder(input)
 
 	// Decode the input into a newly allocated UlReq value.
-	ur := ulreq.New()
+	ur := New()
 	_ = d.Decode(ur) // error check ignored for brevity
 
 	// Do something interesting with the UlReq, e.g. print its contents.
@@ -77,11 +76,11 @@ func ExampleDecoder_Decode() {
 	fmt.Println("wants =", ur.Wants)
 	fmt.Println("shallows =", ur.Shallows)
 	switch depth := ur.Depth.(type) {
-	case ulreq.DepthCommits:
+	case DepthCommits:
 		fmt.Println("depth =", int(depth))
-	case ulreq.DepthSince:
+	case DepthSince:
 		fmt.Println("depth =", time.Time(depth))
-	case ulreq.DepthReference:
+	case DepthReference:
 		fmt.Println("depth =", string(depth))
 	}
 	// Output:

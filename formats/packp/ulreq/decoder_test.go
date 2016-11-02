@@ -1,4 +1,4 @@
-package ulreq_test
+package ulreq
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/core"
 	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
-	"gopkg.in/src-d/go-git.v4/formats/packp/ulreq"
 
 	. "gopkg.in/check.v1"
 )
@@ -18,9 +17,9 @@ type SuiteDecoder struct{}
 var _ = Suite(&SuiteDecoder{})
 
 func (s *SuiteDecoder) TestEmpty(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	var buf bytes.Buffer
-	d := ulreq.NewDecoder(&buf)
+	d := NewDecoder(&buf)
 
 	err := d.Decode(ur)
 	c.Assert(err, ErrorMatches, "pkt-line 1: EOF")
@@ -45,8 +44,8 @@ func toPktLines(c *C, payloads []string) io.Reader {
 }
 
 func testDecoderErrorMatches(c *C, input io.Reader, pattern string) {
-	ur := ulreq.New()
-	d := ulreq.NewDecoder(input)
+	ur := New()
+	d := NewDecoder(input)
 
 	err := d.Decode(ur)
 	c.Assert(err, ErrorMatches, pattern)
@@ -73,14 +72,14 @@ func (s *SuiteDecoder) TestWantOK(c *C) {
 	})
 }
 
-func testDecodeOK(c *C, payloads []string) *ulreq.UlReq {
+func testDecodeOK(c *C, payloads []string) *UlReq {
 	var buf bytes.Buffer
 	e := pktline.NewEncoder(&buf)
 	err := e.EncodeString(payloads...)
 	c.Assert(err, IsNil)
 
-	ur := ulreq.New()
-	d := ulreq.NewDecoder(&buf)
+	ur := New()
+	d := NewDecoder(&buf)
 
 	err = d.Decode(ur)
 	c.Assert(err, IsNil)
@@ -400,8 +399,8 @@ func (s *SuiteDecoder) TestDeepenCommits(c *C) {
 	}
 	ur := testDecodeOK(c, payloads)
 
-	c.Assert(ur.Depth, FitsTypeOf, ulreq.DepthCommits(0))
-	commits, ok := ur.Depth.(ulreq.DepthCommits)
+	c.Assert(ur.Depth, FitsTypeOf, DepthCommits(0))
+	commits, ok := ur.Depth.(DepthCommits)
 	c.Assert(ok, Equals, true)
 	c.Assert(int(commits), Equals, 1234)
 }
@@ -414,8 +413,8 @@ func (s *SuiteDecoder) TestDeepenCommitsInfiniteInplicit(c *C) {
 	}
 	ur := testDecodeOK(c, payloads)
 
-	c.Assert(ur.Depth, FitsTypeOf, ulreq.DepthCommits(0))
-	commits, ok := ur.Depth.(ulreq.DepthCommits)
+	c.Assert(ur.Depth, FitsTypeOf, DepthCommits(0))
+	commits, ok := ur.Depth.(DepthCommits)
 	c.Assert(ok, Equals, true)
 	c.Assert(int(commits), Equals, 0)
 }
@@ -427,8 +426,8 @@ func (s *SuiteDecoder) TestDeepenCommitsInfiniteExplicit(c *C) {
 	}
 	ur := testDecodeOK(c, payloads)
 
-	c.Assert(ur.Depth, FitsTypeOf, ulreq.DepthCommits(0))
-	commits, ok := ur.Depth.(ulreq.DepthCommits)
+	c.Assert(ur.Depth, FitsTypeOf, DepthCommits(0))
+	commits, ok := ur.Depth.(DepthCommits)
 	c.Assert(ok, Equals, true)
 	c.Assert(int(commits), Equals, 0)
 }
@@ -463,8 +462,8 @@ func (s *SuiteDecoder) TestDeepenSince(c *C) {
 
 	expected := time.Date(2015, time.January, 2, 3, 4, 5, 0, time.UTC)
 
-	c.Assert(ur.Depth, FitsTypeOf, ulreq.DepthSince(time.Now()))
-	since, ok := ur.Depth.(ulreq.DepthSince)
+	c.Assert(ur.Depth, FitsTypeOf, DepthSince(time.Now()))
+	since, ok := ur.Depth.(DepthSince)
 	c.Assert(ok, Equals, true)
 	c.Assert(time.Time(since).Equal(expected), Equals, true,
 		Commentf("obtained=%s\nexpected=%s", time.Time(since), expected))
@@ -480,8 +479,8 @@ func (s *SuiteDecoder) TestDeepenReference(c *C) {
 
 	expected := "refs/heads/master"
 
-	c.Assert(ur.Depth, FitsTypeOf, ulreq.DepthReference(""))
-	reference, ok := ur.Depth.(ulreq.DepthReference)
+	c.Assert(ur.Depth, FitsTypeOf, DepthReference(""))
+	reference, ok := ur.Depth.(DepthReference)
 	c.Assert(ok, Equals, true)
 	c.Assert(string(reference), Equals, expected)
 }
@@ -524,8 +523,8 @@ func (s *SuiteDecoder) TestAll(c *C) {
 	sort.Sort(byHash(ur.Shallows))
 	c.Assert(ur.Shallows, DeepEquals, expectedShallows)
 
-	c.Assert(ur.Depth, FitsTypeOf, ulreq.DepthCommits(0))
-	commits, ok := ur.Depth.(ulreq.DepthCommits)
+	c.Assert(ur.Depth, FitsTypeOf, DepthCommits(0))
+	commits, ok := ur.Depth.(DepthCommits)
 	c.Assert(ok, Equals, true)
 	c.Assert(int(commits), Equals, 1234)
 }

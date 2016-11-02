@@ -1,4 +1,4 @@
-package ulreq_test
+package ulreq
 
 import (
 	"bytes"
@@ -6,7 +6,6 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/core"
 	"gopkg.in/src-d/go-git.v4/formats/packp/pktline"
-	"gopkg.in/src-d/go-git.v4/formats/packp/ulreq"
 
 	. "gopkg.in/check.v1"
 )
@@ -26,9 +25,9 @@ func pktlines(c *C, payloads ...string) []byte {
 	return buf.Bytes()
 }
 
-func testEncode(c *C, ur *ulreq.UlReq, expectedPayloads []string) {
+func testEncode(c *C, ur *UlReq, expectedPayloads []string) {
 	var buf bytes.Buffer
-	e := ulreq.NewEncoder(&buf)
+	e := NewEncoder(&buf)
 
 	err := e.Encode(ur)
 	c.Assert(err, IsNil)
@@ -41,23 +40,23 @@ func testEncode(c *C, ur *ulreq.UlReq, expectedPayloads []string) {
 	c.Assert(obtained, DeepEquals, expected, comment)
 }
 
-func testEncodeError(c *C, ur *ulreq.UlReq, expectedErrorRegEx string) {
+func testEncodeError(c *C, ur *UlReq, expectedErrorRegEx string) {
 	var buf bytes.Buffer
-	e := ulreq.NewEncoder(&buf)
+	e := NewEncoder(&buf)
 
 	err := e.Encode(ur)
 	c.Assert(err, ErrorMatches, expectedErrorRegEx)
 }
 
 func (s *SuiteEncoder) TestZeroValue(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	expectedErrorRegEx := ".*empty wants.*"
 
 	testEncodeError(c, ur, expectedErrorRegEx)
 }
 
 func (s *SuiteEncoder) TestOneWant(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
 
 	expected := []string{
@@ -69,7 +68,7 @@ func (s *SuiteEncoder) TestOneWant(c *C) {
 }
 
 func (s *SuiteEncoder) TestOneWantWithCapabilities(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
 	ur.Capabilities.Add("sysref", "HEAD:/refs/heads/master")
 	ur.Capabilities.Add("multi_ack")
@@ -86,7 +85,7 @@ func (s *SuiteEncoder) TestOneWantWithCapabilities(c *C) {
 }
 
 func (s *SuiteEncoder) TestWants(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	ur.Wants = append(ur.Wants, core.NewHash("4444444444444444444444444444444444444444"))
 	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
 	ur.Wants = append(ur.Wants, core.NewHash("3333333333333333333333333333333333333333"))
@@ -106,7 +105,7 @@ func (s *SuiteEncoder) TestWants(c *C) {
 }
 
 func (s *SuiteEncoder) TestWantsWithCapabilities(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	ur.Wants = append(ur.Wants, core.NewHash("4444444444444444444444444444444444444444"))
 	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
 	ur.Wants = append(ur.Wants, core.NewHash("3333333333333333333333333333333333333333"))
@@ -132,7 +131,7 @@ func (s *SuiteEncoder) TestWantsWithCapabilities(c *C) {
 }
 
 func (s *SuiteEncoder) TestShallow(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
 	ur.Capabilities.Add("multi_ack")
 	ur.Shallows = append(ur.Shallows, core.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
@@ -147,7 +146,7 @@ func (s *SuiteEncoder) TestShallow(c *C) {
 }
 
 func (s *SuiteEncoder) TestManyShallows(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
 	ur.Capabilities.Add("multi_ack")
 	ur.Shallows = append(ur.Shallows, core.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))
@@ -168,9 +167,9 @@ func (s *SuiteEncoder) TestManyShallows(c *C) {
 }
 
 func (s *SuiteEncoder) TestDepthCommits(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
-	ur.Depth = ulreq.DepthCommits(1234)
+	ur.Depth = DepthCommits(1234)
 
 	expected := []string{
 		"want 1111111111111111111111111111111111111111\n",
@@ -182,10 +181,10 @@ func (s *SuiteEncoder) TestDepthCommits(c *C) {
 }
 
 func (s *SuiteEncoder) TestDepthSinceUTC(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
 	since := time.Date(2015, time.January, 2, 3, 4, 5, 0, time.UTC)
-	ur.Depth = ulreq.DepthSince(since)
+	ur.Depth = DepthSince(since)
 
 	expected := []string{
 		"want 1111111111111111111111111111111111111111\n",
@@ -197,14 +196,14 @@ func (s *SuiteEncoder) TestDepthSinceUTC(c *C) {
 }
 
 func (s *SuiteEncoder) TestDepthSinceNonUTC(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
 	berlin, err := time.LoadLocation("Europe/Berlin")
 	c.Assert(err, IsNil)
 	since := time.Date(2015, time.January, 2, 3, 4, 5, 0, berlin)
 	// since value is 2015-01-02 03:04:05 +0100 UTC (Europe/Berlin) or
 	// 2015-01-02 02:04:05 +0000 UTC, which is 1420164245 Unix seconds.
-	ur.Depth = ulreq.DepthSince(since)
+	ur.Depth = DepthSince(since)
 
 	expected := []string{
 		"want 1111111111111111111111111111111111111111\n",
@@ -216,9 +215,9 @@ func (s *SuiteEncoder) TestDepthSinceNonUTC(c *C) {
 }
 
 func (s *SuiteEncoder) TestDepthReference(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
-	ur.Depth = ulreq.DepthReference("refs/heads/feature-foo")
+	ur.Depth = DepthReference("refs/heads/feature-foo")
 
 	expected := []string{
 		"want 1111111111111111111111111111111111111111\n",
@@ -230,7 +229,7 @@ func (s *SuiteEncoder) TestDepthReference(c *C) {
 }
 
 func (s *SuiteEncoder) TestAll(c *C) {
-	ur := ulreq.New()
+	ur := New()
 	ur.Wants = append(ur.Wants, core.NewHash("4444444444444444444444444444444444444444"))
 	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
 	ur.Wants = append(ur.Wants, core.NewHash("3333333333333333333333333333333333333333"))
@@ -249,7 +248,7 @@ func (s *SuiteEncoder) TestAll(c *C) {
 	ur.Shallows = append(ur.Shallows, core.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
 
 	since := time.Date(2015, time.January, 2, 3, 4, 5, 0, time.UTC)
-	ur.Depth = ulreq.DepthSince(since)
+	ur.Depth = DepthSince(since)
 
 	expected := []string{
 		"want 1111111111111111111111111111111111111111 multi_ack ofs-delta side-band sysref=HEAD:/refs/heads/master thin-pack\n",
