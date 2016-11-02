@@ -299,6 +299,8 @@ func (s *FilesystemSuite) TestRemoveNonExisting(c *C) {
 
 func (s *FilesystemSuite) TestRemoveTempFile(c *C) {
 	f, err := s.Fs.TempFile("test-dir", "test-prefix")
+	c.Assert(err, IsNil)
+
 	fn := f.Filename()
 	c.Assert(err, IsNil)
 	c.Assert(f.Close(), IsNil)
