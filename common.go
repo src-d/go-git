@@ -8,11 +8,12 @@ import (
 	"gopkg.in/src-d/go-git.v4/core"
 )
 
-// Storage storage of objects and references
-type Storage interface {
-	ConfigStorage() config.ConfigStorage
-	ObjectStorage() core.ObjectStorage
-	ReferenceStorage() core.ReferenceStorage
+// Storer storage of objects, references and all the information that require
+// be persisted
+type Storer interface {
+	core.ObjectStorer
+	core.ReferenceStorer
+	config.ConfigStorer
 }
 
 // countLines returns the number of lines in a string à la git, this is
