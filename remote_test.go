@@ -111,7 +111,7 @@ func (s *RemoteSuite) TestFetchWithPackfileWriter(c *C) {
 
 	defer os.RemoveAll(dir) // clean up
 
-	fss, err := filesystem.NewStorage(osfs.NewOS(dir))
+	fss, err := filesystem.NewStorage(osfs.New(dir))
 	c.Assert(err, IsNil)
 
 	mock := &mockPackfileWriter{Storer: fss}

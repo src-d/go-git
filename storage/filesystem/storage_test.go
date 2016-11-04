@@ -18,7 +18,7 @@ type StorageSuite struct {
 var _ = Suite(&StorageSuite{})
 
 func (s *StorageSuite) SetUpTest(c *C) {
-	storage, err := NewStorage(os.NewOS(c.MkDir()))
+	storage, err := NewStorage(os.New(c.MkDir()))
 	c.Assert(err, IsNil)
 
 	s.BaseStorageSuite = test.NewBaseStorageSuite(storage)
