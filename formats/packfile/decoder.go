@@ -45,7 +45,7 @@ var (
 type Decoder struct {
 	s  *Scanner
 	o  core.ObjectStorer
-	tx core.TxObjectStorer
+	tx core.Transaction
 
 	offsetToHash map[int64]core.Hash
 	hashToOffset map[core.Hash]int64
@@ -83,7 +83,7 @@ func (d *Decoder) doDecode() error {
 		return err
 	}
 
-	_, isTxStorer := d.o.(core.ObjectStorerTx)
+	_, isTxStorer := d.o.(core.Transactioner)
 	switch {
 	case d.o == nil:
 		return d.readObjects(int(count))
@@ -120,7 +120,7 @@ func (d *Decoder) readObjectsWithObjectStorer(count int) error {
 }
 
 func (d *Decoder) readObjectsWithObjectStorerTx(count int) error {
-	tx := d.o.(core.ObjectStorerTx).Begin()
+	tx := d.o.(core.Transactioner).Begin()
 
 	for i := 0; i < count; i++ {
 		obj, err := d.ReadObject()

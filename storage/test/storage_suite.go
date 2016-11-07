@@ -138,7 +138,7 @@ func (s *BaseStorageSuite) TestStorerIter(c *C) {
 }
 
 func (s *BaseStorageSuite) TestObjectStorerTxSetObjectAndCommit(c *C) {
-	storer, ok := s.Storer.(core.ObjectStorerTx)
+	storer, ok := s.Storer.(core.Transactioner)
 	if !ok {
 		c.Skip("not a core.ObjectStorerTx")
 	}
@@ -171,7 +171,7 @@ func (s *BaseStorageSuite) TestObjectStorerTxSetObjectAndCommit(c *C) {
 }
 
 func (s *BaseStorageSuite) TestObjectStorerTxSetObjectAndGetObject(c *C) {
-	storer, ok := s.Storer.(core.ObjectStorerTx)
+	storer, ok := s.Storer.(core.Transactioner)
 	if !ok {
 		c.Skip("not a core.ObjectStorerTx")
 	}
@@ -188,7 +188,7 @@ func (s *BaseStorageSuite) TestObjectStorerTxSetObjectAndGetObject(c *C) {
 }
 
 func (s *BaseStorageSuite) TestObjectStorerTxGetObjectNotFound(c *C) {
-	storer, ok := s.Storer.(core.ObjectStorerTx)
+	storer, ok := s.Storer.(core.Transactioner)
 	if !ok {
 		c.Skip("not a core.ObjectStorerTx")
 	}
@@ -200,7 +200,7 @@ func (s *BaseStorageSuite) TestObjectStorerTxGetObjectNotFound(c *C) {
 }
 
 func (s *BaseStorageSuite) TestObjectStorerTxSetObjectAndRollback(c *C) {
-	storer, ok := s.Storer.(core.ObjectStorerTx)
+	storer, ok := s.Storer.(core.Transactioner)
 	if !ok {
 		c.Skip("not a core.ObjectStorerTx")
 	}

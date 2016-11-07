@@ -123,7 +123,7 @@ func flattenObjectMap(m map[core.Hash]core.Object) []core.Object {
 	return objects
 }
 
-func (o *ObjectStorage) Begin() core.TxObjectStorer {
+func (o *ObjectStorage) Begin() core.Transaction {
 	return &TxObjectStorage{
 		Storage: o,
 		Objects: make(map[core.Hash]core.Object, 0),

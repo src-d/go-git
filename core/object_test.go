@@ -171,6 +171,6 @@ func (o *MockObjectStorage) IterObjects(t ObjectType) (ObjectIter, error) {
 	return nil, nil
 }
 
-func (o *MockObjectStorage) Begin() TxObjectStorer {
+func (o *MockObjectStorage) Begin() Transaction {
 	return nil
 }

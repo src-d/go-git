@@ -7,8 +7,7 @@ import (
 
 var (
 	//ErrStop is used to stop a ForEach function in an Iter
-	ErrStop           = errors.New("stop iter")
-	ErrNotImplemented = errors.New("method not-implemented")
+	ErrStop = errors.New("stop iter")
 )
 
 // ObjectStorer generic storage of objects
@@ -34,11 +33,11 @@ type ObjectStorer interface {
 	IterObjects(ObjectType) (ObjectIter, error)
 }
 
-// ObjectStorerTx is a optional method for ObjectStorer, it enable transaction
+// Transactioner is a optional method for ObjectStorer, it enable transaction
 // base write and read operations in the storage
-type ObjectStorerTx interface {
+type Transactioner interface {
 	// Begin starts a transaction.
-	Begin() TxObjectStorer
+	Begin() Transaction
 }
 
 // PackfileWriter is a optional method for ObjectStorer, it enable direct write
@@ -60,9 +59,9 @@ type ObjectIter interface {
 	Close()
 }
 
-// TxObjectStorer is an in-progress storage transaction. A transaction must end
+// Transaction is an in-progress storage transaction. A transaction must end
 // with a call to Commit or Rollback.
-type TxObjectStorer interface {
+type Transaction interface {
 	SetObject(Object) (Hash, error)
 	Object(ObjectType, Hash) (Object, error)
 	Commit() error
