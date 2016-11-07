@@ -19,14 +19,14 @@ type ObjectStorer interface {
 	// SetObject save an object into the storage, the object shuld be create
 	// with the NewObject, method, and file if the type is not supported.
 	SetObject(Object) (Hash, error)
-	// GetObject an object by hash with the given ObjectType. Implementors
+	// Object an object by hash with the given ObjectType. Implementors
 	// should return (nil, ErrObjectNotFound) if an object doesn't exist with
 	// both the given hash and object type.
 	//
 	// Valid ObjectType values are CommitObject, BlobObject, TagObject,
 	// TreeObject and AnyObject. If AnyObject is given, the object must be
 	// looked up regardless of its type.
-	GetObject(ObjectType, Hash) (Object, error)
+	Object(ObjectType, Hash) (Object, error)
 	// IterObjects returns a custom ObjectIter over all the object on the
 	// storage.
 	//
@@ -64,7 +64,7 @@ type ObjectIter interface {
 // with a call to Commit or Rollback.
 type TxObjectStorer interface {
 	SetObject(Object) (Hash, error)
-	GetObject(ObjectType, Hash) (Object, error)
+	Object(ObjectType, Hash) (Object, error)
 	Commit() error
 	Rollback() error
 }
@@ -72,7 +72,7 @@ type TxObjectStorer interface {
 // ReferenceStorer generic storage of references
 type ReferenceStorer interface {
 	SetReference(*Reference) error
-	GetReference(ReferenceName) (*Reference, error)
+	Reference(ReferenceName) (*Reference, error)
 	IterReferences() (ReferenceIter, error)
 }
 

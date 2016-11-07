@@ -110,7 +110,6 @@ func (i *GitUploadPackInfo) Decode(r io.Reader) error {
 }
 
 func (i *GitUploadPackInfo) addRefs(ar *advrefs.AdvRefs) error {
-	i.Refs = make(memory.ReferenceStorage, 0)
 	for name, hash := range ar.References {
 		ref := core.NewReferenceFromStrings(name, hash.String())
 		i.Refs.SetReference(ref)

@@ -63,7 +63,7 @@ func (s *Storage) SetObject(obj core.Object) (core.Hash, error) {
 	return obj.Hash(), err
 }
 
-func (s *Storage) GetObject(t core.ObjectType, h core.Hash) (core.Object, error) {
+func (s *Storage) Object(t core.ObjectType, h core.Hash) (core.Object, error) {
 	key, err := s.buildKey(h, t)
 	if err != nil {
 		return nil, err
@@ -165,7 +165,7 @@ func (s *Storage) SetReference(ref *core.Reference) error {
 	return s.client.Put(nil, key, bins)
 }
 
-func (s *Storage) GetReference(n core.ReferenceName) (*core.Reference, error) {
+func (s *Storage) Reference(n core.ReferenceName) (*core.Reference, error) {
 	key, err := s.buildReferenceKey(n)
 	if err != nil {
 		return nil, err

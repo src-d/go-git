@@ -346,7 +346,7 @@ func (r *Repository) Tags() (*TagIter, error) {
 
 // Object returns an object with the given hash.
 func (r *Repository) Object(t core.ObjectType, h core.Hash) (Object, error) {
-	obj, err := r.s.GetObject(t, h)
+	obj, err := r.s.Object(t, h)
 	if err != nil {
 		if err == core.ErrObjectNotFound {
 			return nil, ErrObjectNotFound
@@ -394,7 +394,7 @@ func (r *Repository) Ref(name core.ReferenceName, resolved bool) (*core.Referenc
 		return core.ResolveReference(r.s, name)
 	}
 
-	return r.s.GetReference(name)
+	return r.s.Reference(name)
 }
 
 // Refs returns a map with all the References

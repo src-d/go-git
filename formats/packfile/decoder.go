@@ -262,7 +262,7 @@ func (d *Decoder) recallByOffset(o int64) (core.Object, error) {
 	}
 
 	if h, ok := d.offsetToHash[o]; ok {
-		return d.tx.GetObject(core.AnyObject, h)
+		return d.tx.Object(core.AnyObject, h)
 	}
 
 	return nil, core.ErrObjectNotFound
@@ -275,7 +275,7 @@ func (d *Decoder) recallByHash(h core.Hash) (core.Object, error) {
 		}
 	}
 
-	obj, err := d.tx.GetObject(core.AnyObject, h)
+	obj, err := d.tx.Object(core.AnyObject, h)
 	if err != core.ErrObjectNotFound {
 		return obj, err
 	}

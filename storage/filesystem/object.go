@@ -13,15 +13,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/utils/fs"
 )
 
-// ObjectStorage is an implementation of core.ObjectStorage that stores
-// data on disk in the standard git format (this is, the .git directory).
-//
-// Zero values of this type are not safe to use, see the New function below.
-//
-// Currently only reads are supported, no writting.
-//
-// Also values from this type are not yet able to track changes on disk, this is,
-// Gitdir values will get outdated as soon as repositories change on disk.
 type ObjectStorage struct {
 	dir   *dotgit.DotGit
 	index map[core.Hash]index
@@ -114,7 +105,7 @@ func (s *ObjectStorage) SetObject(o core.Object) (core.Hash, error) {
 
 // Get returns the object with the given hash, by searching for it in
 // the packfile and the git object directories.
-func (s *ObjectStorage) GetObject(t core.ObjectType, h core.Hash) (core.Object, error) {
+func (s *ObjectStorage) Object(t core.ObjectType, h core.Hash) (core.Object, error) {
 	obj, err := s.getFromUnpacked(h)
 	if err == core.ErrObjectNotFound {
 		obj, err = s.getFromPackfile(h)

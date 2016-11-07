@@ -127,7 +127,7 @@ func (iter *ObjectLookupIter) Next() (Object, error) {
 	}
 
 	hash := iter.series[iter.pos]
-	obj, err := iter.storage.GetObject(iter.t, hash)
+	obj, err := iter.storage.Object(iter.t, hash)
 	if err == nil {
 		iter.pos++
 	}

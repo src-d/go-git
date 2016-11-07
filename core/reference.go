@@ -204,7 +204,7 @@ func (iter *ReferenceSliceIter) Close() {
 }
 
 func ResolveReference(s ReferenceStorer, n ReferenceName) (*Reference, error) {
-	r, err := s.GetReference(n)
+	r, err := s.Reference(n)
 	if err != nil || r == nil {
 		return r, err
 	}
@@ -220,7 +220,7 @@ func resolveReference(s ReferenceStorer, r *Reference, recursion int) (*Referenc
 		return nil, ErrMaxResolveRecursion
 	}
 
-	t, err := s.GetReference(r.Target())
+	t, err := s.Reference(r.Target())
 	if err != nil {
 		return nil, err
 	}

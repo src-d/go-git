@@ -139,7 +139,7 @@ func (r *Remote) getWantedReferences(spec []config.RefSpec) ([]*core.Reference, 
 			}
 		}
 
-		_, err := r.s.GetObject(core.CommitObject, ref.Hash())
+		_, err := r.s.Object(core.CommitObject, ref.Hash())
 		if err == core.ErrObjectNotFound {
 			refs = append(refs, ref)
 			return nil
@@ -231,7 +231,7 @@ func (r *Remote) buildFetchedTags() error {
 			return nil
 		}
 
-		_, err := r.s.GetObject(core.AnyObject, ref.Hash())
+		_, err := r.s.Object(core.AnyObject, ref.Hash())
 		if err == core.ErrObjectNotFound {
 			return nil
 		}
@@ -255,7 +255,7 @@ func (r *Remote) Ref(name core.ReferenceName, resolved bool) (*core.Reference, e
 		return core.ResolveReference(r.upInfo.Refs, name)
 	}
 
-	return r.upInfo.Refs.GetReference(name)
+	return r.upInfo.Refs.Reference(name)
 }
 
 // Refs returns a map with all the References

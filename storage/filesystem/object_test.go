@@ -20,7 +20,7 @@ func (s *FsSuite) TestGetFromObjectFile(c *C) {
 	c.Assert(err, IsNil)
 
 	expected := core.NewHash("f3dfe29d268303fc6e1bbce268605fc99573406e")
-	obj, err := o.GetObject(core.AnyObject, expected)
+	obj, err := o.Object(core.AnyObject, expected)
 	c.Assert(err, IsNil)
 	c.Assert(obj.Hash(), Equals, expected)
 }
@@ -32,7 +32,7 @@ func (s *FsSuite) TestGetFromPackfile(c *C) {
 		c.Assert(err, IsNil)
 
 		expected := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
-		obj, err := o.GetObject(core.AnyObject, expected)
+		obj, err := o.Object(core.AnyObject, expected)
 		c.Assert(err, IsNil)
 		c.Assert(obj.Hash(), Equals, expected)
 	})

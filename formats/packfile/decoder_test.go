@@ -160,7 +160,7 @@ func (s *ReaderSuite) TestSetOffsets(c *C) {
 func assertObjects(c *C, s *memory.Storage, expects []string) {
 	c.Assert(len(expects), Equals, len(s.Objects))
 	for _, exp := range expects {
-		obt, err := s.GetObject(core.AnyObject, core.NewHash(exp))
+		obt, err := s.Object(core.AnyObject, core.NewHash(exp))
 		c.Assert(err, IsNil)
 		c.Assert(obt.Hash().String(), Equals, exp)
 	}

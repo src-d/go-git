@@ -66,11 +66,11 @@ func (s *BaseStorageSuite) TestSetObjectAndGetObject(c *C) {
 		c.Assert(err, IsNil)
 		c.Assert(h.String(), Equals, to.Hash, comment)
 
-		o, err := s.Storer.GetObject(to.Type, h)
+		o, err := s.Storer.Object(to.Type, h)
 		c.Assert(err, IsNil)
 		c.Assert(objectEquals(o, to.Object), IsNil)
 
-		o, err = s.Storer.GetObject(core.AnyObject, h)
+		o, err = s.Storer.Object(core.AnyObject, h)
 		c.Assert(err, IsNil)
 		c.Assert(objectEquals(o, to.Object), IsNil)
 
@@ -79,7 +79,7 @@ func (s *BaseStorageSuite) TestSetObjectAndGetObject(c *C) {
 				continue
 			}
 
-			o, err = s.Storer.GetObject(t, h)
+			o, err = s.Storer.Object(t, h)
 			c.Assert(o, IsNil)
 			c.Assert(err, Equals, core.ErrObjectNotFound)
 		}
@@ -182,7 +182,7 @@ func (s *BaseStorageSuite) TestObjectStorerTxSetObjectAndGetObject(c *C) {
 		c.Assert(err, IsNil)
 		c.Assert(h.String(), Equals, expected.Hash)
 
-		o, err := tx.GetObject(expected.Type, core.NewHash(expected.Hash))
+		o, err := tx.Object(expected.Type, core.NewHash(expected.Hash))
 		c.Assert(o.Hash().String(), DeepEquals, expected.Hash)
 	}
 }
@@ -194,7 +194,7 @@ func (s *BaseStorageSuite) TestObjectStorerTxGetObjectNotFound(c *C) {
 	}
 
 	tx := storer.Begin()
-	o, err := tx.GetObject(core.AnyObject, core.ZeroHash)
+	o, err := tx.Object(core.AnyObject, core.ZeroHash)
 	c.Assert(o, IsNil)
 	c.Assert(err, Equals, core.ErrObjectNotFound)
 }
@@ -232,13 +232,13 @@ func (s *BaseStorageSuite) TestSetReferenceAndGetReference(c *C) {
 	)
 	c.Assert(err, IsNil)
 
-	e, err := s.Storer.GetReference(core.ReferenceName("foo"))
+	e, err := s.Storer.Reference(core.ReferenceName("foo"))
 	c.Assert(err, IsNil)
 	c.Assert(e.Hash().String(), Equals, "bc9968d75e48de59f0870ffb71f5e160bbbdcf52")
 }
 
 func (s *BaseStorageSuite) TestGetReferenceNotFound(c *C) {
-	r, err := s.Storer.GetReference(core.ReferenceName("bar"))
+	r, err := s.Storer.Reference(core.ReferenceName("bar"))
 	c.Assert(err, Equals, core.ErrReferenceNotFound)
 	c.Assert(r, IsNil)
 }

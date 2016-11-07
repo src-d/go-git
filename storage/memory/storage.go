@@ -10,13 +10,17 @@ import (
 
 var ErrUnsupportedObjectType = fmt.Errorf("unsupported object type")
 
-// Storage in memory storage system
+// Storage is an implementation of git.Storer that stores data on memory, being
+// ephemeral. The use of this storage should be done in controlled envoriments,
+// since the representation in memory of some repository can fill the machine
+// memory. in the other hand this storage has the best performance.
 type Storage struct {
 	ConfigStorage
 	ObjectStorage
 	ReferenceStorage
 }
 
+// NewStorage returns a new Storage base on memory
 func NewStorage() *Storage {
 	return &Storage{
 		ReferenceStorage: make(ReferenceStorage, 0),
@@ -84,7 +88,7 @@ func (o *ObjectStorage) SetObject(obj core.Object) (core.Hash, error) {
 	return h, nil
 }
 
-func (o *ObjectStorage) GetObject(t core.ObjectType, h core.Hash) (core.Object, error) {
+func (o *ObjectStorage) Object(t core.ObjectType, h core.Hash) (core.Object, error) {
 	obj, ok := o.Objects[h]
 	if !ok || (core.AnyObject != t && obj.Type() != t) {
 		return nil, core.ErrObjectNotFound
@@ -138,7 +142,7 @@ func (tx *TxObjectStorage) SetObject(obj core.Object) (core.Hash, error) {
 	return h, nil
 }
 
-func (tx *TxObjectStorage) GetObject(t core.ObjectType, h core.Hash) (core.Object, error) {
+func (tx *TxObjectStorage) Object(t core.ObjectType, h core.Hash) (core.Object, error) {
 	obj, ok := tx.Objects[h]
 	if !ok || (core.AnyObject != t && obj.Type() != t) {
 		return nil, core.ErrObjectNotFound
@@ -173,7 +177,7 @@ func (r ReferenceStorage) SetReference(ref *core.Reference) error {
 	return nil
 }
 
-func (r ReferenceStorage) GetReference(n core.ReferenceName) (*core.Reference, error) {
+func (r ReferenceStorage) Reference(n core.ReferenceName) (*core.Reference, error) {
 	ref, ok := r[n]
 	if !ok {
 		return nil, core.ErrReferenceNotFound

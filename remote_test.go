@@ -90,7 +90,7 @@ func (s *RemoteSuite) TestFetch(c *C) {
 	}
 
 	for _, exp := range expectedRefs {
-		r, _ := sto.GetReference(exp.Name())
+		r, _ := sto.Reference(exp.Name())
 		c.Assert(exp.String(), Equals, r.String())
 	}
 }

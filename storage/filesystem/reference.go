@@ -13,7 +13,7 @@ func (r *ReferenceStorage) SetReference(ref *core.Reference) error {
 	return r.dir.SetRef(ref)
 }
 
-func (r *ReferenceStorage) GetReference(n core.ReferenceName) (*core.Reference, error) {
+func (r *ReferenceStorage) Reference(n core.ReferenceName) (*core.Reference, error) {
 	return r.dir.Ref(n)
 }
 

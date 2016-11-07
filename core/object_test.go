@@ -163,7 +163,7 @@ func (o *MockObjectStorage) SetObject(obj Object) (Hash, error) {
 	return ZeroHash, nil
 }
 
-func (o *MockObjectStorage) GetObject(t ObjectType, h Hash) (Object, error) {
+func (o *MockObjectStorage) Object(t ObjectType, h Hash) (Object, error) {
 	return &MemoryObject{h: h}, nil
 }
 
