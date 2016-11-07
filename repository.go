@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"gopkg.in/src-d/go-git.v4/config"
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 	osfs "gopkg.in/src-d/go-git.v4/utils/fs/os"

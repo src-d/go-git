@@ -3,7 +3,7 @@ package git
 import (
 	"io"
 
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 // Blob is used to store file data - it is generally a file.

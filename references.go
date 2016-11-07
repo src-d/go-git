@@ -3,7 +3,7 @@ package git
 import (
 	"io"
 
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/diff"
 
 	"github.com/sergi/go-diff/diffmatchpatch"

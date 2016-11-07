@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 // Hash hash of an object

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 //export c_Signature_Name

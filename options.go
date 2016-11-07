@@ -3,9 +3,9 @@ package git
 import (
 	"errors"
 
-	"gopkg.in/src-d/go-git.v4/clients/common"
+	"gopkg.in/src-d/go-git.v4/plumbing/clients/common"
 	"gopkg.in/src-d/go-git.v4/config"
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 const (

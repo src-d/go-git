@@ -10,7 +10,7 @@ package main
 import (
 //line /home/mcuadros/workspace/go/src/gopkg.in/src-d/go-git.v4/cshared/tree_cshared.go:7
 	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 //line /home/mcuadros/workspace/go/src/gopkg.in/src-d/go-git.v4/cshared/tree_cshared.go:13

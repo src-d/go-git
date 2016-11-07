@@ -9,7 +9,7 @@ import (
 	"github.com/alcortesm/tgz"
 
 	"gopkg.in/check.v1"
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/utils/fs"
 	osfs "gopkg.in/src-d/go-git.v4/utils/fs/os"
 )

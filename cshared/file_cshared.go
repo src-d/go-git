@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 
 	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 //export c_File_get_Name

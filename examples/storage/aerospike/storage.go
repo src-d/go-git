@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 
 	"gopkg.in/src-d/go-git.v4/config"
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	driver "github.com/aerospike/aerospike-client-go"
 )

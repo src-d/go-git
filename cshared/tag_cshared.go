@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 func c_Tag_get_Hash(t uint64) *C.char {

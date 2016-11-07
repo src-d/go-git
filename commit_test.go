@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/fixtures"
 
 	. "gopkg.in/check.v1"

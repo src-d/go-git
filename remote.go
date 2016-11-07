@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/src-d/go-git.v4/clients"
-	"gopkg.in/src-d/go-git.v4/clients/common"
+	"gopkg.in/src-d/go-git.v4/plumbing/clients"
+	"gopkg.in/src-d/go-git.v4/plumbing/clients/common"
 	"gopkg.in/src-d/go-git.v4/config"
-	"gopkg.in/src-d/go-git.v4/core"
-	"gopkg.in/src-d/go-git.v4/formats/packfile"
-	"gopkg.in/src-d/go-git.v4/formats/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/formats/packfile"
+	"gopkg.in/src-d/go-git.v4/plumbing/formats/packp"
 )
 
 var NoErrAlreadyUpToDate = errors.New("already up-to-date")

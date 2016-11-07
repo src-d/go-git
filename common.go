@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/config"
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 // Storer is a generic storage of objects, references and any information

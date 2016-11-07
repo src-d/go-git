@@ -8,7 +8,7 @@ import (
 	"unsafe"
 
 	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/core"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 //export c_Commit_get_Hash
