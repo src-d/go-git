@@ -80,7 +80,7 @@ func c_Tag_Decode(o uint64) (uint64, int, *C.char) {
 	if !ok {
 		return IH, ErrorCodeNotFound, C.CString(MessageNotFound)
 	}
-	cobj := obj.(*core.Object)
+	cobj := obj.(*plumbing.Object)
 	tag := git.Tag{}
 	err := tag.Decode(*cobj)
 	if err != nil {

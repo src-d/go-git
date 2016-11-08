@@ -50,7 +50,7 @@ func (s *SuiteEncoder) TestZeroValue(c *C) {
 }
 
 func (s *SuiteEncoder) TestHead(c *C) {
-	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+	hash := plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
 	ar := &advrefs.AdvRefs{
 		Head: &hash,
 	}
@@ -81,7 +81,7 @@ func (s *SuiteEncoder) TestCapsNoHead(c *C) {
 }
 
 func (s *SuiteEncoder) TestCapsWithHead(c *C) {
-	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+	hash := plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
 	capabilities := packp.NewCapabilities()
 	capabilities.Add("symref", "HEAD:/refs/heads/master")
 	capabilities.Add("ofs-delta")
@@ -100,12 +100,12 @@ func (s *SuiteEncoder) TestCapsWithHead(c *C) {
 }
 
 func (s *SuiteEncoder) TestRefs(c *C) {
-	references := map[string]core.Hash{
-		"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
-		"refs/tags/v2.6.12-tree": core.NewHash("1111111111111111111111111111111111111111"),
-		"refs/tags/v2.7.13-tree": core.NewHash("3333333333333333333333333333333333333333"),
-		"refs/tags/v2.6.13-tree": core.NewHash("2222222222222222222222222222222222222222"),
-		"refs/tags/v2.6.11-tree": core.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
+	references := map[string]plumbing.Hash{
+		"refs/heads/master":      plumbing.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
+		"refs/tags/v2.6.12-tree": plumbing.NewHash("1111111111111111111111111111111111111111"),
+		"refs/tags/v2.7.13-tree": plumbing.NewHash("3333333333333333333333333333333333333333"),
+		"refs/tags/v2.6.13-tree": plumbing.NewHash("2222222222222222222222222222222222222222"),
+		"refs/tags/v2.6.11-tree": plumbing.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
 	}
 	ar := &advrefs.AdvRefs{
 		References: references,
@@ -125,16 +125,16 @@ func (s *SuiteEncoder) TestRefs(c *C) {
 }
 
 func (s *SuiteEncoder) TestPeeled(c *C) {
-	references := map[string]core.Hash{
-		"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
-		"refs/tags/v2.6.12-tree": core.NewHash("1111111111111111111111111111111111111111"),
-		"refs/tags/v2.7.13-tree": core.NewHash("3333333333333333333333333333333333333333"),
-		"refs/tags/v2.6.13-tree": core.NewHash("2222222222222222222222222222222222222222"),
-		"refs/tags/v2.6.11-tree": core.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
+	references := map[string]plumbing.Hash{
+		"refs/heads/master":      plumbing.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
+		"refs/tags/v2.6.12-tree": plumbing.NewHash("1111111111111111111111111111111111111111"),
+		"refs/tags/v2.7.13-tree": plumbing.NewHash("3333333333333333333333333333333333333333"),
+		"refs/tags/v2.6.13-tree": plumbing.NewHash("2222222222222222222222222222222222222222"),
+		"refs/tags/v2.6.11-tree": plumbing.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
 	}
-	peeled := map[string]core.Hash{
-		"refs/tags/v2.7.13-tree": core.NewHash("4444444444444444444444444444444444444444"),
-		"refs/tags/v2.6.12-tree": core.NewHash("5555555555555555555555555555555555555555"),
+	peeled := map[string]plumbing.Hash{
+		"refs/tags/v2.7.13-tree": plumbing.NewHash("4444444444444444444444444444444444444444"),
+		"refs/tags/v2.6.12-tree": plumbing.NewHash("5555555555555555555555555555555555555555"),
 	}
 	ar := &advrefs.AdvRefs{
 		References: references,
@@ -157,11 +157,11 @@ func (s *SuiteEncoder) TestPeeled(c *C) {
 }
 
 func (s *SuiteEncoder) TestShallow(c *C) {
-	shallows := []core.Hash{
-		core.NewHash("1111111111111111111111111111111111111111"),
-		core.NewHash("4444444444444444444444444444444444444444"),
-		core.NewHash("3333333333333333333333333333333333333333"),
-		core.NewHash("2222222222222222222222222222222222222222"),
+	shallows := []plumbing.Hash{
+		plumbing.NewHash("1111111111111111111111111111111111111111"),
+		plumbing.NewHash("4444444444444444444444444444444444444444"),
+		plumbing.NewHash("3333333333333333333333333333333333333333"),
+		plumbing.NewHash("2222222222222222222222222222222222222222"),
 	}
 	ar := &advrefs.AdvRefs{
 		Shallows: shallows,
@@ -180,31 +180,31 @@ func (s *SuiteEncoder) TestShallow(c *C) {
 }
 
 func (s *SuiteEncoder) TestAll(c *C) {
-	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+	hash := plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
 
 	capabilities := packp.NewCapabilities()
 	capabilities.Add("symref", "HEAD:/refs/heads/master")
 	capabilities.Add("ofs-delta")
 	capabilities.Add("multi_ack")
 
-	references := map[string]core.Hash{
-		"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
-		"refs/tags/v2.6.12-tree": core.NewHash("1111111111111111111111111111111111111111"),
-		"refs/tags/v2.7.13-tree": core.NewHash("3333333333333333333333333333333333333333"),
-		"refs/tags/v2.6.13-tree": core.NewHash("2222222222222222222222222222222222222222"),
-		"refs/tags/v2.6.11-tree": core.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
+	references := map[string]plumbing.Hash{
+		"refs/heads/master":      plumbing.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
+		"refs/tags/v2.6.12-tree": plumbing.NewHash("1111111111111111111111111111111111111111"),
+		"refs/tags/v2.7.13-tree": plumbing.NewHash("3333333333333333333333333333333333333333"),
+		"refs/tags/v2.6.13-tree": plumbing.NewHash("2222222222222222222222222222222222222222"),
+		"refs/tags/v2.6.11-tree": plumbing.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
 	}
 
-	peeled := map[string]core.Hash{
-		"refs/tags/v2.7.13-tree": core.NewHash("4444444444444444444444444444444444444444"),
-		"refs/tags/v2.6.12-tree": core.NewHash("5555555555555555555555555555555555555555"),
+	peeled := map[string]plumbing.Hash{
+		"refs/tags/v2.7.13-tree": plumbing.NewHash("4444444444444444444444444444444444444444"),
+		"refs/tags/v2.6.12-tree": plumbing.NewHash("5555555555555555555555555555555555555555"),
 	}
 
-	shallows := []core.Hash{
-		core.NewHash("1111111111111111111111111111111111111111"),
-		core.NewHash("4444444444444444444444444444444444444444"),
-		core.NewHash("3333333333333333333333333333333333333333"),
-		core.NewHash("2222222222222222222222222222222222222222"),
+	shallows := []plumbing.Hash{
+		plumbing.NewHash("1111111111111111111111111111111111111111"),
+		plumbing.NewHash("4444444444444444444444444444444444444444"),
+		plumbing.NewHash("3333333333333333333333333333333333333333"),
+		plumbing.NewHash("2222222222222222222222222222222222222222"),
 	}
 
 	ar := &advrefs.AdvRefs{
@@ -235,8 +235,8 @@ func (s *SuiteEncoder) TestAll(c *C) {
 }
 
 func (s *SuiteEncoder) TestErrorTooLong(c *C) {
-	references := map[string]core.Hash{
-		strings.Repeat("a", pktline.MaxPayloadSize): core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
+	references := map[string]plumbing.Hash{
+		strings.Repeat("a", pktline.MaxPayloadSize): plumbing.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
 	}
 	ar := &advrefs.AdvRefs{
 		References: references,

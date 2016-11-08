@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/pktline"
 )
 
@@ -128,7 +128,7 @@ func (s *GitUploadPackService) doRequest(method, url string, content *strings.Re
 
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		return nil, core.NewPermanentError(err)
+		return nil, plumbing.NewPermanentError(err)
 	}
 
 	s.applyHeadersToRequest(req, content)
@@ -136,7 +136,7 @@ func (s *GitUploadPackService) doRequest(method, url string, content *strings.Re
 
 	res, err := s.client.Do(req)
 	if err != nil {
-		return nil, core.NewUnexpectedError(err)
+		return nil, plumbing.NewUnexpectedError(err)
 	}
 
 	if err := NewHTTPError(res); err != nil {

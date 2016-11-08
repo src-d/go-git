@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 )
 
 // HTTPAuthMethod concrete implementation of common.AuthMethod for HTTP services
@@ -62,7 +62,7 @@ func NewHTTPError(r *http.Response) error {
 	}
 
 	err := &HTTPError{r}
-	return core.NewUnexpectedError(err)
+	return plumbing.NewUnexpectedError(err)
 }
 
 // StatusCode returns the status code of the response

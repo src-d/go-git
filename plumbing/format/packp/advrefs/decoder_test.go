@@ -110,7 +110,7 @@ func (s *SuiteDecoder) TestHead(c *C) {
 	}
 	ar := testDecodeOK(c, payloads)
 	c.Assert(*ar.Head, Equals,
-		core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+		plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 }
 
 func (s *SuiteDecoder) TestFirstIsNotHead(c *C) {
@@ -121,7 +121,7 @@ func (s *SuiteDecoder) TestFirstIsNotHead(c *C) {
 	ar := testDecodeOK(c, payloads)
 	c.Assert(ar.Head, IsNil)
 	c.Assert(ar.References["refs/heads/master"], Equals,
-		core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+		plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 }
 
 func (s *SuiteDecoder) TestShortRef(c *C) {
@@ -269,36 +269,36 @@ func (s *SuiteDecoder) TestWithPrefixAndFlush(c *C) {
 func (s *SuiteDecoder) TestOtherRefs(c *C) {
 	for _, test := range [...]struct {
 		input      []string
-		references map[string]core.Hash
-		peeled     map[string]core.Hash
+		references map[string]plumbing.Hash
+		peeled     map[string]plumbing.Hash
 	}{
 		{
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				pktline.FlushString,
 			},
-			references: make(map[string]core.Hash),
-			peeled:     make(map[string]core.Hash),
+			references: make(map[string]plumbing.Hash),
+			peeled:     make(map[string]plumbing.Hash),
 		}, {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				"1111111111111111111111111111111111111111 ref/foo",
 				pktline.FlushString,
 			},
-			references: map[string]core.Hash{
-				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
+			references: map[string]plumbing.Hash{
+				"ref/foo": plumbing.NewHash("1111111111111111111111111111111111111111"),
 			},
-			peeled: make(map[string]core.Hash),
+			peeled: make(map[string]plumbing.Hash),
 		}, {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				"1111111111111111111111111111111111111111 ref/foo\n",
 				pktline.FlushString,
 			},
-			references: map[string]core.Hash{
-				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
+			references: map[string]plumbing.Hash{
+				"ref/foo": plumbing.NewHash("1111111111111111111111111111111111111111"),
 			},
-			peeled: make(map[string]core.Hash),
+			peeled: make(map[string]plumbing.Hash),
 		}, {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
@@ -306,20 +306,20 @@ func (s *SuiteDecoder) TestOtherRefs(c *C) {
 				"2222222222222222222222222222222222222222 ref/bar",
 				pktline.FlushString,
 			},
-			references: map[string]core.Hash{
-				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
-				"ref/bar": core.NewHash("2222222222222222222222222222222222222222"),
+			references: map[string]plumbing.Hash{
+				"ref/foo": plumbing.NewHash("1111111111111111111111111111111111111111"),
+				"ref/bar": plumbing.NewHash("2222222222222222222222222222222222222222"),
 			},
-			peeled: make(map[string]core.Hash),
+			peeled: make(map[string]plumbing.Hash),
 		}, {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
 				"1111111111111111111111111111111111111111 ref/foo^{}\n",
 				pktline.FlushString,
 			},
-			references: make(map[string]core.Hash),
-			peeled: map[string]core.Hash{
-				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
+			references: make(map[string]plumbing.Hash),
+			peeled: map[string]plumbing.Hash{
+				"ref/foo": plumbing.NewHash("1111111111111111111111111111111111111111"),
 			},
 		}, {
 			input: []string{
@@ -328,11 +328,11 @@ func (s *SuiteDecoder) TestOtherRefs(c *C) {
 				"2222222222222222222222222222222222222222 ref/bar^{}",
 				pktline.FlushString,
 			},
-			references: map[string]core.Hash{
-				"ref/foo": core.NewHash("1111111111111111111111111111111111111111"),
+			references: map[string]plumbing.Hash{
+				"ref/foo": plumbing.NewHash("1111111111111111111111111111111111111111"),
 			},
-			peeled: map[string]core.Hash{
-				"ref/bar": core.NewHash("2222222222222222222222222222222222222222"),
+			peeled: map[string]plumbing.Hash{
+				"ref/bar": plumbing.NewHash("2222222222222222222222222222222222222222"),
 			},
 		}, {
 			input: []string{
@@ -348,18 +348,18 @@ func (s *SuiteDecoder) TestOtherRefs(c *C) {
 				"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
 				pktline.FlushString,
 			},
-			references: map[string]core.Hash{
-				"refs/heads/master":      core.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
-				"refs/pull/10/head":      core.NewHash("51b8b4fb32271d39fbdd760397406177b2b0fd36"),
-				"refs/pull/100/head":     core.NewHash("02b5a6031ba7a8cbfde5d65ff9e13ecdbc4a92ca"),
-				"refs/pull/100/merge":    core.NewHash("c284c212704c43659bf5913656b8b28e32da1621"),
-				"refs/pull/101/merge":    core.NewHash("3d6537dce68c8b7874333a1720958bd8db3ae8ca"),
-				"refs/tags/v2.6.11":      core.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
-				"refs/tags/v2.6.11-tree": core.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
+			references: map[string]plumbing.Hash{
+				"refs/heads/master":      plumbing.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
+				"refs/pull/10/head":      plumbing.NewHash("51b8b4fb32271d39fbdd760397406177b2b0fd36"),
+				"refs/pull/100/head":     plumbing.NewHash("02b5a6031ba7a8cbfde5d65ff9e13ecdbc4a92ca"),
+				"refs/pull/100/merge":    plumbing.NewHash("c284c212704c43659bf5913656b8b28e32da1621"),
+				"refs/pull/101/merge":    plumbing.NewHash("3d6537dce68c8b7874333a1720958bd8db3ae8ca"),
+				"refs/tags/v2.6.11":      plumbing.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
+				"refs/tags/v2.6.11-tree": plumbing.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
 			},
-			peeled: map[string]core.Hash{
-				"refs/tags/v2.6.11":      core.NewHash("c39ae07f393806ccf406ef966e9a15afc43cc36a"),
-				"refs/tags/v2.6.11-tree": core.NewHash("c39ae07f393806ccf406ef966e9a15afc43cc36a"),
+			peeled: map[string]plumbing.Hash{
+				"refs/tags/v2.6.11":      plumbing.NewHash("c39ae07f393806ccf406ef966e9a15afc43cc36a"),
+				"refs/tags/v2.6.11-tree": plumbing.NewHash("c39ae07f393806ccf406ef966e9a15afc43cc36a"),
 			},
 		},
 	} {
@@ -393,7 +393,7 @@ func (s *SuiteDecoder) TestMalformedOtherRefsMultipleSpaces(c *C) {
 func (s *SuiteDecoder) TestShallow(c *C) {
 	for _, test := range [...]struct {
 		input    []string
-		shallows []core.Hash
+		shallows []plumbing.Hash
 	}{
 		{
 			input: []string{
@@ -403,7 +403,7 @@ func (s *SuiteDecoder) TestShallow(c *C) {
 				"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
 				pktline.FlushString,
 			},
-			shallows: []core.Hash{},
+			shallows: []plumbing.Hash{},
 		}, {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
@@ -413,7 +413,7 @@ func (s *SuiteDecoder) TestShallow(c *C) {
 				"shallow 1111111111111111111111111111111111111111\n",
 				pktline.FlushString,
 			},
-			shallows: []core.Hash{core.NewHash("1111111111111111111111111111111111111111")},
+			shallows: []plumbing.Hash{plumbing.NewHash("1111111111111111111111111111111111111111")},
 		}, {
 			input: []string{
 				"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta symref=HEAD:/refs/heads/master\n",
@@ -424,9 +424,9 @@ func (s *SuiteDecoder) TestShallow(c *C) {
 				"shallow 2222222222222222222222222222222222222222\n",
 				pktline.FlushString,
 			},
-			shallows: []core.Hash{
-				core.NewHash("1111111111111111111111111111111111111111"),
-				core.NewHash("2222222222222222222222222222222222222222"),
+			shallows: []plumbing.Hash{
+				plumbing.NewHash("1111111111111111111111111111111111111111"),
+				plumbing.NewHash("2222222222222222222222222222222222222222"),
 			},
 		},
 	} {

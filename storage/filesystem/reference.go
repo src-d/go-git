@@ -10,11 +10,11 @@ type ReferenceStorage struct {
 	dir *dotgit.DotGit
 }
 
-func (r *ReferenceStorage) SetReference(ref *core.Reference) error {
+func (r *ReferenceStorage) SetReference(ref *plumbing.Reference) error {
 	return r.dir.SetRef(ref)
 }
 
-func (r *ReferenceStorage) Reference(n core.ReferenceName) (*core.Reference, error) {
+func (r *ReferenceStorage) Reference(n plumbing.ReferenceName) (*plumbing.Reference, error) {
 	return r.dir.Ref(n)
 }
 

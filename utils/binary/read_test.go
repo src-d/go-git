@@ -76,7 +76,7 @@ func (s *BinarySuite) TestReadUint16(c *C) {
 }
 
 func (s *BinarySuite) TestReadHash(c *C) {
-	expected := core.NewHash("43aec75c611f22c73b27ece2841e6ccca592f285")
+	expected := plumbing.NewHash("43aec75c611f22c73b27ece2841e6ccca592f285")
 	buf := bytes.NewBuffer(nil)
 	err := binary.Write(buf, binary.BigEndian, expected)
 	c.Assert(err, IsNil)

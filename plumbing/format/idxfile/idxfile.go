@@ -24,12 +24,12 @@ type Idxfile struct {
 // An Entry represents data about an object in the packfile: its hash,
 // offset and CRC32 checksum.
 type Entry struct {
-	Hash   core.Hash
+	Hash   plumbing.Hash
 	CRC32  uint32
 	Offset uint64
 }
 
-func (idx *Idxfile) Add(h core.Hash, offset uint64, crc32 uint32) {
+func (idx *Idxfile) Add(h plumbing.Hash, offset uint64, crc32 uint32) {
 	idx.Entries = append(idx.Entries, Entry{
 		Hash:   h,
 		Offset: offset,

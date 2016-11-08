@@ -1,5 +1,5 @@
-// Package core implement the core interfaces and structs used by go-git
-package core
+// package plumbing implement the core interfaces and structs used by go-git
+package plumbing
 
 import (
 	"errors"

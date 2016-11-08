@@ -53,11 +53,11 @@ func NewEndpoint(endpoint string) (Endpoint, error) {
 
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return Endpoint{}, core.NewPermanentError(err)
+		return Endpoint{}, plumbing.NewPermanentError(err)
 	}
 
 	if !u.IsAbs() {
-		return Endpoint{}, core.NewPermanentError(fmt.Errorf(
+		return Endpoint{}, plumbing.NewPermanentError(fmt.Errorf(
 			"invalid endpoint: %s", endpoint,
 		))
 	}
@@ -96,15 +96,15 @@ func (i *GitUploadPackInfo) Decode(r io.Reader) error {
 	ar := advrefs.New()
 	if err := d.Decode(ar); err != nil {
 		if err == advrefs.ErrEmpty {
-			return core.NewPermanentError(err)
+			return plumbing.NewPermanentError(err)
 		}
-		return core.NewUnexpectedError(err)
+		return plumbing.NewUnexpectedError(err)
 	}
 
 	i.Capabilities = ar.Capabilities
 
 	if err := i.addRefs(ar); err != nil {
-		return core.NewUnexpectedError(err)
+		return plumbing.NewUnexpectedError(err)
 	}
 
 	return nil
@@ -112,7 +112,7 @@ func (i *GitUploadPackInfo) Decode(r io.Reader) error {
 
 func (i *GitUploadPackInfo) addRefs(ar *advrefs.AdvRefs) error {
 	for name, hash := range ar.References {
-		ref := core.NewReferenceFromStrings(name, hash.String())
+		ref := plumbing.NewReferenceFromStrings(name, hash.String())
 		i.Refs.SetReference(ref)
 	}
 
@@ -128,11 +128,11 @@ func (i *GitUploadPackInfo) addSymbolicRefs(ar *advrefs.AdvRefs) error {
 		chunks := strings.Split(symref, ":")
 		if len(chunks) != 2 {
 			err := fmt.Errorf("bad number of `:` in symref value (%q)", symref)
-			return core.NewUnexpectedError(err)
+			return plumbing.NewUnexpectedError(err)
 		}
-		name := core.ReferenceName(chunks[0])
-		target := core.ReferenceName(chunks[1])
-		ref := core.NewSymbolicReference(name, target)
+		name := plumbing.ReferenceName(chunks[0])
+		target := plumbing.ReferenceName(chunks[1])
+		ref := plumbing.NewSymbolicReference(name, target)
 		i.Refs.SetReference(ref)
 	}
 
@@ -143,8 +143,8 @@ func hasSymrefs(ar *advrefs.AdvRefs) bool {
 	return ar.Capabilities.Supports("symref")
 }
 
-func (i *GitUploadPackInfo) Head() *core.Reference {
-	ref, _ := storer.ResolveReference(i.Refs, core.HEAD)
+func (i *GitUploadPackInfo) Head() *plumbing.Reference {
+	ref, _ := storer.ResolveReference(i.Refs, plumbing.HEAD)
 	return ref
 }
 
@@ -165,7 +165,7 @@ func (i *GitUploadPackInfo) Bytes() []byte {
 	_ = e.Encodef("%s HEAD\x00%s\n", i.Head().Hash(), i.Capabilities.String())
 
 	for _, ref := range i.Refs {
-		if ref.Type() != core.HashReference {
+		if ref.Type() != plumbing.HashReference {
 			continue
 		}
 
@@ -178,16 +178,16 @@ func (i *GitUploadPackInfo) Bytes() []byte {
 }
 
 type GitUploadPackRequest struct {
-	Wants []core.Hash
-	Haves []core.Hash
+	Wants []plumbing.Hash
+	Haves []plumbing.Hash
 	Depth int
 }
 
-func (r *GitUploadPackRequest) Want(h ...core.Hash) {
+func (r *GitUploadPackRequest) Want(h ...plumbing.Hash) {
 	r.Wants = append(r.Wants, h...)
 }
 
-func (r *GitUploadPackRequest) Have(h ...core.Hash) {
+func (r *GitUploadPackRequest) Have(h ...plumbing.Hash) {
 	r.Haves = append(r.Haves, h...)
 }
 

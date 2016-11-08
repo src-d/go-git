@@ -16,7 +16,7 @@ type Decoder struct {
 	s     *pktline.Scanner // a pkt-line scanner from the input stream
 	line  []byte           // current pkt-line contents, use parser.nextLine() to make it advance
 	nLine int              // current pkt-line number for debugging, begins at 1
-	hash  core.Hash        // last hash read
+	hash  plumbing.Hash    // last hash read
 	err   error            // sticky error, use the parser.error() method to fill this out
 	data  *AdvRefs         // parsed data is stored here
 }
@@ -240,15 +240,15 @@ func decodeOtherRefs(p *Decoder) decoderStateFn {
 }
 
 // Reads a ref-name
-func readRef(data []byte) (string, core.Hash, error) {
+func readRef(data []byte) (string, plumbing.Hash, error) {
 	chunks := bytes.Split(data, sp)
 	switch {
 	case len(chunks) == 1:
-		return "", core.ZeroHash, fmt.Errorf("malformed ref data: no space was found")
+		return "", plumbing.ZeroHash, fmt.Errorf("malformed ref data: no space was found")
 	case len(chunks) > 2:
-		return "", core.ZeroHash, fmt.Errorf("malformed ref data: more than one space found")
+		return "", plumbing.ZeroHash, fmt.Errorf("malformed ref data: more than one space found")
 	default:
-		return string(chunks[1]), core.NewHash(string(chunks[0])), nil
+		return string(chunks[1]), plumbing.NewHash(string(chunks[0])), nil
 	}
 }
 
@@ -268,7 +268,7 @@ func decodeShallow(p *Decoder) decoderStateFn {
 	}
 
 	text := p.line[:hashSize]
-	var h core.Hash
+	var h plumbing.Hash
 	if _, err := hex.Decode(h[:], text); err != nil {
 		p.error("invalid hash text: %s", err)
 		return nil

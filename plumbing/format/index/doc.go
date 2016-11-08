@@ -253,14 +253,14 @@ Git index format
   - Stat data of $GIT_DIR/info/exclude. See "Index entry" section from
     ctime field until "file size".
 
-  - Stat data of core.excludesfile
+  - Stat data of plumbing.excludesfile
 
   - 32-bit dir_flags (see struct dir_struct)
 
   - 160-bit SHA-1 of $GIT_DIR/info/exclude. Null SHA-1 means the file
     does not exist.
 
-  - 160-bit SHA-1 of core.excludesfile. Null SHA-1 means the file does
+  - 160-bit SHA-1 of plumbing.excludesfile. Null SHA-1 means the file does
     not exist.
 
   - NUL-terminated string of per-dir exclude file name. This usually

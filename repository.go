@@ -196,10 +196,10 @@ func (r *Repository) updateRemoteConfig(
 
 }
 
-func (r *Repository) createReferences(ref *core.Reference) error {
+func (r *Repository) createReferences(ref *plumbing.Reference) error {
 	if !ref.IsBranch() {
 		// detached HEAD mode
-		head := core.NewHashReference(core.HEAD, ref.Hash())
+		head := plumbing.NewHashReference(plumbing.HEAD, ref.Hash())
 		return r.s.SetReference(head)
 	}
 
@@ -207,7 +207,7 @@ func (r *Repository) createReferences(ref *core.Reference) error {
 		return err
 	}
 
-	head := core.NewSymbolicReference(core.HEAD, ref.Name())
+	head := plumbing.NewSymbolicReference(plumbing.HEAD, ref.Name())
 	return r.s.SetReference(head)
 }
 
@@ -219,7 +219,7 @@ func (r *Repository) IsEmpty() (bool, error) {
 	}
 
 	var count int
-	return count == 0, iter.ForEach(func(r *core.Reference) error {
+	return count == 0, iter.ForEach(func(r *plumbing.Reference) error {
 		count++
 		return nil
 	})
@@ -265,8 +265,8 @@ func (r *Repository) Pull(o *PullOptions) error {
 }
 
 // Commit return the commit with the given hash
-func (r *Repository) Commit(h core.Hash) (*Commit, error) {
-	commit, err := r.Object(core.CommitObject, h)
+func (r *Repository) Commit(h plumbing.Hash) (*Commit, error) {
+	commit, err := r.Object(plumbing.CommitObject, h)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +276,7 @@ func (r *Repository) Commit(h core.Hash) (*Commit, error) {
 
 // Commits decode the objects into commits
 func (r *Repository) Commits() (*CommitIter, error) {
-	iter, err := r.s.IterObjects(core.CommitObject)
+	iter, err := r.s.IterObjects(plumbing.CommitObject)
 	if err != nil {
 		return nil, err
 	}
@@ -285,8 +285,8 @@ func (r *Repository) Commits() (*CommitIter, error) {
 }
 
 // Tree return the tree with the given hash
-func (r *Repository) Tree(h core.Hash) (*Tree, error) {
-	tree, err := r.Object(core.TreeObject, h)
+func (r *Repository) Tree(h plumbing.Hash) (*Tree, error) {
+	tree, err := r.Object(plumbing.TreeObject, h)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func (r *Repository) Tree(h core.Hash) (*Tree, error) {
 
 // Trees decodes the objects into trees
 func (r *Repository) Trees() (*TreeIter, error) {
-	iter, err := r.s.IterObjects(core.TreeObject)
+	iter, err := r.s.IterObjects(plumbing.TreeObject)
 	if err != nil {
 		return nil, err
 	}
@@ -305,8 +305,8 @@ func (r *Repository) Trees() (*TreeIter, error) {
 }
 
 // Blob returns the blob with the given hash
-func (r *Repository) Blob(h core.Hash) (*Blob, error) {
-	blob, err := r.Object(core.BlobObject, h)
+func (r *Repository) Blob(h plumbing.Hash) (*Blob, error) {
+	blob, err := r.Object(plumbing.BlobObject, h)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +316,7 @@ func (r *Repository) Blob(h core.Hash) (*Blob, error) {
 
 // Blobs decodes the objects into blobs
 func (r *Repository) Blobs() (*BlobIter, error) {
-	iter, err := r.s.IterObjects(core.BlobObject)
+	iter, err := r.s.IterObjects(plumbing.BlobObject)
 	if err != nil {
 		return nil, err
 	}
@@ -325,8 +325,8 @@ func (r *Repository) Blobs() (*BlobIter, error) {
 }
 
 // Tag returns a tag with the given hash.
-func (r *Repository) Tag(h core.Hash) (*Tag, error) {
-	tag, err := r.Object(core.TagObject, h)
+func (r *Repository) Tag(h plumbing.Hash) (*Tag, error) {
+	tag, err := r.Object(plumbing.TagObject, h)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +337,7 @@ func (r *Repository) Tag(h core.Hash) (*Tag, error) {
 // Tags returns a TagIter that can step through all of the annotated tags
 // in the repository.
 func (r *Repository) Tags() (*TagIter, error) {
-	iter, err := r.s.IterObjects(core.TagObject)
+	iter, err := r.s.IterObjects(plumbing.TagObject)
 	if err != nil {
 		return nil, err
 	}
@@ -346,37 +346,37 @@ func (r *Repository) Tags() (*TagIter, error) {
 }
 
 // Object returns an object with the given hash.
-func (r *Repository) Object(t core.ObjectType, h core.Hash) (Object, error) {
+func (r *Repository) Object(t plumbing.ObjectType, h plumbing.Hash) (Object, error) {
 	obj, err := r.s.Object(t, h)
 	if err != nil {
-		if err == core.ErrObjectNotFound {
+		if err == plumbing.ErrObjectNotFound {
 			return nil, ErrObjectNotFound
 		}
 		return nil, err
 	}
 
 	switch obj.Type() {
-	case core.CommitObject:
+	case plumbing.CommitObject:
 		commit := &Commit{r: r}
 		return commit, commit.Decode(obj)
-	case core.TreeObject:
+	case plumbing.TreeObject:
 		tree := &Tree{r: r}
 		return tree, tree.Decode(obj)
-	case core.BlobObject:
+	case plumbing.BlobObject:
 		blob := &Blob{}
 		return blob, blob.Decode(obj)
-	case core.TagObject:
+	case plumbing.TagObject:
 		tag := &Tag{r: r}
 		return tag, tag.Decode(obj)
 	default:
-		return nil, core.ErrInvalidType
+		return nil, plumbing.ErrInvalidType
 	}
 }
 
 // Objects returns an ObjectIter that can step through all of the annotated tags
 // in the repository.
 func (r *Repository) Objects() (*ObjectIter, error) {
-	iter, err := r.s.IterObjects(core.AnyObject)
+	iter, err := r.s.IterObjects(plumbing.AnyObject)
 	if err != nil {
 		return nil, err
 	}
@@ -385,12 +385,12 @@ func (r *Repository) Objects() (*ObjectIter, error) {
 }
 
 // Head returns the reference where HEAD is pointing
-func (r *Repository) Head() (*core.Reference, error) {
-	return storer.ResolveReference(r.s, core.HEAD)
+func (r *Repository) Head() (*plumbing.Reference, error) {
+	return storer.ResolveReference(r.s, plumbing.HEAD)
 }
 
 // Ref returns the Hash pointing the given refName
-func (r *Repository) Ref(name core.ReferenceName, resolved bool) (*core.Reference, error) {
+func (r *Repository) Ref(name plumbing.ReferenceName, resolved bool) (*plumbing.Reference, error) {
 	if resolved {
 		return storer.ResolveReference(r.s, name)
 	}

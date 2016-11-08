@@ -55,7 +55,7 @@ func c_File_Decode(o uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	cobj := obj.(*core.Object)
+	cobj := obj.(*plumbing.Object)
 	file := git.File{}
 	file.Decode(*cobj)
 	return uint64(RegisterObject(&file))

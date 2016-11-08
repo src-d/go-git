@@ -4,8 +4,8 @@ import (
 	"io"
 	"testing"
 
-	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/idxfile"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 
@@ -149,8 +149,8 @@ func (s *ReaderSuite) TestSetOffsets(c *C) {
 	d, err := NewDecoder(scanner, nil)
 	c.Assert(err, IsNil)
 
-	h := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
-	d.SetOffsets(map[core.Hash]int64{h: 42})
+	h := plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+	d.SetOffsets(map[plumbing.Hash]int64{h: 42})
 
 	o := d.Offsets()
 	c.Assert(o, HasLen, 1)
@@ -160,20 +160,20 @@ func (s *ReaderSuite) TestSetOffsets(c *C) {
 func assertObjects(c *C, s *memory.Storage, expects []string) {
 	c.Assert(len(expects), Equals, len(s.Objects))
 	for _, exp := range expects {
-		obt, err := s.Object(core.AnyObject, core.NewHash(exp))
+		obt, err := s.Object(plumbing.AnyObject, plumbing.NewHash(exp))
 		c.Assert(err, IsNil)
 		c.Assert(obt.Hash().String(), Equals, exp)
 	}
 }
 
-func getOffsetsFromIdx(r io.Reader) map[core.Hash]int64 {
+func getOffsetsFromIdx(r io.Reader) map[plumbing.Hash]int64 {
 	idx := &idxfile.Idxfile{}
 	err := idxfile.NewDecoder(r).Decode(idx)
 	if err != nil {
 		panic(err)
 	}
 
-	offsets := make(map[core.Hash]int64)
+	offsets := make(map[plumbing.Hash]int64)
 	for _, e := range idx.Entries {
 		offsets[e.Hash] = int64(e.Offset)
 	}

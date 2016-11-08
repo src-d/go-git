@@ -22,7 +22,7 @@ var (
 type Reader struct {
 	multi  io.Reader
 	zlib   io.ReadCloser
-	hasher core.Hasher
+	hasher plumbing.Hasher
 }
 
 // NewReader returns a new Reader reading from r.
@@ -38,14 +38,14 @@ func NewReader(r io.Reader) (*Reader, error) {
 }
 
 // Header reads the type and the size of object, and prepares the reader for read
-func (r *Reader) Header() (t core.ObjectType, size int64, err error) {
+func (r *Reader) Header() (t plumbing.ObjectType, size int64, err error) {
 	var raw []byte
 	raw, err = r.readUntil(' ')
 	if err != nil {
 		return
 	}
 
-	t, err = core.ParseObjectType(string(raw))
+	t, err = plumbing.ParseObjectType(string(raw))
 	if err != nil {
 		return
 	}
@@ -86,8 +86,8 @@ func (r *Reader) readUntil(delim byte) ([]byte, error) {
 	}
 }
 
-func (r *Reader) prepareForRead(t core.ObjectType, size int64) {
-	r.hasher = core.NewHasher(t, size)
+func (r *Reader) prepareForRead(t plumbing.ObjectType, size int64) {
+	r.hasher = plumbing.NewHasher(t, size)
 	r.multi = io.TeeReader(r.zlib, r.hasher)
 }
 
@@ -103,7 +103,7 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 }
 
 // Hash returns the hash of the object data stream that has been read so far.
-func (r *Reader) Hash() core.Hash {
+func (r *Reader) Hash() plumbing.Hash {
 	return r.hasher.Sum()
 }
 

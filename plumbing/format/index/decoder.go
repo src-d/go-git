@@ -273,7 +273,7 @@ func (d *Decoder) getExtensionReader() (io.Reader, error) {
 }
 
 func (d *Decoder) readChecksum(expected []byte, alreadyRead [4]byte) error {
-	var h core.Hash
+	var h plumbing.Hash
 	copy(h[:4], alreadyRead[:])
 
 	if err := binary.Read(d.r, h[4:]); err != nil {
@@ -399,7 +399,7 @@ func (d *resolveUndoDecoder) Decode(ru *ResolveUndo) error {
 
 func (d *resolveUndoDecoder) readEntry() (*ResolveUndoEntry, error) {
 	e := &ResolveUndoEntry{
-		Stages: make(map[Stage]core.Hash, 0),
+		Stages: make(map[Stage]plumbing.Hash, 0),
 	}
 
 	path, err := binary.ReadUntil(d.r, '\x00')
@@ -416,7 +416,7 @@ func (d *resolveUndoDecoder) readEntry() (*ResolveUndoEntry, error) {
 	}
 
 	for s := range e.Stages {
-		var hash core.Hash
+		var hash plumbing.Hash
 		if err := binary.Read(d.r, hash[:]); err != nil {
 			return nil, err
 		}
@@ -439,7 +439,7 @@ func (d *resolveUndoDecoder) readStage(e *ResolveUndoEntry, s Stage) error {
 	}
 
 	if stage != 0 {
-		e.Stages[s] = core.ZeroHash
+		e.Stages[s] = plumbing.ZeroHash
 	}
 
 	return nil

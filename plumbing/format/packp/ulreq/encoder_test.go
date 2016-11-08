@@ -57,7 +57,7 @@ func (s *SuiteEncoder) TestZeroValue(c *C) {
 
 func (s *SuiteEncoder) TestOneWant(c *C) {
 	ur := New()
-	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 
 	expected := []string{
 		"want 1111111111111111111111111111111111111111\n",
@@ -69,7 +69,7 @@ func (s *SuiteEncoder) TestOneWant(c *C) {
 
 func (s *SuiteEncoder) TestOneWantWithCapabilities(c *C) {
 	ur := New()
-	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	ur.Capabilities.Add("sysref", "HEAD:/refs/heads/master")
 	ur.Capabilities.Add("multi_ack")
 	ur.Capabilities.Add("thin-pack")
@@ -86,11 +86,11 @@ func (s *SuiteEncoder) TestOneWantWithCapabilities(c *C) {
 
 func (s *SuiteEncoder) TestWants(c *C) {
 	ur := New()
-	ur.Wants = append(ur.Wants, core.NewHash("4444444444444444444444444444444444444444"))
-	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
-	ur.Wants = append(ur.Wants, core.NewHash("3333333333333333333333333333333333333333"))
-	ur.Wants = append(ur.Wants, core.NewHash("2222222222222222222222222222222222222222"))
-	ur.Wants = append(ur.Wants, core.NewHash("5555555555555555555555555555555555555555"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("4444444444444444444444444444444444444444"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("3333333333333333333333333333333333333333"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("2222222222222222222222222222222222222222"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("5555555555555555555555555555555555555555"))
 
 	expected := []string{
 		"want 1111111111111111111111111111111111111111\n",
@@ -106,11 +106,11 @@ func (s *SuiteEncoder) TestWants(c *C) {
 
 func (s *SuiteEncoder) TestWantsWithCapabilities(c *C) {
 	ur := New()
-	ur.Wants = append(ur.Wants, core.NewHash("4444444444444444444444444444444444444444"))
-	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
-	ur.Wants = append(ur.Wants, core.NewHash("3333333333333333333333333333333333333333"))
-	ur.Wants = append(ur.Wants, core.NewHash("2222222222222222222222222222222222222222"))
-	ur.Wants = append(ur.Wants, core.NewHash("5555555555555555555555555555555555555555"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("4444444444444444444444444444444444444444"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("3333333333333333333333333333333333333333"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("2222222222222222222222222222222222222222"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("5555555555555555555555555555555555555555"))
 
 	ur.Capabilities.Add("sysref", "HEAD:/refs/heads/master")
 	ur.Capabilities.Add("multi_ack")
@@ -132,9 +132,9 @@ func (s *SuiteEncoder) TestWantsWithCapabilities(c *C) {
 
 func (s *SuiteEncoder) TestShallow(c *C) {
 	ur := New()
-	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	ur.Capabilities.Add("multi_ack")
-	ur.Shallows = append(ur.Shallows, core.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+	ur.Shallows = append(ur.Shallows, plumbing.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
 
 	expected := []string{
 		"want 1111111111111111111111111111111111111111 multi_ack\n",
@@ -147,12 +147,12 @@ func (s *SuiteEncoder) TestShallow(c *C) {
 
 func (s *SuiteEncoder) TestManyShallows(c *C) {
 	ur := New()
-	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	ur.Capabilities.Add("multi_ack")
-	ur.Shallows = append(ur.Shallows, core.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))
-	ur.Shallows = append(ur.Shallows, core.NewHash("dddddddddddddddddddddddddddddddddddddddd"))
-	ur.Shallows = append(ur.Shallows, core.NewHash("cccccccccccccccccccccccccccccccccccccccc"))
-	ur.Shallows = append(ur.Shallows, core.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+	ur.Shallows = append(ur.Shallows, plumbing.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))
+	ur.Shallows = append(ur.Shallows, plumbing.NewHash("dddddddddddddddddddddddddddddddddddddddd"))
+	ur.Shallows = append(ur.Shallows, plumbing.NewHash("cccccccccccccccccccccccccccccccccccccccc"))
+	ur.Shallows = append(ur.Shallows, plumbing.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
 
 	expected := []string{
 		"want 1111111111111111111111111111111111111111 multi_ack\n",
@@ -168,7 +168,7 @@ func (s *SuiteEncoder) TestManyShallows(c *C) {
 
 func (s *SuiteEncoder) TestDepthCommits(c *C) {
 	ur := New()
-	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	ur.Depth = DepthCommits(1234)
 
 	expected := []string{
@@ -182,7 +182,7 @@ func (s *SuiteEncoder) TestDepthCommits(c *C) {
 
 func (s *SuiteEncoder) TestDepthSinceUTC(c *C) {
 	ur := New()
-	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	since := time.Date(2015, time.January, 2, 3, 4, 5, 0, time.UTC)
 	ur.Depth = DepthSince(since)
 
@@ -197,7 +197,7 @@ func (s *SuiteEncoder) TestDepthSinceUTC(c *C) {
 
 func (s *SuiteEncoder) TestDepthSinceNonUTC(c *C) {
 	ur := New()
-	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	berlin, err := time.LoadLocation("Europe/Berlin")
 	c.Assert(err, IsNil)
 	since := time.Date(2015, time.January, 2, 3, 4, 5, 0, berlin)
@@ -216,7 +216,7 @@ func (s *SuiteEncoder) TestDepthSinceNonUTC(c *C) {
 
 func (s *SuiteEncoder) TestDepthReference(c *C) {
 	ur := New()
-	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	ur.Depth = DepthReference("refs/heads/feature-foo")
 
 	expected := []string{
@@ -230,11 +230,11 @@ func (s *SuiteEncoder) TestDepthReference(c *C) {
 
 func (s *SuiteEncoder) TestAll(c *C) {
 	ur := New()
-	ur.Wants = append(ur.Wants, core.NewHash("4444444444444444444444444444444444444444"))
-	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
-	ur.Wants = append(ur.Wants, core.NewHash("3333333333333333333333333333333333333333"))
-	ur.Wants = append(ur.Wants, core.NewHash("2222222222222222222222222222222222222222"))
-	ur.Wants = append(ur.Wants, core.NewHash("5555555555555555555555555555555555555555"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("4444444444444444444444444444444444444444"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("3333333333333333333333333333333333333333"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("2222222222222222222222222222222222222222"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("5555555555555555555555555555555555555555"))
 
 	ur.Capabilities.Add("sysref", "HEAD:/refs/heads/master")
 	ur.Capabilities.Add("multi_ack")
@@ -242,10 +242,10 @@ func (s *SuiteEncoder) TestAll(c *C) {
 	ur.Capabilities.Add("side-band")
 	ur.Capabilities.Add("ofs-delta")
 
-	ur.Shallows = append(ur.Shallows, core.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))
-	ur.Shallows = append(ur.Shallows, core.NewHash("dddddddddddddddddddddddddddddddddddddddd"))
-	ur.Shallows = append(ur.Shallows, core.NewHash("cccccccccccccccccccccccccccccccccccccccc"))
-	ur.Shallows = append(ur.Shallows, core.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+	ur.Shallows = append(ur.Shallows, plumbing.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))
+	ur.Shallows = append(ur.Shallows, plumbing.NewHash("dddddddddddddddddddddddddddddddddddddddd"))
+	ur.Shallows = append(ur.Shallows, plumbing.NewHash("cccccccccccccccccccccccccccccccccccccccc"))
+	ur.Shallows = append(ur.Shallows, plumbing.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
 
 	since := time.Date(2015, time.January, 2, 3, 4, 5, 0, time.UTC)
 	ur.Depth = DepthSince(since)

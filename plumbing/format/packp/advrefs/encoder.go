@@ -71,15 +71,15 @@ func encodeFirstLine(e *Encoder) encoderStateFn {
 	return encodeRefs
 }
 
-func formatHead(h *core.Hash) string {
+func formatHead(h *plumbing.Hash) string {
 	if h == nil {
-		return core.ZeroHash.String()
+		return plumbing.ZeroHash.String()
 	}
 
 	return h.String()
 }
 
-func formatSeparator(h *core.Hash) string {
+func formatSeparator(h *plumbing.Hash) string {
 	if h == nil {
 		return noHead
 	}
@@ -117,7 +117,7 @@ func encodeRefs(e *Encoder) encoderStateFn {
 	return encodeShallow
 }
 
-func sortRefs(m map[string]core.Hash) []string {
+func sortRefs(m map[string]plumbing.Hash) []string {
 	ret := make([]string, 0, len(m))
 	for k := range m {
 		ret = append(ret, k)
@@ -139,7 +139,7 @@ func encodeShallow(e *Encoder) encoderStateFn {
 	return encodeFlush
 }
 
-func sortShallows(c []core.Hash) []string {
+func sortShallows(c []plumbing.Hash) []string {
 	ret := []string{}
 	for _, h := range c {
 		ret = append(ret, h.String())

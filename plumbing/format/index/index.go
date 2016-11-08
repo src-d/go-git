@@ -47,7 +47,7 @@ type Index struct {
 // multiple Entry instances may appear for the same path name.
 type Entry struct {
 	// Hash is the SHA1 of the represented file
-	Hash core.Hash
+	Hash plumbing.Hash
 	// Name is the  Entry path name relative to top level directory
 	Name string
 	// CreatedAt time when the tracked path was created
@@ -90,7 +90,7 @@ type TreeEntry struct {
 	Trees int
 	// Hash object name for the object that would result from writing this span
 	// of index as a tree.
-	Hash core.Hash
+	Hash plumbing.Hash
 }
 
 // ResolveUndo when a conflict is resolved (e.g. with "git add path"), these
@@ -104,5 +104,5 @@ type ResolveUndo struct {
 // ResolveUndoEntry contains the information about a conflict when is resolved
 type ResolveUndoEntry struct {
 	Path   string
-	Stages map[Stage]core.Hash
+	Stages map[Stage]plumbing.Hash
 }

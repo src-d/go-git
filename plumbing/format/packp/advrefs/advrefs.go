@@ -39,11 +39,11 @@ var (
 // be filled up with whatever is found on the line.
 type AdvRefs struct {
 	Prefix       [][]byte // payloads of the prefix
-	Head         *core.Hash
+	Head         *plumbing.Hash
 	Capabilities *packp.Capabilities
-	References   map[string]core.Hash
-	Peeled       map[string]core.Hash
-	Shallows     []core.Hash
+	References   map[string]plumbing.Hash
+	Peeled       map[string]plumbing.Hash
+	Shallows     []plumbing.Hash
 }
 
 // New returns a pointer to a new AdvRefs value, ready to be used.
@@ -51,8 +51,8 @@ func New() *AdvRefs {
 	return &AdvRefs{
 		Prefix:       [][]byte{},
 		Capabilities: packp.NewCapabilities(),
-		References:   make(map[string]core.Hash),
-		Peeled:       make(map[string]core.Hash),
-		Shallows:     []core.Hash{},
+		References:   make(map[string]plumbing.Hash),
+		Peeled:       make(map[string]plumbing.Hash),
+		Shallows:     []plumbing.Hash{},
 	}
 }

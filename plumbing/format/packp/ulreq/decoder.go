@@ -108,16 +108,16 @@ func decodeFirstWant(d *Decoder) decoderStateFn {
 	return decodeCaps
 }
 
-func (d *Decoder) readHash() (core.Hash, bool) {
+func (d *Decoder) readHash() (plumbing.Hash, bool) {
 	if len(d.line) < hashSize {
 		d.err = fmt.Errorf("malformed hash: %v", d.line)
-		return core.ZeroHash, false
+		return plumbing.ZeroHash, false
 	}
 
-	var hash core.Hash
+	var hash plumbing.Hash
 	if _, err := hex.Decode(hash[:], d.line[:hashSize]); err != nil {
 		d.error("invalid hash text: %s", err)
-		return core.ZeroHash, false
+		return plumbing.ZeroHash, false
 	}
 	d.line = d.line[hashSize:]
 

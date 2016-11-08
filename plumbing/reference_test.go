@@ -1,4 +1,4 @@
-package core
+package plumbing
 
 import . "gopkg.in/check.v1"
 

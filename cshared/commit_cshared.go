@@ -131,7 +131,7 @@ func c_Commit_Decode(o uint64) (uint64, int, *C.char) {
 	if !ok {
 		return IH, ErrorCodeNotFound, C.CString(MessageNotFound)
 	}
-	cobj := obj.(*core.Object)
+	cobj := obj.(*plumbing.Object)
 	err := commit.Decode(*cobj)
 	if err != nil {
 		return IH, ErrorCodeInternal, C.CString(err.Error())

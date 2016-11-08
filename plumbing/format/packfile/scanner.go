@@ -34,10 +34,10 @@ const (
 // ObjectHeader contains the information related to the object, this information
 // is collected from the previous bytes to the content of the object.
 type ObjectHeader struct {
-	Type            core.ObjectType
+	Type            plumbing.ObjectType
 	Offset          int64
 	Length          int64
-	Reference       core.Hash
+	Reference       plumbing.Hash
 	OffsetReference int64
 }
 
@@ -166,14 +166,14 @@ func (s *Scanner) NextObjectHeader() (*ObjectHeader, error) {
 	}
 
 	switch h.Type {
-	case core.OFSDeltaObject:
+	case plumbing.OFSDeltaObject:
 		no, err := binary.ReadVariableWidthInt(s.r)
 		if err != nil {
 			return nil, err
 		}
 
 		h.OffsetReference = h.Offset - no
-	case core.REFDeltaObject:
+	case plumbing.REFDeltaObject:
 		var err error
 		h.Reference, err = binary.ReadHash(s.r)
 		if err != nil {
@@ -219,7 +219,7 @@ func (s *Scanner) discardObjectIfNeeded() error {
 
 // ReadObjectTypeAndLength reads and returns the object type and the
 // length field from an object entry in a packfile.
-func (s *Scanner) readObjectTypeAndLength() (core.ObjectType, int64, error) {
+func (s *Scanner) readObjectTypeAndLength() (plumbing.ObjectType, int64, error) {
 	t, c, err := s.readType()
 	if err != nil {
 		return t, 0, err
@@ -239,11 +239,11 @@ const (
 	lengthBits      = uint8(7)   // subsequent bytes has 7 bits to store the length
 )
 
-func (s *Scanner) readType() (core.ObjectType, byte, error) {
+func (s *Scanner) readType() (plumbing.ObjectType, byte, error) {
 	var c byte
 	var err error
 	if c, err = s.r.ReadByte(); err != nil {
-		return core.ObjectType(0), 0, err
+		return plumbing.ObjectType(0), 0, err
 	}
 
 	typ := parseType(c)
@@ -251,8 +251,8 @@ func (s *Scanner) readType() (core.ObjectType, byte, error) {
 	return typ, c, nil
 }
 
-func parseType(b byte) core.ObjectType {
-	return core.ObjectType((b & maskType) >> firstLengthBits)
+func parseType(b byte) plumbing.ObjectType {
+	return plumbing.ObjectType((b & maskType) >> firstLengthBits)
 }
 
 // the length is codified in the last 4 bits of the first byte and in
@@ -321,10 +321,10 @@ func (s *Scanner) Seek(offset int64) (previous int64, err error) {
 }
 
 // Checksum returns the checksum of the packfile
-func (s *Scanner) Checksum() (core.Hash, error) {
+func (s *Scanner) Checksum() (plumbing.Hash, error) {
 	err := s.discardObjectIfNeeded()
 	if err != nil {
-		return core.ZeroHash, err
+		return plumbing.ZeroHash, err
 	}
 
 	return binary.ReadHash(s.r)

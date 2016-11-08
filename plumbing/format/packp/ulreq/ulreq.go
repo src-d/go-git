@@ -14,8 +14,8 @@ import (
 // safe, use the New function instead.
 type UlReq struct {
 	Capabilities *packp.Capabilities
-	Wants        []core.Hash
-	Shallows     []core.Hash
+	Wants        []plumbing.Hash
+	Shallows     []plumbing.Hash
 	Depth        Depth
 }
 
@@ -49,8 +49,8 @@ func (d DepthReference) isDepth() {}
 func New() *UlReq {
 	return &UlReq{
 		Capabilities: packp.NewCapabilities(),
-		Wants:        []core.Hash{},
-		Shallows:     []core.Hash{},
+		Wants:        []plumbing.Hash{},
+		Shallows:     []plumbing.Hash{},
 		Depth:        DepthCommits(0),
 	}
 }

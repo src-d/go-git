@@ -5,8 +5,8 @@ import (
 	"os"
 
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 )
 
 type RemoteSuite struct {
@@ -106,7 +106,7 @@ func (s *RemoteSuite) TestCapabilities(c *C) {
 func (s *RemoteSuite) TestFetchNotConnected(c *C) {
 	r := NewGitUploadPackService(s.Endpoint)
 	pr := &common.GitUploadPackRequest{}
-	pr.Want(core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	pr.Want(plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 	_, err := r.Fetch(pr)
 	c.Assert(err, Equals, ErrNotConnected)
 }
@@ -117,8 +117,8 @@ func (s *RemoteSuite) TestFetch(c *C) {
 	defer func() { c.Assert(r.Disconnect(), IsNil) }()
 
 	req := &common.GitUploadPackRequest{}
-	req.Want(core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
-	req.Want(core.NewHash("e8d3ffab552895c19b9fcf7aa264d277cde33881"))
+	req.Want(plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	req.Want(plumbing.NewHash("e8d3ffab552895c19b9fcf7aa264d277cde33881"))
 	reader, err := r.Fetch(req)
 	c.Assert(err, IsNil)
 	defer func() { c.Assert(reader.Close(), IsNil) }()
@@ -134,7 +134,7 @@ func (s *RemoteSuite) TestFetchError(c *C) {
 	defer func() { c.Assert(r.Disconnect(), IsNil) }()
 
 	req := &common.GitUploadPackRequest{}
-	req.Want(core.NewHash("1111111111111111111111111111111111111111"))
+	req.Want(plumbing.NewHash("1111111111111111111111111111111111111111"))
 
 	reader, err := r.Fetch(req)
 	c.Assert(err, IsNil)

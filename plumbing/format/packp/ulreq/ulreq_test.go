@@ -20,17 +20,17 @@ func ExampleEncoder_Encode() {
 	ur := New()
 
 	// Add a couple of wants
-	ur.Wants = append(ur.Wants, core.NewHash("3333333333333333333333333333333333333333"))
-	ur.Wants = append(ur.Wants, core.NewHash("1111111111111111111111111111111111111111"))
-	ur.Wants = append(ur.Wants, core.NewHash("2222222222222222222222222222222222222222"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("3333333333333333333333333333333333333333"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
+	ur.Wants = append(ur.Wants, plumbing.NewHash("2222222222222222222222222222222222222222"))
 
 	// And some capabilities you will like the server to use
 	ur.Capabilities.Add("sysref", "HEAD:/refs/heads/master")
 	ur.Capabilities.Add("ofs-delta")
 
 	// Add a couple of shallows
-	ur.Shallows = append(ur.Shallows, core.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))
-	ur.Shallows = append(ur.Shallows, core.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+	ur.Shallows = append(ur.Shallows, plumbing.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))
+	ur.Shallows = append(ur.Shallows, plumbing.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
 
 	// And retrict the answer of the server to commits newer than "2015-01-02 03:04:05 UTC"
 	since := time.Date(2015, time.January, 2, 3, 4, 5, 0, time.UTC)

@@ -35,7 +35,7 @@ var (
 	// to recall cannot be returned.
 	ErrCannotRecall = NewError("cannot recall object")
 	// ErrNonSeekable is returned if a NewDecoder is used with a non-seekable
-	// reader and without a core.ObjectStorage or ReadObjectAt method is called
+	// reader and without a plumbing.ObjectStorage or ReadObjectAt method is called
 	// without a seekable scanner
 	ErrNonSeekable = NewError("non-seekable scanner")
 	// ErrRollback error making Rollback over a transaction after an error
@@ -48,9 +48,9 @@ type Decoder struct {
 	o  storer.ObjectStorer
 	tx storer.Transaction
 
-	offsetToHash map[int64]core.Hash
-	hashToOffset map[core.Hash]int64
-	crcs         map[core.Hash]uint32
+	offsetToHash map[int64]plumbing.Hash
+	hashToOffset map[plumbing.Hash]int64
+	crcs         map[plumbing.Hash]uint32
 }
 
 // NewDecoder returns a new Decoder that reads from r.
@@ -63,16 +63,16 @@ func NewDecoder(s *Scanner, o storer.ObjectStorer) (*Decoder, error) {
 		s: s,
 		o: o,
 
-		offsetToHash: make(map[int64]core.Hash, 0),
-		hashToOffset: make(map[core.Hash]int64, 0),
-		crcs:         make(map[core.Hash]uint32, 0),
+		offsetToHash: make(map[int64]plumbing.Hash, 0),
+		hashToOffset: make(map[plumbing.Hash]int64, 0),
+		crcs:         make(map[plumbing.Hash]uint32, 0),
 	}, nil
 }
 
 // Decode reads a packfile and stores it in the value pointed to by s.
-func (d *Decoder) Decode() (checksum core.Hash, err error) {
+func (d *Decoder) Decode() (checksum plumbing.Hash, err error) {
 	if err := d.doDecode(); err != nil {
-		return core.ZeroHash, err
+		return plumbing.ZeroHash, err
 	}
 
 	return d.s.Checksum()
@@ -145,7 +145,7 @@ func (d *Decoder) readObjectsWithObjectStorerTx(count int) error {
 }
 
 // ReadObject reads a object from the stream and return it
-func (d *Decoder) ReadObject() (core.Object, error) {
+func (d *Decoder) ReadObject() (plumbing.Object, error) {
 	h, err := d.s.NextObjectHeader()
 	if err != nil {
 		return nil, err
@@ -156,11 +156,11 @@ func (d *Decoder) ReadObject() (core.Object, error) {
 	obj.SetType(h.Type)
 	var crc uint32
 	switch h.Type {
-	case core.CommitObject, core.TreeObject, core.BlobObject, core.TagObject:
+	case plumbing.CommitObject, plumbing.TreeObject, plumbing.BlobObject, plumbing.TagObject:
 		crc, err = d.fillRegularObjectContent(obj)
-	case core.REFDeltaObject:
+	case plumbing.REFDeltaObject:
 		crc, err = d.fillREFDeltaObjectContent(obj, h.Reference)
-	case core.OFSDeltaObject:
+	case plumbing.OFSDeltaObject:
 		crc, err = d.fillOFSDeltaObjectContent(obj, h.OffsetReference)
 	default:
 		err = ErrInvalidObject.AddDetails("type %q", h.Type)
@@ -177,16 +177,16 @@ func (d *Decoder) ReadObject() (core.Object, error) {
 	return obj, nil
 }
 
-func (d *Decoder) newObject() core.Object {
+func (d *Decoder) newObject() plumbing.Object {
 	if d.o == nil {
-		return &core.MemoryObject{}
+		return &plumbing.MemoryObject{}
 	}
 
 	return d.o.NewObject()
 }
 
 // ReadObjectAt reads an object at the given location
-func (d *Decoder) ReadObjectAt(offset int64) (core.Object, error) {
+func (d *Decoder) ReadObjectAt(offset int64) (plumbing.Object, error) {
 	if !d.s.IsSeekable {
 		return nil, ErrNonSeekable
 	}
@@ -206,7 +206,7 @@ func (d *Decoder) ReadObjectAt(offset int64) (core.Object, error) {
 	return d.ReadObject()
 }
 
-func (d *Decoder) fillRegularObjectContent(obj core.Object) (uint32, error) {
+func (d *Decoder) fillRegularObjectContent(obj plumbing.Object) (uint32, error) {
 	w, err := obj.Writer()
 	if err != nil {
 		return 0, err
@@ -216,7 +216,7 @@ func (d *Decoder) fillRegularObjectContent(obj core.Object) (uint32, error) {
 	return crc, err
 }
 
-func (d *Decoder) fillREFDeltaObjectContent(obj core.Object, ref core.Hash) (uint32, error) {
+func (d *Decoder) fillREFDeltaObjectContent(obj plumbing.Object, ref plumbing.Hash) (uint32, error) {
 	buf := bytes.NewBuffer(nil)
 	_, crc, err := d.s.NextObject(buf)
 	if err != nil {
@@ -232,7 +232,7 @@ func (d *Decoder) fillREFDeltaObjectContent(obj core.Object, ref core.Hash) (uin
 	return crc, ApplyDelta(obj, base, buf.Bytes())
 }
 
-func (d *Decoder) fillOFSDeltaObjectContent(obj core.Object, offset int64) (uint32, error) {
+func (d *Decoder) fillOFSDeltaObjectContent(obj plumbing.Object, offset int64) (uint32, error) {
 	buf := bytes.NewBuffer(nil)
 	_, crc, err := d.s.NextObject(buf)
 	if err != nil {
@@ -248,55 +248,55 @@ func (d *Decoder) fillOFSDeltaObjectContent(obj core.Object, offset int64) (uint
 	return crc, ApplyDelta(obj, base, buf.Bytes())
 }
 
-func (d *Decoder) setOffset(h core.Hash, offset int64) {
+func (d *Decoder) setOffset(h plumbing.Hash, offset int64) {
 	d.offsetToHash[offset] = h
 	d.hashToOffset[h] = offset
 }
 
-func (d *Decoder) setCRC(h core.Hash, crc uint32) {
+func (d *Decoder) setCRC(h plumbing.Hash, crc uint32) {
 	d.crcs[h] = crc
 }
 
-func (d *Decoder) recallByOffset(o int64) (core.Object, error) {
+func (d *Decoder) recallByOffset(o int64) (plumbing.Object, error) {
 	if d.s.IsSeekable {
 		return d.ReadObjectAt(o)
 	}
 
 	if h, ok := d.offsetToHash[o]; ok {
-		return d.tx.Object(core.AnyObject, h)
+		return d.tx.Object(plumbing.AnyObject, h)
 	}
 
-	return nil, core.ErrObjectNotFound
+	return nil, plumbing.ErrObjectNotFound
 }
 
-func (d *Decoder) recallByHash(h core.Hash) (core.Object, error) {
+func (d *Decoder) recallByHash(h plumbing.Hash) (plumbing.Object, error) {
 	if d.s.IsSeekable {
 		if o, ok := d.hashToOffset[h]; ok {
 			return d.ReadObjectAt(o)
 		}
 	}
 
-	obj, err := d.tx.Object(core.AnyObject, h)
-	if err != core.ErrObjectNotFound {
+	obj, err := d.tx.Object(plumbing.AnyObject, h)
+	if err != plumbing.ErrObjectNotFound {
 		return obj, err
 	}
 
-	return nil, core.ErrObjectNotFound
+	return nil, plumbing.ErrObjectNotFound
 }
 
 // SetOffsets sets the offsets, required when using the method ReadObjectAt,
 // without decoding the full packfile
-func (d *Decoder) SetOffsets(offsets map[core.Hash]int64) {
+func (d *Decoder) SetOffsets(offsets map[plumbing.Hash]int64) {
 	d.hashToOffset = offsets
 }
 
 // Offsets returns the objects read offset
-func (d *Decoder) Offsets() map[core.Hash]int64 {
+func (d *Decoder) Offsets() map[plumbing.Hash]int64 {
 	return d.hashToOffset
 }
 
 // CRCs returns the CRC-32 for each objected read
-func (d *Decoder) CRCs() map[core.Hash]uint32 {
+func (d *Decoder) CRCs() map[plumbing.Hash]uint32 {
 	return d.crcs
 }
 

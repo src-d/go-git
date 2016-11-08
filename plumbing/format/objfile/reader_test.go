@@ -18,7 +18,7 @@ var _ = Suite(&SuiteReader{})
 func (s *SuiteReader) TestReadObjfile(c *C) {
 	for k, fixture := range objfileFixtures {
 		com := fmt.Sprintf("test %d: ", k)
-		hash := core.NewHash(fixture.hash)
+		hash := plumbing.NewHash(fixture.hash)
 		content, _ := base64.StdEncoding.DecodeString(fixture.content)
 		data, _ := base64.StdEncoding.DecodeString(fixture.data)
 
@@ -26,7 +26,7 @@ func (s *SuiteReader) TestReadObjfile(c *C) {
 	}
 }
 
-func testReader(c *C, source io.Reader, hash core.Hash, t core.ObjectType, content []byte, com string) {
+func testReader(c *C, source io.Reader, hash plumbing.Hash, t plumbing.ObjectType, content []byte, com string) {
 	r, err := NewReader(source)
 	c.Assert(err, IsNil)
 

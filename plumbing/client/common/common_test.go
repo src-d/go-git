@@ -56,13 +56,13 @@ func (s *SuiteCommon) TestGitUploadPackInfo(c *C) {
 	c.Assert(name, Equals, "refs/heads/master")
 	c.Assert(i.Refs, HasLen, 4)
 
-	ref := i.Refs[core.ReferenceName(name)]
+	ref := i.Refs[plumbing.ReferenceName(name)]
 	c.Assert(ref, NotNil)
 	c.Assert(ref.Hash().String(), Equals, "6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
 
-	ref = i.Refs[core.HEAD]
+	ref = i.Refs[plumbing.HEAD]
 	c.Assert(ref, NotNil)
-	c.Assert(ref.Target(), Equals, core.ReferenceName(name))
+	c.Assert(ref.Target(), Equals, plumbing.ReferenceName(name))
 }
 
 const GitUploadPackInfoNoHEADFixture = "MDAxZSMgc2VydmljZT1naXQtdXBsb2FkLXBhY2sKMDAwMDAwYmNkN2UxZmVlMjYxMjM0YmIzYTQzYzA5NmY1NTg3NDhhNTY5ZDc5ZWZmIHJlZnMvaGVhZHMvdjQAbXVsdGlfYWNrIHRoaW4tcGFjayBzaWRlLWJhbmQgc2lkZS1iYW5kLTY0ayBvZnMtZGVsdGEgc2hhbGxvdyBuby1wcm9ncmVzcyBpbmNsdWRlLXRhZyBtdWx0aV9hY2tfZGV0YWlsZWQgbm8tZG9uZSBhZ2VudD1naXQvMS45LjEKMDAwMA=="
@@ -95,11 +95,11 @@ func (s *SuiteCommon) TestGitUploadPackEncode(c *C) {
 	info := NewGitUploadPackInfo()
 	info.Capabilities.Add("symref", "HEAD:refs/heads/master")
 
-	ref := core.ReferenceName("refs/heads/master")
-	hash := core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
-	info.Refs = map[core.ReferenceName]*core.Reference{
-		core.HEAD: core.NewSymbolicReference(core.HEAD, ref),
-		ref:       core.NewHashReference(ref, hash),
+	ref := plumbing.ReferenceName("refs/heads/master")
+	hash := plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+	info.Refs = map[plumbing.ReferenceName]*plumbing.Reference{
+		plumbing.HEAD: plumbing.NewSymbolicReference(plumbing.HEAD, ref),
+		ref:           plumbing.NewHashReference(ref, hash),
 	}
 
 	c.Assert(info.Head(), NotNil)
@@ -113,9 +113,9 @@ func (s *SuiteCommon) TestGitUploadPackEncode(c *C) {
 
 func (s *SuiteCommon) TestGitUploadPackRequest(c *C) {
 	r := &GitUploadPackRequest{}
-	r.Want(core.NewHash("d82f291cde9987322c8a0c81a325e1ba6159684c"))
-	r.Want(core.NewHash("2b41ef280fdb67a9b250678686a0c3e03b0a9989"))
-	r.Have(core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	r.Want(plumbing.NewHash("d82f291cde9987322c8a0c81a325e1ba6159684c"))
+	r.Want(plumbing.NewHash("2b41ef280fdb67a9b250678686a0c3e03b0a9989"))
+	r.Have(plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 
 	c.Assert(r.String(), Equals,
 		"0032want d82f291cde9987322c8a0c81a325e1ba6159684c\n"+

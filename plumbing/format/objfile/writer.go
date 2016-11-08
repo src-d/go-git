@@ -19,7 +19,7 @@ var (
 type Writer struct {
 	raw    io.Writer
 	zlib   io.WriteCloser
-	hasher core.Hasher
+	hasher plumbing.Hasher
 	multi  io.Writer
 
 	closed  bool
@@ -38,11 +38,11 @@ func NewWriter(w io.Writer) *Writer {
 }
 
 // WriteHeader writes the type and the size and prepares to accept the object's
-// contents. If an invalid t is provided, core.ErrInvalidType is returned. If a
+// contents. If an invalid t is provided, plumbing.ErrInvalidType is returned. If a
 // negative size is provided, ErrNegativeSize is returned.
-func (w *Writer) WriteHeader(t core.ObjectType, size int64) error {
+func (w *Writer) WriteHeader(t plumbing.ObjectType, size int64) error {
 	if !t.Valid() {
-		return core.ErrInvalidType
+		return plumbing.ErrInvalidType
 	}
 	if size < 0 {
 		return ErrNegativeSize
@@ -59,10 +59,10 @@ func (w *Writer) WriteHeader(t core.ObjectType, size int64) error {
 	return err
 }
 
-func (w *Writer) prepareForWrite(t core.ObjectType, size int64) {
+func (w *Writer) prepareForWrite(t plumbing.ObjectType, size int64) {
 	w.pending = size
 
-	w.hasher = core.NewHasher(t, size)
+	w.hasher = plumbing.NewHasher(t, size)
 	w.multi = io.MultiWriter(w.zlib, w.hasher)
 }
 
@@ -91,7 +91,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 
 // Hash returns the hash of the object data stream that has been written so far.
 // It can be called before or after Close.
-func (w *Writer) Hash() core.Hash {
+func (w *Writer) Hash() plumbing.Hash {
 	return w.hasher.Sum() // Not yet closed, return hash of data written so far
 }
 

@@ -114,8 +114,8 @@ func (r *Remote) Fetch(o *FetchOptions) (err error) {
 	return r.updateLocalReferenceStorage(o.RefSpecs, refs)
 }
 
-func (r *Remote) getWantedReferences(spec []config.RefSpec) ([]*core.Reference, error) {
-	var refs []*core.Reference
+func (r *Remote) getWantedReferences(spec []config.RefSpec) ([]*plumbing.Reference, error) {
+	var refs []*plumbing.Reference
 	iter, err := r.Refs()
 	if err != nil {
 		return refs, err
@@ -129,8 +129,8 @@ func (r *Remote) getWantedReferences(spec []config.RefSpec) ([]*core.Reference, 
 		}
 	}
 
-	return refs, iter.ForEach(func(ref *core.Reference) error {
-		if ref.Type() != core.HashReference {
+	return refs, iter.ForEach(func(ref *plumbing.Reference) error {
+		if ref.Type() != plumbing.HashReference {
 			return nil
 		}
 
@@ -140,8 +140,8 @@ func (r *Remote) getWantedReferences(spec []config.RefSpec) ([]*core.Reference, 
 			}
 		}
 
-		_, err := r.s.Object(core.CommitObject, ref.Hash())
-		if err == core.ErrObjectNotFound {
+		_, err := r.s.Object(plumbing.CommitObject, ref.Hash())
+		if err == plumbing.ErrObjectNotFound {
 			refs = append(refs, ref)
 			return nil
 		}
@@ -151,7 +151,7 @@ func (r *Remote) getWantedReferences(spec []config.RefSpec) ([]*core.Reference, 
 }
 
 func (r *Remote) buildRequest(
-	s storer.ReferenceStorer, o *FetchOptions, refs []*core.Reference,
+	s storer.ReferenceStorer, o *FetchOptions, refs []*plumbing.Reference,
 ) (*common.GitUploadPackRequest, error) {
 	req := &common.GitUploadPackRequest{}
 	req.Depth = o.Depth
@@ -165,8 +165,8 @@ func (r *Remote) buildRequest(
 		return nil, err
 	}
 
-	err = i.ForEach(func(ref *core.Reference) error {
-		if ref.Type() != core.HashReference {
+	err = i.ForEach(func(ref *plumbing.Reference) error {
+		if ref.Type() != plumbing.HashReference {
 			return nil
 		}
 
@@ -199,19 +199,19 @@ func (r *Remote) updateObjectStorage(reader io.Reader) error {
 	return err
 }
 
-func (r *Remote) updateLocalReferenceStorage(specs []config.RefSpec, refs []*core.Reference) error {
+func (r *Remote) updateLocalReferenceStorage(specs []config.RefSpec, refs []*plumbing.Reference) error {
 	for _, spec := range specs {
 		for _, ref := range refs {
 			if !spec.Match(ref.Name()) {
 				continue
 			}
 
-			if ref.Type() != core.HashReference {
+			if ref.Type() != plumbing.HashReference {
 				continue
 			}
 
 			name := spec.Dst(ref.Name())
-			n := core.NewHashReference(name, ref.Hash())
+			n := plumbing.NewHashReference(name, ref.Hash())
 			if err := r.s.SetReference(n); err != nil {
 				return err
 			}
@@ -227,13 +227,13 @@ func (r *Remote) buildFetchedTags() error {
 		return err
 	}
 
-	return iter.ForEach(func(ref *core.Reference) error {
+	return iter.ForEach(func(ref *plumbing.Reference) error {
 		if !ref.IsTag() {
 			return nil
 		}
 
-		_, err := r.s.Object(core.AnyObject, ref.Hash())
-		if err == core.ErrObjectNotFound {
+		_, err := r.s.Object(plumbing.AnyObject, ref.Hash())
+		if err == plumbing.ErrObjectNotFound {
 			return nil
 		}
 
@@ -246,12 +246,12 @@ func (r *Remote) buildFetchedTags() error {
 }
 
 // Head returns the Reference of the HEAD
-func (r *Remote) Head() *core.Reference {
+func (r *Remote) Head() *plumbing.Reference {
 	return r.upInfo.Head()
 }
 
 // Ref returns the Hash pointing the given refName
-func (r *Remote) Ref(name core.ReferenceName, resolved bool) (*core.Reference, error) {
+func (r *Remote) Ref(name plumbing.ReferenceName, resolved bool) (*plumbing.Reference, error) {
 	if resolved {
 		return storer.ResolveReference(r.upInfo.Refs, name)
 	}

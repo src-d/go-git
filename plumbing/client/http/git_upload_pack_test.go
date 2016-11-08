@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 )
 
 type RemoteSuite struct {
@@ -95,7 +95,7 @@ func (s *RemoteSuite) TestFetch(c *C) {
 	c.Assert(r.Connect(), IsNil)
 
 	req := &common.GitUploadPackRequest{}
-	req.Want(core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	req.Want(plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 
 	reader, err := r.Fetch(req)
 	c.Assert(err, IsNil)
@@ -110,8 +110,8 @@ func (s *RemoteSuite) TestFetchNoChanges(c *C) {
 	c.Assert(r.Connect(), IsNil)
 
 	req := &common.GitUploadPackRequest{}
-	req.Want(core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
-	req.Have(core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	req.Want(plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	req.Have(plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 
 	reader, err := r.Fetch(req)
 	c.Assert(err, Equals, common.ErrEmptyGitUploadPack)
@@ -123,8 +123,8 @@ func (s *RemoteSuite) TestFetchMulti(c *C) {
 	c.Assert(r.Connect(), IsNil)
 
 	req := &common.GitUploadPackRequest{}
-	req.Want(core.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
-	req.Want(core.NewHash("e8d3ffab552895c19b9fcf7aa264d277cde33881"))
+	req.Want(plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	req.Want(plumbing.NewHash("e8d3ffab552895c19b9fcf7aa264d277cde33881"))
 
 	reader, err := r.Fetch(req)
 	c.Assert(err, IsNil)

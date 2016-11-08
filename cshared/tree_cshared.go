@@ -99,7 +99,7 @@ func c_Tree_Decode(o uint64) (uint64, int, *_Ctype_char) {
 	if !ok {
 		return IH, ErrorCodeNotFound, _Cfunc_CString(MessageNotFound)
 	}
-	cobj := obj.(*core.Object)
+	cobj := obj.(*plumbing.Object)
 	tree := git.Tree{}
 	err := tree.Decode(*cobj)
 	if err != nil {

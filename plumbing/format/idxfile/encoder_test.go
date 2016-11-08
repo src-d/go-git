@@ -5,14 +5,14 @@ import (
 	"io/ioutil"
 
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 func (s *IdxfileSuite) TestEncode(c *C) {
 	expected := &Idxfile{}
-	expected.Add(core.NewHash("4bfc730165c370df4a012afbb45ba3f9c332c0d4"), 82, 82)
-	expected.Add(core.NewHash("8fa2238efdae08d83c12ee176fae65ff7c99af46"), 42, 42)
+	expected.Add(plumbing.NewHash("4bfc730165c370df4a012afbb45ba3f9c332c0d4"), 82, 82)
+	expected.Add(plumbing.NewHash("8fa2238efdae08d83c12ee176fae65ff7c99af46"), 42, 42)
 
 	buf := bytes.NewBuffer(nil)
 	e := NewEncoder(buf)

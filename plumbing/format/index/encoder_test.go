@@ -21,7 +21,7 @@ func (s *IdxfileSuite) TestEncode(c *C) {
 			GID:        8484,
 			Size:       42,
 			Stage:      TheirMode,
-			Hash:       core.NewHash("e25b29c8946e0e192fae2edc1dabf7be71e8ecf3"),
+			Hash:       plumbing.NewHash("e25b29c8946e0e192fae2edc1dabf7be71e8ecf3"),
 			Name:       "foo",
 		}, {
 			CreatedAt:  time.Now(),

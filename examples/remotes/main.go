@@ -46,10 +46,10 @@ func main() {
 	color.Blue("git show-ref")
 
 	refs, _ := r.Refs()
-	refs.ForEach(func(ref *core.Reference) error {
+	refs.ForEach(func(ref *plumbing.Reference) error {
 		// The HEAD is ommitted in a `git show-ref` so we ignore the symbolic
 		// references, the HEAD
-		if ref.Type() == core.SymbolicReference {
+		if ref.Type() == plumbing.SymbolicReference {
 			return nil
 		}
 

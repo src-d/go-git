@@ -67,8 +67,8 @@ func (s *SuiteDecoder) TestWantOK(c *C) {
 	}
 	ur := testDecodeOK(c, payloads)
 
-	c.Assert(ur.Wants, DeepEquals, []core.Hash{
-		core.NewHash("1111111111111111111111111111111111111111"),
+	c.Assert(ur.Wants, DeepEquals, []plumbing.Hash{
+		plumbing.NewHash("1111111111111111111111111111111111111111"),
 	})
 }
 
@@ -93,8 +93,8 @@ func (s *SuiteDecoder) TestWantWithCapabilities(c *C) {
 		pktline.FlushString,
 	}
 	ur := testDecodeOK(c, payloads)
-	c.Assert(ur.Wants, DeepEquals, []core.Hash{
-		core.NewHash("1111111111111111111111111111111111111111")})
+	c.Assert(ur.Wants, DeepEquals, []plumbing.Hash{
+		plumbing.NewHash("1111111111111111111111111111111111111111")})
 
 	c.Assert(ur.Capabilities.Supports("ofs-delta"), Equals, true)
 	c.Assert(ur.Capabilities.Supports("multi_ack"), Equals, true)
@@ -110,11 +110,11 @@ func (s *SuiteDecoder) TestManyWantsNoCapabilities(c *C) {
 	}
 	ur := testDecodeOK(c, payloads)
 
-	expected := []core.Hash{
-		core.NewHash("1111111111111111111111111111111111111111"),
-		core.NewHash("2222222222222222222222222222222222222222"),
-		core.NewHash("3333333333333333333333333333333333333333"),
-		core.NewHash("4444444444444444444444444444444444444444"),
+	expected := []plumbing.Hash{
+		plumbing.NewHash("1111111111111111111111111111111111111111"),
+		plumbing.NewHash("2222222222222222222222222222222222222222"),
+		plumbing.NewHash("3333333333333333333333333333333333333333"),
+		plumbing.NewHash("4444444444444444444444444444444444444444"),
 	}
 
 	sort.Sort(byHash(ur.Wants))
@@ -122,7 +122,7 @@ func (s *SuiteDecoder) TestManyWantsNoCapabilities(c *C) {
 	c.Assert(ur.Wants, DeepEquals, expected)
 }
 
-type byHash []core.Hash
+type byHash []plumbing.Hash
 
 func (a byHash) Len() int      { return len(a) }
 func (a byHash) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
@@ -166,11 +166,11 @@ func (s *SuiteDecoder) TestManyWantsWithCapabilities(c *C) {
 	}
 	ur := testDecodeOK(c, payloads)
 
-	expected := []core.Hash{
-		core.NewHash("1111111111111111111111111111111111111111"),
-		core.NewHash("2222222222222222222222222222222222222222"),
-		core.NewHash("3333333333333333333333333333333333333333"),
-		core.NewHash("4444444444444444444444444444444444444444"),
+	expected := []plumbing.Hash{
+		plumbing.NewHash("1111111111111111111111111111111111111111"),
+		plumbing.NewHash("2222222222222222222222222222222222222222"),
+		plumbing.NewHash("3333333333333333333333333333333333333333"),
+		plumbing.NewHash("4444444444444444444444444444444444444444"),
 	}
 
 	sort.Sort(byHash(ur.Wants))
@@ -189,12 +189,12 @@ func (s *SuiteDecoder) TestSingleShallowSingleWant(c *C) {
 	}
 	ur := testDecodeOK(c, payloads)
 
-	expectedWants := []core.Hash{
-		core.NewHash("3333333333333333333333333333333333333333"),
+	expectedWants := []plumbing.Hash{
+		plumbing.NewHash("3333333333333333333333333333333333333333"),
 	}
 
-	expectedShallows := []core.Hash{
-		core.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+	expectedShallows := []plumbing.Hash{
+		plumbing.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
 	}
 
 	c.Assert(ur.Wants, DeepEquals, expectedWants)
@@ -215,16 +215,16 @@ func (s *SuiteDecoder) TestSingleShallowManyWants(c *C) {
 	}
 	ur := testDecodeOK(c, payloads)
 
-	expectedWants := []core.Hash{
-		core.NewHash("1111111111111111111111111111111111111111"),
-		core.NewHash("2222222222222222222222222222222222222222"),
-		core.NewHash("3333333333333333333333333333333333333333"),
-		core.NewHash("4444444444444444444444444444444444444444"),
+	expectedWants := []plumbing.Hash{
+		plumbing.NewHash("1111111111111111111111111111111111111111"),
+		plumbing.NewHash("2222222222222222222222222222222222222222"),
+		plumbing.NewHash("3333333333333333333333333333333333333333"),
+		plumbing.NewHash("4444444444444444444444444444444444444444"),
 	}
 	sort.Sort(byHash(expectedWants))
 
-	expectedShallows := []core.Hash{
-		core.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+	expectedShallows := []plumbing.Hash{
+		plumbing.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
 	}
 
 	sort.Sort(byHash(ur.Wants))
@@ -246,15 +246,15 @@ func (s *SuiteDecoder) TestManyShallowSingleWant(c *C) {
 	}
 	ur := testDecodeOK(c, payloads)
 
-	expectedWants := []core.Hash{
-		core.NewHash("3333333333333333333333333333333333333333"),
+	expectedWants := []plumbing.Hash{
+		plumbing.NewHash("3333333333333333333333333333333333333333"),
 	}
 
-	expectedShallows := []core.Hash{
-		core.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-		core.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
-		core.NewHash("cccccccccccccccccccccccccccccccccccccccc"),
-		core.NewHash("dddddddddddddddddddddddddddddddddddddddd"),
+	expectedShallows := []plumbing.Hash{
+		plumbing.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+		plumbing.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+		plumbing.NewHash("cccccccccccccccccccccccccccccccccccccccc"),
+		plumbing.NewHash("dddddddddddddddddddddddddddddddddddddddd"),
 	}
 	sort.Sort(byHash(expectedShallows))
 
@@ -280,19 +280,19 @@ func (s *SuiteDecoder) TestManyShallowManyWants(c *C) {
 	}
 	ur := testDecodeOK(c, payloads)
 
-	expectedWants := []core.Hash{
-		core.NewHash("1111111111111111111111111111111111111111"),
-		core.NewHash("2222222222222222222222222222222222222222"),
-		core.NewHash("3333333333333333333333333333333333333333"),
-		core.NewHash("4444444444444444444444444444444444444444"),
+	expectedWants := []plumbing.Hash{
+		plumbing.NewHash("1111111111111111111111111111111111111111"),
+		plumbing.NewHash("2222222222222222222222222222222222222222"),
+		plumbing.NewHash("3333333333333333333333333333333333333333"),
+		plumbing.NewHash("4444444444444444444444444444444444444444"),
 	}
 	sort.Sort(byHash(expectedWants))
 
-	expectedShallows := []core.Hash{
-		core.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-		core.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
-		core.NewHash("cccccccccccccccccccccccccccccccccccccccc"),
-		core.NewHash("dddddddddddddddddddddddddddddddddddddddd"),
+	expectedShallows := []plumbing.Hash{
+		plumbing.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+		plumbing.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+		plumbing.NewHash("cccccccccccccccccccccccccccccccccccccccc"),
+		plumbing.NewHash("dddddddddddddddddddddddddddddddddddddddd"),
 	}
 	sort.Sort(byHash(expectedShallows))
 
@@ -500,11 +500,11 @@ func (s *SuiteDecoder) TestAll(c *C) {
 	}
 	ur := testDecodeOK(c, payloads)
 
-	expectedWants := []core.Hash{
-		core.NewHash("1111111111111111111111111111111111111111"),
-		core.NewHash("2222222222222222222222222222222222222222"),
-		core.NewHash("3333333333333333333333333333333333333333"),
-		core.NewHash("4444444444444444444444444444444444444444"),
+	expectedWants := []plumbing.Hash{
+		plumbing.NewHash("1111111111111111111111111111111111111111"),
+		plumbing.NewHash("2222222222222222222222222222222222222222"),
+		plumbing.NewHash("3333333333333333333333333333333333333333"),
+		plumbing.NewHash("4444444444444444444444444444444444444444"),
 	}
 	sort.Sort(byHash(expectedWants))
 	sort.Sort(byHash(ur.Wants))
@@ -513,11 +513,11 @@ func (s *SuiteDecoder) TestAll(c *C) {
 	c.Assert(ur.Capabilities.Supports("ofs-delta"), Equals, true)
 	c.Assert(ur.Capabilities.Supports("multi_ack"), Equals, true)
 
-	expectedShallows := []core.Hash{
-		core.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-		core.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
-		core.NewHash("cccccccccccccccccccccccccccccccccccccccc"),
-		core.NewHash("dddddddddddddddddddddddddddddddddddddddd"),
+	expectedShallows := []plumbing.Hash{
+		plumbing.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+		plumbing.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+		plumbing.NewHash("cccccccccccccccccccccccccccccccccccccccc"),
+		plumbing.NewHash("dddddddddddddddddddddddddddddddddddddddd"),
 	}
 	sort.Sort(byHash(expectedShallows))
 	sort.Sort(byHash(ur.Shallows))

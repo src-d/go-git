@@ -99,7 +99,7 @@ func readFanout(idx *Idxfile, r io.Reader) error {
 func readObjectNames(idx *Idxfile, r io.Reader) error {
 	c := int(idx.ObjectCount)
 	for i := 0; i < c; i++ {
-		var ref core.Hash
+		var ref plumbing.Hash
 		if _, err := r.Read(ref[:]); err != nil {
 			return err
 		}

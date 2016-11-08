@@ -47,7 +47,7 @@ func (e *Encoder) Encode(v *UlReq) error {
 
 type encoderStateFn func(*Encoder) encoderStateFn
 
-func sortHashes(list []core.Hash) []string {
+func sortHashes(list []plumbing.Hash) []string {
 	sorted := make([]string, len(list))
 	for i, hash := range list {
 		sorted[i] = hash.String()

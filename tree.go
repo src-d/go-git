@@ -31,7 +31,7 @@ var (
 // and/or blobs (i.e. files and sub-directories)
 type Tree struct {
 	Entries []TreeEntry
-	Hash    core.Hash
+	Hash    plumbing.Hash
 
 	r *Repository
 	m map[string]*TreeEntry
@@ -41,7 +41,7 @@ type Tree struct {
 type TreeEntry struct {
 	Name string
 	Mode os.FileMode
-	Hash core.Hash
+	Hash plumbing.Hash
 }
 
 // File returns the hash of the file identified by the `path` argument.
@@ -52,7 +52,7 @@ func (t *Tree) File(path string) (*File, error) {
 		return nil, ErrFileNotFound
 	}
 
-	obj, err := t.r.s.Object(core.BlobObject, e.Hash)
+	obj, err := t.r.s.Object(plumbing.BlobObject, e.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (t *Tree) dir(baseName string) (*Tree, error) {
 		return nil, errDirNotFound
 	}
 
-	obj, err := t.r.s.Object(core.TreeObject, entry.Hash)
+	obj, err := t.r.s.Object(plumbing.TreeObject, entry.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -119,18 +119,18 @@ func (t *Tree) Files() *FileIter {
 // the current value of Tree.Hash.
 //
 // ID is present to fulfill the Object interface.
-func (t *Tree) ID() core.Hash {
+func (t *Tree) ID() plumbing.Hash {
 	return t.Hash
 }
 
-// Type returns the type of object. It always returns core.TreeObject.
-func (t *Tree) Type() core.ObjectType {
-	return core.TreeObject
+// Type returns the type of object. It always returns plumbing.TreeObject.
+func (t *Tree) Type() plumbing.ObjectType {
+	return plumbing.TreeObject
 }
 
-// Decode transform an core.Object into a Tree struct
-func (t *Tree) Decode(o core.Object) (err error) {
-	if o.Type() != core.TreeObject {
+// Decode transform an plumbing.Object into a Tree struct
+func (t *Tree) Decode(o plumbing.Object) (err error) {
+	if o.Type() != plumbing.TreeObject {
 		return ErrUnsupportedObject
 	}
 
@@ -169,7 +169,7 @@ func (t *Tree) Decode(o core.Object) (err error) {
 			return err
 		}
 
-		var hash core.Hash
+		var hash plumbing.Hash
 		if _, err = io.ReadFull(r, hash[:]); err != nil {
 			return err
 		}
@@ -202,9 +202,9 @@ func (t *Tree) decodeFileMode(mode string) (os.FileMode, error) {
 	return m, nil
 }
 
-// Encode transforms a Tree into a core.Object.
-func (t *Tree) Encode(o core.Object) error {
-	o.SetType(core.TreeObject)
+// Encode transforms a Tree into a plumbing.Object.
+func (t *Tree) Encode(o plumbing.Object) error {
+	o.SetType(plumbing.TreeObject)
 	w, err := o.Writer()
 	if err != nil {
 		return err
@@ -393,7 +393,7 @@ func (iter *TreeIter) Next() (*Tree, error) {
 			return nil, err
 		}
 
-		if obj.Type() != core.TreeObject {
+		if obj.Type() != plumbing.TreeObject {
 			continue
 		}
 
@@ -406,8 +406,8 @@ func (iter *TreeIter) Next() (*Tree, error) {
 // an error happens or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
 func (iter *TreeIter) ForEach(cb func(*Tree) error) error {
-	return iter.ObjectIter.ForEach(func(obj core.Object) error {
-		if obj.Type() != core.TreeObject {
+	return iter.ObjectIter.ForEach(func(obj plumbing.Object) error {
+		if obj.Type() != plumbing.TreeObject {
 			return nil
 		}
 

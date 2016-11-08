@@ -13,12 +13,12 @@ import (
 )
 
 type PackWriter struct {
-	Notify func(h core.Hash, i idxfile.Idxfile)
+	Notify func(h plumbing.Hash, i idxfile.Idxfile)
 
 	fs       fs.Filesystem
 	fr, fw   fs.File
 	synced   *syncedReader
-	checksum core.Hash
+	checksum plumbing.Hash
 	index    idxfile.Idxfile
 	result   chan error
 }

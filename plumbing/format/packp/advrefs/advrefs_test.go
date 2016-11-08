@@ -281,7 +281,7 @@ func ExampleEncoder_Encode() {
 	ar := advrefs.New()
 
 	// ...add a hash for the HEAD...
-	head := core.NewHash("1111111111111111111111111111111111111111")
+	head := plumbing.NewHash("1111111111111111111111111111111111111111")
 	ar.Head = &head
 
 	// ...add some server capabilities...
@@ -290,14 +290,14 @@ func ExampleEncoder_Encode() {
 	ar.Capabilities.Add("multi_ack")
 
 	// ...add a couple of references...
-	ar.References["refs/heads/master"] = core.NewHash("2222222222222222222222222222222222222222")
-	ar.References["refs/tags/v1"] = core.NewHash("3333333333333333333333333333333333333333")
+	ar.References["refs/heads/master"] = plumbing.NewHash("2222222222222222222222222222222222222222")
+	ar.References["refs/tags/v1"] = plumbing.NewHash("3333333333333333333333333333333333333333")
 
 	// ...including a peeled ref...
-	ar.Peeled["refs/tags/v1"] = core.NewHash("4444444444444444444444444444444444444444")
+	ar.Peeled["refs/tags/v1"] = plumbing.NewHash("4444444444444444444444444444444444444444")
 
 	// ...and finally add a shallow
-	ar.Shallows = append(ar.Shallows, core.NewHash("5555555555555555555555555555555555555555"))
+	ar.Shallows = append(ar.Shallows, plumbing.NewHash("5555555555555555555555555555555555555555"))
 
 	// Encode the advrefs.Contents to a bytes.Buffer.
 	// You can encode into stdout too, but you will not be able

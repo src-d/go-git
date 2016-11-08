@@ -19,7 +19,7 @@ func (s *SuiteWriter) TestWriteObjfile(c *C) {
 		buffer := bytes.NewBuffer(nil)
 
 		com := fmt.Sprintf("test %d: ", k)
-		hash := core.NewHash(fixture.hash)
+		hash := plumbing.NewHash(fixture.hash)
 		content, _ := base64.StdEncoding.DecodeString(fixture.content)
 
 		// Write the data out to the buffer
@@ -30,7 +30,7 @@ func (s *SuiteWriter) TestWriteObjfile(c *C) {
 	}
 }
 
-func testWriter(c *C, dest io.Writer, hash core.Hash, t core.ObjectType, content []byte) {
+func testWriter(c *C, dest io.Writer, hash plumbing.Hash, t plumbing.ObjectType, content []byte) {
 	size := int64(len(content))
 	w := NewWriter(dest)
 
@@ -49,7 +49,7 @@ func (s *SuiteWriter) TestWriteOverflow(c *C) {
 	buf := bytes.NewBuffer(nil)
 	w := NewWriter(buf)
 
-	err := w.WriteHeader(core.BlobObject, 8)
+	err := w.WriteHeader(plumbing.BlobObject, 8)
 	c.Assert(err, IsNil)
 
 	n, err := w.Write([]byte("1234"))
@@ -65,16 +65,16 @@ func (s *SuiteWriter) TestNewWriterInvalidType(c *C) {
 	buf := bytes.NewBuffer(nil)
 	w := NewWriter(buf)
 
-	err := w.WriteHeader(core.InvalidObject, 8)
-	c.Assert(err, Equals, core.ErrInvalidType)
+	err := w.WriteHeader(plumbing.InvalidObject, 8)
+	c.Assert(err, Equals, plumbing.ErrInvalidType)
 }
 
 func (s *SuiteWriter) TestNewWriterInvalidSize(c *C) {
 	buf := bytes.NewBuffer(nil)
 	w := NewWriter(buf)
 
-	err := w.WriteHeader(core.BlobObject, -1)
+	err := w.WriteHeader(plumbing.BlobObject, -1)
 	c.Assert(err, Equals, ErrNegativeSize)
-	err = w.WriteHeader(core.BlobObject, -1651860)
+	err = w.WriteHeader(plumbing.BlobObject, -1651860)
 	c.Assert(err, Equals, ErrNegativeSize)
 }
