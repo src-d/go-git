@@ -6,12 +6,12 @@ import (
 	"os"
 	"testing"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/clients"
-	"gopkg.in/src-d/go-git.v4/plumbing/clients/common"
+	"gopkg.in/src-d/go-git.v4/plumbing/client"
+	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/fixtures"
-	"gopkg.in/src-d/go-git.v4/plumbing/formats/packfile"
-	"gopkg.in/src-d/go-git.v4/plumbing/formats/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/packp"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
 	. "gopkg.in/check.v1"

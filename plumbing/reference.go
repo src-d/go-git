@@ -3,7 +3,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 )
 
@@ -14,13 +13,10 @@ const (
 	refRemotePrefix = refPrefix + "remotes/"
 	refNotePrefix   = refPrefix + "notes/"
 	symrefPrefix    = "ref: "
-
-	maxResolveRecursion = 1024
 )
 
 var (
-	ErrMaxResolveRecursion = errors.New("max. recursion level reached")
-	ErrReferenceNotFound   = errors.New("reference not found")
+	ErrReferenceNotFound = errors.New("reference not found")
 )
 
 // ReferenceType reference type's
@@ -147,84 +143,4 @@ func (r *Reference) Strings() [2]string {
 func (r *Reference) String() string {
 	s := r.Strings()
 	return fmt.Sprintf("%s %s", s[1], s[0])
-}
-
-// ReferenceSliceIter implements ReferenceIter. It iterates over a series of
-// references stored in a slice and yields each one in turn when Next() is
-// called.
-//
-// The ReferenceSliceIter must be closed with a call to Close() when it is no
-// longer needed.
-type ReferenceSliceIter struct {
-	series []*Reference
-	pos    int
-}
-
-// NewReferenceSliceIter returns a reference iterator for the given slice of
-// objects.
-func NewReferenceSliceIter(series []*Reference) *ReferenceSliceIter {
-	return &ReferenceSliceIter{
-		series: series,
-	}
-}
-
-// Next returns the next reference from the iterator. If the iterator has
-// reached the end it will return io.EOF as an error.
-func (iter *ReferenceSliceIter) Next() (*Reference, error) {
-	if iter.pos >= len(iter.series) {
-		return nil, io.EOF
-	}
-
-	obj := iter.series[iter.pos]
-	iter.pos++
-	return obj, nil
-}
-
-// ForEach call the cb function for each reference contained on this iter until
-// an error happends or the end of the iter is reached. If ErrStop is sent
-// the iteration is stop but no error is returned. The iterator is closed.
-func (iter *ReferenceSliceIter) ForEach(cb func(*Reference) error) error {
-	defer iter.Close()
-	for _, r := range iter.series {
-		if err := cb(r); err != nil {
-			if err == ErrStop {
-				return nil
-			}
-
-			return nil
-		}
-	}
-
-	return nil
-}
-
-// Close releases any resources used by the iterator.
-func (iter *ReferenceSliceIter) Close() {
-	iter.pos = len(iter.series)
-}
-
-func ResolveReference(s ReferenceStorer, n ReferenceName) (*Reference, error) {
-	r, err := s.Reference(n)
-	if err != nil || r == nil {
-		return r, err
-	}
-	return resolveReference(s, r, 0)
-}
-
-func resolveReference(s ReferenceStorer, r *Reference, recursion int) (*Reference, error) {
-	if r.Type() != SymbolicReference {
-		return r, nil
-	}
-
-	if recursion > maxResolveRecursion {
-		return nil, ErrMaxResolveRecursion
-	}
-
-	t, err := s.Reference(r.Target())
-	if err != nil {
-		return nil, err
-	}
-
-	recursion++
-	return resolveReference(s, t, recursion)
 }

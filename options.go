@@ -3,7 +3,7 @@ package git
 import (
 	"errors"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/clients/common"
+	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 )
