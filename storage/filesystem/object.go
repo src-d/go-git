@@ -8,6 +8,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/format/idxfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/objfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem/internal/dotgit"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 	"gopkg.in/src-d/go-git.v4/utils/fs"
@@ -195,14 +196,14 @@ func (s *ObjectStorage) findObjectInPackfile(h core.Hash) (core.Hash, int64) {
 
 // Iter returns an iterator for all the objects in the packfile with the
 // given type.
-func (s *ObjectStorage) IterObjects(t core.ObjectType) (core.ObjectIter, error) {
+func (s *ObjectStorage) IterObjects(t core.ObjectType) (storer.ObjectIter, error) {
 	objects, err := s.dir.Objects()
 	if err != nil {
 		return nil, err
 	}
 
 	seen := make(map[core.Hash]bool, 0)
-	var iters []core.ObjectIter
+	var iters []storer.ObjectIter
 	if len(objects) != 0 {
 		iters = append(iters, &objectsIter{s: s, t: t, h: objects})
 		seen = hashListAsMap(objects)
@@ -214,17 +215,17 @@ func (s *ObjectStorage) IterObjects(t core.ObjectType) (core.ObjectIter, error) 
 	}
 
 	iters = append(iters, packi...)
-	return core.NewMultiObjectIter(iters), nil
+	return storer.NewMultiObjectIter(iters), nil
 }
 
 func (s *ObjectStorage) buildPackfileIters(
-	t core.ObjectType, seen map[core.Hash]bool) ([]core.ObjectIter, error) {
+	t core.ObjectType, seen map[core.Hash]bool) ([]storer.ObjectIter, error) {
 	packs, err := s.dir.ObjectPacks()
 	if err != nil {
 		return nil, err
 	}
 
-	var iters []core.ObjectIter
+	var iters []storer.ObjectIter
 	for _, h := range packs {
 		pack, err := s.dir.ObjectPack(h)
 		if err != nil {
@@ -269,7 +270,7 @@ type packfileIter struct {
 	total    uint32
 }
 
-func newPackfileIter(f fs.File, t core.ObjectType, seen map[core.Hash]bool) (core.ObjectIter, error) {
+func newPackfileIter(f fs.File, t core.ObjectType, seen map[core.Hash]bool) (storer.ObjectIter, error) {
 	s := packfile.NewScanner(f)
 	_, total, err := s.Header()
 	if err != nil {

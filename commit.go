@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 // Hash hash of an object
@@ -38,7 +39,7 @@ func (c *Commit) Tree() (*Tree, error) {
 // Parents return a CommitIter to the parent Commits
 func (c *Commit) Parents() *CommitIter {
 	return NewCommitIter(c.r,
-		core.NewObjectLookupIter(c.r.s, core.CommitObject, c.parents),
+		storer.NewObjectLookupIter(c.r.s, core.CommitObject, c.parents),
 	)
 }
 
@@ -204,7 +205,7 @@ func indent(t string) string {
 
 // CommitIter provides an iterator for a set of commits.
 type CommitIter struct {
-	core.ObjectIter
+	storer.ObjectIter
 	r *Repository
 }
 
@@ -212,7 +213,7 @@ type CommitIter struct {
 // object iterator.
 //
 // The returned CommitIter will automatically skip over non-commit objects.
-func NewCommitIter(r *Repository, iter core.ObjectIter) *CommitIter {
+func NewCommitIter(r *Repository, iter storer.ObjectIter) *CommitIter {
 	return &CommitIter{iter, r}
 }
 

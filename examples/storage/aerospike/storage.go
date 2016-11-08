@@ -8,6 +8,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 
 	driver "github.com/aerospike/aerospike-client-go"
 )
@@ -81,7 +82,7 @@ func (s *Storage) Object(t core.ObjectType, h core.Hash) (core.Object, error) {
 	return objectFromRecord(rec, t)
 }
 
-func (s *Storage) IterObjects(t core.ObjectType) (core.ObjectIter, error) {
+func (s *Storage) IterObjects(t core.ObjectType) (storer.ObjectIter, error) {
 	stmnt := driver.NewStatement(s.ns, t.String())
 	err := stmnt.Addfilter(driver.NewEqualFilter(urlField, s.url))
 
@@ -123,7 +124,7 @@ func (i *ObjectIter) ForEach(cb func(obj core.Object) error) error {
 		}
 
 		if err := cb(obj); err != nil {
-			if err == core.ErrStop {
+			if err == storer.ErrStop {
 				return nil
 			}
 
@@ -186,7 +187,7 @@ func (s *Storage) buildReferenceKey(n core.ReferenceName) (*driver.Key, error) {
 	return driver.NewKey(s.ns, referencesSet, fmt.Sprintf("%s|%s", s.url, n))
 }
 
-func (s *Storage) IterReferences() (core.ReferenceIter, error) {
+func (s *Storage) IterReferences() (storer.ReferenceIter, error) {
 	stmnt := driver.NewStatement(s.ns, referencesSet)
 	err := stmnt.Addfilter(driver.NewEqualFilter(urlField, s.url))
 	if err != nil {
@@ -206,7 +207,7 @@ func (s *Storage) IterReferences() (core.ReferenceIter, error) {
 		))
 	}
 
-	return core.NewReferenceSliceIter(refs), nil
+	return storer.NewReferenceSliceIter(refs), nil
 }
 
 func (s *Storage) Config() (*config.Config, error) {

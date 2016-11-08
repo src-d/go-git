@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 // Blob is used to store file data - it is generally a file.
@@ -66,7 +67,7 @@ func (b *Blob) Reader() (io.ReadCloser, error) {
 
 // BlobIter provides an iterator for a set of blobs.
 type BlobIter struct {
-	core.ObjectIter
+	storer.ObjectIter
 	r *Repository
 }
 
@@ -74,7 +75,7 @@ type BlobIter struct {
 // object iterator.
 //
 // The returned BlobIter will automatically skip over non-blob objects.
-func NewBlobIter(r *Repository, iter core.ObjectIter) *BlobIter {
+func NewBlobIter(r *Repository, iter storer.ObjectIter) *BlobIter {
 	return &BlobIter{iter, r}
 }
 

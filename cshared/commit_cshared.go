@@ -10,6 +10,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 )
+import "gopkg.in/src-d/go-git.v4/plumbing/storer"
 
 //export c_Commit_get_Hash
 func c_Commit_get_Hash(c uint64) *C.char {
@@ -196,7 +197,7 @@ func c_NewCommitIter(r uint64, iter uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	obj_iter := obj.(*core.ObjectIter)
+	obj_iter := obj.(*storer.ObjectIter)
 	commit_iter := git.NewCommitIter(repo, *obj_iter)
 	handle := RegisterObject(commit_iter)
 	return uint64(handle)

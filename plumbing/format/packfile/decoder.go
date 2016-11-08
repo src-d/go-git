@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 // Format specifies if the packfile uses ref-deltas or ofs-deltas.
@@ -44,8 +45,8 @@ var (
 // Decoder reads and decodes packfiles from an input stream.
 type Decoder struct {
 	s  *Scanner
-	o  core.ObjectStorer
-	tx core.Transaction
+	o  storer.ObjectStorer
+	tx storer.Transaction
 
 	offsetToHash map[int64]core.Hash
 	hashToOffset map[core.Hash]int64
@@ -53,7 +54,7 @@ type Decoder struct {
 }
 
 // NewDecoder returns a new Decoder that reads from r.
-func NewDecoder(s *Scanner, o core.ObjectStorer) (*Decoder, error) {
+func NewDecoder(s *Scanner, o storer.ObjectStorer) (*Decoder, error) {
 	if !s.IsSeekable && o == nil {
 		return nil, ErrNonSeekable
 	}
@@ -83,7 +84,7 @@ func (d *Decoder) doDecode() error {
 		return err
 	}
 
-	_, isTxStorer := d.o.(core.Transactioner)
+	_, isTxStorer := d.o.(storer.Transactioner)
 	switch {
 	case d.o == nil:
 		return d.readObjects(int(count))
@@ -120,7 +121,7 @@ func (d *Decoder) readObjectsWithObjectStorer(count int) error {
 }
 
 func (d *Decoder) readObjectsWithObjectStorerTx(count int) error {
-	tx := d.o.(core.Transactioner).Begin()
+	tx := d.o.(storer.Transactioner).Begin()
 
 	for i := 0; i < count; i++ {
 		obj, err := d.ReadObject()

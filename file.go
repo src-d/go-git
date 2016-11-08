@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 // File represents git file objects.
@@ -99,7 +99,7 @@ func (iter *FileIter) ForEach(cb func(*File) error) error {
 		}
 
 		if err := cb(f); err != nil {
-			if err == core.ErrStop {
+			if err == storer.ErrStop {
 				return nil
 			}
 

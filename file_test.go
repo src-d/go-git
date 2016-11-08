@@ -3,8 +3,9 @@ package git
 import (
 	"io"
 
-	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 
 	. "gopkg.in/check.v1"
 )
@@ -227,7 +228,7 @@ func (s *FileSuite) TestFileIter(c *C) {
 	i = tree.Files()
 	i.ForEach(func(f *File) error {
 		count++
-		return core.ErrStop
+		return storer.ErrStop
 	})
 
 	c.Assert(count, Equals, 1)

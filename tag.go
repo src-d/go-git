@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 // Tag represents an annotated tag object. It points to a single git object of
@@ -183,7 +184,7 @@ func (t *Tag) String() string {
 
 // TagIter provides an iterator for a set of tags.
 type TagIter struct {
-	core.ObjectIter
+	storer.ObjectIter
 	r *Repository
 }
 
@@ -191,7 +192,7 @@ type TagIter struct {
 // object iterator.
 //
 // The returned TagIter will automatically skip over non-tag objects.
-func NewTagIter(r *Repository, iter core.ObjectIter) *TagIter {
+func NewTagIter(r *Repository, iter storer.ObjectIter) *TagIter {
 	return &TagIter{iter, r}
 }
 

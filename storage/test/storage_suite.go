@@ -9,13 +9,14 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 
 	. "gopkg.in/check.v1"
 )
 
-type storer interface {
-	core.ObjectStorer
-	core.ReferenceStorer
+type Storer interface {
+	storer.ObjectStorer
+	storer.ReferenceStorer
 	config.ConfigStorer
 }
 
@@ -26,13 +27,13 @@ type TestObject struct {
 }
 
 type BaseStorageSuite struct {
-	Storer storer
+	Storer Storer
 
 	validTypes  []core.ObjectType
 	testObjects map[core.ObjectType]TestObject
 }
 
-func NewBaseStorageSuite(s storer) BaseStorageSuite {
+func NewBaseStorageSuite(s Storer) BaseStorageSuite {
 	commit := &core.MemoryObject{}
 	commit.SetType(core.CommitObject)
 	tree := &core.MemoryObject{}
@@ -138,7 +139,7 @@ func (s *BaseStorageSuite) TestStorerIter(c *C) {
 }
 
 func (s *BaseStorageSuite) TestObjectStorerTxSetObjectAndCommit(c *C) {
-	storer, ok := s.Storer.(core.Transactioner)
+	storer, ok := s.Storer.(storer.Transactioner)
 	if !ok {
 		c.Skip("not a core.ObjectStorerTx")
 	}
@@ -171,7 +172,7 @@ func (s *BaseStorageSuite) TestObjectStorerTxSetObjectAndCommit(c *C) {
 }
 
 func (s *BaseStorageSuite) TestObjectStorerTxSetObjectAndGetObject(c *C) {
-	storer, ok := s.Storer.(core.Transactioner)
+	storer, ok := s.Storer.(storer.Transactioner)
 	if !ok {
 		c.Skip("not a core.ObjectStorerTx")
 	}
@@ -188,7 +189,7 @@ func (s *BaseStorageSuite) TestObjectStorerTxSetObjectAndGetObject(c *C) {
 }
 
 func (s *BaseStorageSuite) TestObjectStorerTxGetObjectNotFound(c *C) {
-	storer, ok := s.Storer.(core.Transactioner)
+	storer, ok := s.Storer.(storer.Transactioner)
 	if !ok {
 		c.Skip("not a core.ObjectStorerTx")
 	}
@@ -200,7 +201,7 @@ func (s *BaseStorageSuite) TestObjectStorerTxGetObjectNotFound(c *C) {
 }
 
 func (s *BaseStorageSuite) TestObjectStorerTxSetObjectAndRollback(c *C) {
-	storer, ok := s.Storer.(core.Transactioner)
+	storer, ok := s.Storer.(storer.Transactioner)
 	if !ok {
 		c.Skip("not a core.ObjectStorerTx")
 	}

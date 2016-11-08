@@ -7,6 +7,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 	osfs "gopkg.in/src-d/go-git.v4/utils/fs/os"
@@ -102,7 +103,7 @@ type mockPackfileWriter struct {
 
 func (m *mockPackfileWriter) PackfileWriter() (io.WriteCloser, error) {
 	m.PackfileWriterCalled = true
-	return m.Storer.(core.PackfileWriter).PackfileWriter()
+	return m.Storer.(storer.PackfileWriter).PackfileWriter()
 }
 
 func (s *RemoteSuite) TestFetchWithPackfileWriter(c *C) {

@@ -6,6 +6,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 var ErrUnsupportedObjectType = fmt.Errorf("unsupported object type")
@@ -97,7 +98,7 @@ func (o *ObjectStorage) Object(t core.ObjectType, h core.Hash) (core.Object, err
 	return obj, nil
 }
 
-func (o *ObjectStorage) IterObjects(t core.ObjectType) (core.ObjectIter, error) {
+func (o *ObjectStorage) IterObjects(t core.ObjectType) (storer.ObjectIter, error) {
 	var series []core.Object
 	switch t {
 	case core.AnyObject:
@@ -112,7 +113,7 @@ func (o *ObjectStorage) IterObjects(t core.ObjectType) (core.ObjectIter, error) 
 		series = flattenObjectMap(o.Tags)
 	}
 
-	return core.NewObjectSliceIter(series), nil
+	return storer.NewObjectSliceIter(series), nil
 }
 
 func flattenObjectMap(m map[core.Hash]core.Object) []core.Object {
@@ -123,7 +124,7 @@ func flattenObjectMap(m map[core.Hash]core.Object) []core.Object {
 	return objects
 }
 
-func (o *ObjectStorage) Begin() core.Transaction {
+func (o *ObjectStorage) Begin() storer.Transaction {
 	return &TxObjectStorage{
 		Storage: o,
 		Objects: make(map[core.Hash]core.Object, 0),
@@ -186,11 +187,11 @@ func (r ReferenceStorage) Reference(n core.ReferenceName) (*core.Reference, erro
 	return ref, nil
 }
 
-func (r ReferenceStorage) IterReferences() (core.ReferenceIter, error) {
+func (r ReferenceStorage) IterReferences() (storer.ReferenceIter, error) {
 	var refs []*core.Reference
 	for _, ref := range r {
 		refs = append(refs, ref)
 	}
 
-	return core.NewReferenceSliceIter(refs), nil
+	return storer.NewReferenceSliceIter(refs), nil
 }

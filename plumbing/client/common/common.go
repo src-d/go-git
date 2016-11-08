@@ -15,6 +15,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/advrefs"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
@@ -143,7 +144,7 @@ func hasSymrefs(ar *advrefs.AdvRefs) bool {
 }
 
 func (i *GitUploadPackInfo) Head() *core.Reference {
-	ref, _ := core.ResolveReference(i.Refs, core.HEAD)
+	ref, _ := storer.ResolveReference(i.Refs, core.HEAD)
 	return ref
 }
 

@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/client"
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/client"
+	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 var NoErrAlreadyUpToDate = errors.New("already up-to-date")
@@ -150,7 +151,7 @@ func (r *Remote) getWantedReferences(spec []config.RefSpec) ([]*core.Reference, 
 }
 
 func (r *Remote) buildRequest(
-	s core.ReferenceStorer, o *FetchOptions, refs []*core.Reference,
+	s storer.ReferenceStorer, o *FetchOptions, refs []*core.Reference,
 ) (*common.GitUploadPackRequest, error) {
 	req := &common.GitUploadPackRequest{}
 	req.Depth = o.Depth
@@ -177,7 +178,7 @@ func (r *Remote) buildRequest(
 }
 
 func (r *Remote) updateObjectStorage(reader io.Reader) error {
-	if sw, ok := r.s.(core.PackfileWriter); ok {
+	if sw, ok := r.s.(storer.PackfileWriter); ok {
 		w, err := sw.PackfileWriter()
 		if err != nil {
 			return err
@@ -252,14 +253,14 @@ func (r *Remote) Head() *core.Reference {
 // Ref returns the Hash pointing the given refName
 func (r *Remote) Ref(name core.ReferenceName, resolved bool) (*core.Reference, error) {
 	if resolved {
-		return core.ResolveReference(r.upInfo.Refs, name)
+		return storer.ResolveReference(r.upInfo.Refs, name)
 	}
 
 	return r.upInfo.Refs.Reference(name)
 }
 
 // Refs returns a map with all the References
-func (r *Remote) Refs() (core.ReferenceIter, error) {
+func (r *Remote) Refs() (storer.ReferenceIter, error) {
 	return r.upInfo.Refs.IterReferences()
 }
 

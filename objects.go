@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 // ErrUnsupportedObject trigger when a non-supported object is being decoded.
@@ -116,13 +117,13 @@ func (s *Signature) String() string {
 
 // ObjectIter provides an iterator for a set of objects.
 type ObjectIter struct {
-	core.ObjectIter
+	storer.ObjectIter
 	r *Repository
 }
 
 // NewObjectIter returns a ObjectIter for the given repository and underlying
 // object iterator.
-func NewObjectIter(r *Repository, iter core.ObjectIter) *ObjectIter {
+func NewObjectIter(r *Repository, iter storer.ObjectIter) *ObjectIter {
 	return &ObjectIter{iter, r}
 }
 

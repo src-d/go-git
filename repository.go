@@ -6,6 +6,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 	osfs "gopkg.in/src-d/go-git.v4/utils/fs/os"
@@ -176,7 +177,7 @@ func (r *Repository) updateRemoteConfig(
 		return nil
 	}
 
-	head, err := core.ResolveReference(remote.Info().Refs, o.ReferenceName)
+	head, err := storer.ResolveReference(remote.Info().Refs, o.ReferenceName)
 	if err != nil {
 		return err
 	}
@@ -385,19 +386,19 @@ func (r *Repository) Objects() (*ObjectIter, error) {
 
 // Head returns the reference where HEAD is pointing
 func (r *Repository) Head() (*core.Reference, error) {
-	return core.ResolveReference(r.s, core.HEAD)
+	return storer.ResolveReference(r.s, core.HEAD)
 }
 
 // Ref returns the Hash pointing the given refName
 func (r *Repository) Ref(name core.ReferenceName, resolved bool) (*core.Reference, error) {
 	if resolved {
-		return core.ResolveReference(r.s, name)
+		return storer.ResolveReference(r.s, name)
 	}
 
 	return r.s.Reference(name)
 }
 
 // Refs returns a map with all the References
-func (r *Repository) Refs() (core.ReferenceIter, error) {
+func (r *Repository) Refs() (storer.ReferenceIter, error) {
 	return r.s.IterReferences()
 }

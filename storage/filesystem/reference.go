@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem/internal/dotgit"
 )
 
@@ -17,11 +18,11 @@ func (r *ReferenceStorage) Reference(n core.ReferenceName) (*core.Reference, err
 	return r.dir.Ref(n)
 }
 
-func (r *ReferenceStorage) IterReferences() (core.ReferenceIter, error) {
+func (r *ReferenceStorage) IterReferences() (storer.ReferenceIter, error) {
 	refs, err := r.dir.Refs()
 	if err != nil {
 		return nil, err
 	}
 
-	return core.NewReferenceSliceIter(refs), nil
+	return storer.NewReferenceSliceIter(refs), nil
 }

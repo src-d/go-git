@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 const (
@@ -371,7 +372,7 @@ func (w *TreeWalker) Close() {
 
 // TreeIter provides an iterator for a set of trees.
 type TreeIter struct {
-	core.ObjectIter
+	storer.ObjectIter
 	r *Repository
 }
 
@@ -379,7 +380,7 @@ type TreeIter struct {
 // object iterator.
 //
 // The returned TreeIter will automatically skip over non-tree objects.
-func NewTreeIter(r *Repository, iter core.ObjectIter) *TreeIter {
+func NewTreeIter(r *Repository, iter storer.ObjectIter) *TreeIter {
 	return &TreeIter{iter, r}
 }
 
