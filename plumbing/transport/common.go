@@ -11,14 +11,14 @@
 // Each protocol has its own implementation of
 // `NewGitUploadPackService`, but you should generally not use them
 // directly, use this package's `NewGitUploadPackService` instead.
-package clients
+package transport
 
 import (
 	"fmt"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
-	"gopkg.in/src-d/go-git.v4/plumbing/client/http"
-	"gopkg.in/src-d/go-git.v4/plumbing/client/ssh"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/common"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 )
 
 // Protocols are the protocols supported by default.

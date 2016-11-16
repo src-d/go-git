@@ -1,11 +1,11 @@
-package clients
+package transport
 
 import (
 	"fmt"
 	"io"
 	"testing"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/common"
 
 	. "gopkg.in/check.v1"
 )

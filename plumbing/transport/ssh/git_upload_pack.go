@@ -8,10 +8,10 @@ import (
 	"io"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/advrefs"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/pktline"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/ulreq"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/common"
 
 	"golang.org/x/crypto/ssh"
 )

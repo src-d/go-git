@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/common"
 )
 
 // AuthMethod is concrete implementation of common.AuthMethod for HTTP services

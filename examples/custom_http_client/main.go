@@ -8,8 +8,8 @@ import (
 	"github.com/fatih/color"
 
 	git "gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing/client"
-	githttp "gopkg.in/src-d/go-git.v4/plumbing/client/http"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
 func main() {
@@ -24,7 +24,7 @@ func main() {
 		},
 	}
 	// Override http(s) default protocol to use our custom client
-	clients.InstallProtocol(
+	transport.InstallProtocol(
 		"https",
 		githttp.NewGitUploadPackServiceFactory(customClient))
 

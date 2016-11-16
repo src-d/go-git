@@ -8,10 +8,10 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/fixtures"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/client"
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/common"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
 	. "gopkg.in/check.v1"
@@ -36,7 +36,7 @@ func (s *BaseSuite) SetUpSuite(c *C) {
 }
 
 func (s *BaseSuite) installMockProtocol(c *C) {
-	clients.InstallProtocol("https", func(end common.Endpoint) common.GitUploadPackService {
+	transport.InstallProtocol("https", func(end common.Endpoint) common.GitUploadPackService {
 		return &MockGitUploadPackService{endpoint: end}
 	})
 }

@@ -7,11 +7,11 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/client"
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/common"
 )
 
 var NoErrAlreadyUpToDate = errors.New("already up-to-date")
@@ -50,7 +50,7 @@ func (r *Remote) connectUploadPackService() error {
 		return err
 	}
 
-	r.upSrv, err = clients.NewGitUploadPackService(endpoint)
+	r.upSrv, err = transport.NewGitUploadPackService(endpoint)
 	if err != nil {
 		return err
 	}

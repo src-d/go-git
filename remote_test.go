@@ -11,9 +11,9 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/client"
-	githttp "gopkg.in/src-d/go-git.v4/plumbing/client/http"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 	osfs "gopkg.in/src-d/go-git.v4/utils/fs/os"
@@ -225,7 +225,7 @@ func Example_customHTTPClient() {
 	}
 
 	// Override http(s) default protocol to use our custom client
-	clients.InstallProtocol(
+	transport.InstallProtocol(
 		"https",
 		githttp.NewGitUploadPackServiceFactory(customClient))
 

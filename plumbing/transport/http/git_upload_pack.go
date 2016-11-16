@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/common"
 )
 
 // GitUploadPackService git-upload-pack service over HTTP
