@@ -6,12 +6,80 @@ import (
 	"net/http"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport/common"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 )
+
+type Client struct {
+	c    *http.Client
+	ep   transport.Endpoint
+	auth AuthMethod
+}
+
+func NewClient(ep transport.Endpoint) transport.Client {
+	return newClient(nil, ep)
+}
+
+// NewClientFactory creates a http client factory with a customizable client
+// See `InstallProtocol` to install and override default http client.
+// Unless a properly initialized client is given, it will fall back into
+// `http.DefaultClient`.
+func NewClientFactory(c *http.Client) transport.ClientFactory {
+	return func(ep transport.Endpoint) transport.Client {
+		return newClient(c, ep)
+	}
+}
+
+func newClient(c *http.Client, ep transport.Endpoint) transport.Client {
+	if c == nil {
+		c = http.DefaultClient
+	}
+
+	return &Client{
+		c:    c,
+		ep:   ep,
+		auth: basicAuthFromEndpoint(ep),
+	}
+}
+
+// Connect has no effect.
+func (s *Client) Connect() error {
+	return nil
+}
+
+// Disconnect has no effect.
+func (*Client) Disconnect() error {
+	return nil
+}
+
+// SetAuth sets the AuthMethod
+func (s *Client) SetAuth(auth transport.AuthMethod) error {
+	httpAuth, ok := auth.(AuthMethod)
+	if !ok {
+		return transport.ErrInvalidAuthMethod
+	}
+
+	s.auth = httpAuth
+	return nil
+}
+
+func basicAuthFromEndpoint(ep transport.Endpoint) AuthMethod {
+	info := ep.User
+	if info == nil {
+		return nil
+	}
+
+	p, ok := info.Password()
+	if !ok {
+		return nil
+	}
+
+	u := info.Username()
+	return NewBasicAuth(u, p)
+}
 
 // AuthMethod is concrete implementation of common.AuthMethod for HTTP services
 type AuthMethod interface {
-	common.AuthMethod
+	transport.AuthMethod
 	setAuth(r *http.Request)
 }
 
@@ -56,9 +124,9 @@ func NewErr(r *http.Response) error {
 
 	switch r.StatusCode {
 	case http.StatusUnauthorized:
-		return common.ErrAuthorizationRequired
+		return transport.ErrAuthorizationRequired
 	case http.StatusNotFound:
-		return common.ErrRepositoryNotFound
+		return transport.ErrRepositoryNotFound
 	}
 
 	return plumbing.NewUnexpectedError(&Err{r})

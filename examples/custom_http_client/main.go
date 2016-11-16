@@ -8,7 +8,7 @@ import (
 	"github.com/fatih/color"
 
 	git "gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
 	githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
@@ -24,9 +24,9 @@ func main() {
 		},
 	}
 	// Override http(s) default protocol to use our custom client
-	transport.InstallProtocol(
+	client.InstallProtocol(
 		"https",
-		githttp.NewGitUploadPackServiceFactory(customClient))
+		githttp.NewClientFactory(customClient))
 
 	// Create an in-memory repository
 	r := git.NewMemoryRepository()
