@@ -6,13 +6,88 @@ import (
 	"net/http"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport/common"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 )
+
+type Client struct {
+	c *http.Client
+}
+
+var DefaultClient = NewClient(nil)
+
+// NewClient creates a new client with a custom net/http client.
+// See `InstallProtocol` to install and override default http client.
+// Unless a properly initialized client is given, it will fall back into
+// `http.DefaultClient`.
+func NewClient(c *http.Client) transport.Client {
+	if c == nil {
+		return &Client{http.DefaultClient}
+	}
+
+	return &Client{
+		c: c,
+	}
+}
+
+func (c *Client) NewFetchPackSession(ep transport.Endpoint) (
+	transport.FetchPackSession, error) {
+
+	return newFetchPackSession(c.c, ep), nil
+}
+
+func (c *Client) NewSendPackSession(ep transport.Endpoint) (
+	transport.SendPackSession, error) {
+
+	return newSendPackSession(c.c, ep), nil
+}
+
+type session struct {
+	auth     AuthMethod
+	client   *http.Client
+	endpoint transport.Endpoint
+}
+
+func (s *session) SetAuth(auth transport.AuthMethod) error {
+	a, ok := auth.(AuthMethod)
+	if !ok {
+		return transport.ErrInvalidAuthMethod
+	}
+
+	s.auth = a
+	return nil
+}
+
+func (*session) Close() error {
+	return nil
+}
+
+func (s *session) applyAuthToRequest(req *http.Request) {
+	if s.auth == nil {
+		return
+	}
+
+	s.auth.setAuth(req)
+}
 
 // AuthMethod is concrete implementation of common.AuthMethod for HTTP services
 type AuthMethod interface {
-	common.AuthMethod
+	transport.AuthMethod
 	setAuth(r *http.Request)
+}
+
+func basicAuthFromEndpoint(ep transport.Endpoint) *BasicAuth {
+	info := ep.User
+	if info == nil {
+		return nil
+	}
+
+	p, ok := info.Password()
+	if !ok {
+		return nil
+	}
+
+	u := info.Username()
+	return NewBasicAuth(u, p)
 }
 
 // BasicAuth represent a HTTP basic auth
@@ -20,12 +95,16 @@ type BasicAuth struct {
 	username, password string
 }
 
-// NewBasicAuth returns a BasicAuth base on the given user and password
+// NewBasicAuth returns a basicAuth base on the given user and password
 func NewBasicAuth(username, password string) *BasicAuth {
 	return &BasicAuth{username, password}
 }
 
 func (a *BasicAuth) setAuth(r *http.Request) {
+	if a == nil {
+		return
+	}
+
 	r.SetBasicAuth(a.username, a.password)
 }
 
@@ -56,9 +135,9 @@ func NewErr(r *http.Response) error {
 
 	switch r.StatusCode {
 	case http.StatusUnauthorized:
-		return common.ErrAuthorizationRequired
+		return transport.ErrAuthorizationRequired
 	case http.StatusNotFound:
-		return common.ErrRepositoryNotFound
+		return transport.ErrRepositoryNotFound
 	}
 
 	return plumbing.NewUnexpectedError(&Err{r})
