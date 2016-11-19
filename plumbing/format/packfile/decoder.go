@@ -276,9 +276,11 @@ func (d *Decoder) recallByHash(h plumbing.Hash) (plumbing.Object, error) {
 		}
 	}
 
-	obj, err := d.tx.Object(plumbing.AnyObject, h)
-	if err != plumbing.ErrObjectNotFound {
-		return obj, err
+	if d.tx != nil {
+		obj, err := d.tx.Object(plumbing.AnyObject, h)
+		if err != plumbing.ErrObjectNotFound {
+			return obj, err
+		}
 	}
 
 	return nil, plumbing.ErrObjectNotFound
