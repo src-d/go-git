@@ -22,6 +22,10 @@ const (
 
 type SidebandChannel byte
 
+func (ch SidebandChannel) Bytes() []byte {
+	return []byte{byte(ch)}
+}
+
 const (
 	PackData          SidebandChannel = 1
 	ProgressMessage   SidebandChannel = 2
