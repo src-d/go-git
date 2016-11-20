@@ -53,7 +53,15 @@ type Decoder struct {
 	crcs         map[plumbing.Hash]uint32
 }
 
-// NewDecoder returns a new Decoder that reads from r.
+// NewDecoder returns a new Decoder that reads from s and store the objects in
+// o. ObjectStorer can be nil, in this case the objects are not stored but
+// Offsets can be call to retrieve the objets offset in the packfile being scan.
+//
+// If ObjectStorer is nil and the Scanner is not Seekable, ErrNonSeekable is
+// returned.
+//
+// If the ObjectStorer implements storer.Transactioner, a transation is created
+// during the Decode execution, if something fails the Rollback is called
 func NewDecoder(s *Scanner, o storer.ObjectStorer) (*Decoder, error) {
 	if !s.IsSeekable && o == nil {
 		return nil, ErrNonSeekable
@@ -263,7 +271,7 @@ func (d *Decoder) recallByOffset(o int64) (plumbing.Object, error) {
 	}
 
 	if h, ok := d.offsetToHash[o]; ok {
-		return d.tx.Object(plumbing.AnyObject, h)
+		return d.recallByHashNonSeekable(h)
 	}
 
 	return nil, plumbing.ErrObjectNotFound
@@ -276,12 +284,24 @@ func (d *Decoder) recallByHash(h plumbing.Hash) (plumbing.Object, error) {
 		}
 	}
 
-	obj, err := d.tx.Object(plumbing.AnyObject, h)
+	return d.recallByHashNonSeekable(h)
+}
+
+// recallByHashNonSeekable read from a object from a Tx, if we are in a
+// transaction, we should read from there, if not we read from the ObjectStorer
+func (d *Decoder) recallByHashNonSeekable(h plumbing.Hash) (obj plumbing.Object, err error) {
+	if d.tx != nil {
+		obj, err = d.tx.Object(plumbing.AnyObject, h)
+	} else {
+		obj, err = d.o.Object(plumbing.AnyObject, h)
+	}
+
 	if err != plumbing.ErrObjectNotFound {
 		return obj, err
 	}
 
 	return nil, plumbing.ErrObjectNotFound
+
 }
 
 // SetOffsets sets the offsets, required when using the method ReadObjectAt,
