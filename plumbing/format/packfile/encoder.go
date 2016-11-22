@@ -13,21 +13,28 @@ import (
 	"github.com/klauspost/compress/zlib"
 )
 
-// Encoder gets the data from the storage and write it into the writer in PACK format
+// Encoder gets the data from the storage and write it into the writer in PACK
+// format
 type Encoder struct {
 	storage storer.ObjectStorer
 	w       io.Writer
 	hash    hash.Hash
 }
 
-// Creates a new packfile Encoder using a specific Writer
-func NewEncoder(w io.Writer, storage storer.ObjectStorer) *Encoder {
+// NewEncoder creates a new packfile encoder using a specific Writer and
+// ObjectStorer
+func NewEncoder(w io.Writer, s storer.ObjectStorer) *Encoder {
 	h := sha1.New()
 	mw := io.MultiWriter(w, h)
-	return &Encoder{storage, mw, h}
+	return &Encoder{
+		storage: s,
+		w:       mw,
+		hash:    h,
+	}
 }
 
-// List of hashes into the storage that we want to encode into a pack file
+// Encode encodes objects specified using a list of hashes. This objects must
+// exists into the storer
 func (e *Encoder) Encode(hashes []plumbing.Hash) (plumbing.Hash, error) {
 	if err := e.head(len(hashes)); err != nil {
 		return plumbing.ZeroHash, err
@@ -48,7 +55,12 @@ func (e *Encoder) Encode(hashes []plumbing.Hash) (plumbing.Hash, error) {
 }
 
 func (e *Encoder) head(numEntries int) error {
-	return binary.Write(e.w, signature, int32(VersionSupported), int32(numEntries))
+	return binary.Write(
+		e.w,
+		signature,
+		int32(VersionSupported),
+		int32(numEntries),
+	)
 }
 
 func (e *Encoder) entry(o plumbing.Object) error {
@@ -56,10 +68,10 @@ func (e *Encoder) entry(o plumbing.Object) error {
 	if t == plumbing.OFSDeltaObject || t == plumbing.REFDeltaObject {
 		// TODO implements delta objects
 		return fmt.Errorf("delta object not supported: %v", t)
-	} else {
-		if err := e.writeStandardHeader(t, o.Size()); err != nil {
-			return err
-		}
+	}
+
+	if err := e.entryHead(t, o.Size()); err != nil {
+		return err
 	}
 
 	zw := zlib.NewWriter(e.w)
@@ -75,7 +87,7 @@ func (e *Encoder) entry(o plumbing.Object) error {
 	return zw.Close()
 }
 
-func (e *Encoder) writeStandardHeader(typeNum plumbing.ObjectType, size int64) error {
+func (e *Encoder) entryHead(typeNum plumbing.ObjectType, size int64) error {
 	t := int64(typeNum)
 	header := []byte{}
 	c := (t << firstLengthBits) | (size & maskFirstLength)

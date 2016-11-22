@@ -44,7 +44,8 @@ func (s *EncoderSuite) TestCorrectPackWithOneEmptyObject(c *C) {
 	o := &plumbing.MemoryObject{}
 	o.SetType(plumbing.CommitObject)
 	o.SetSize(0)
-	s.store.SetObject(o)
+	_, err := s.store.SetObject(o)
+	c.Assert(err, IsNil)
 
 	hash, err := s.enc.Encode([]plumbing.Hash{o.Hash()})
 	c.Assert(err, IsNil)
@@ -55,7 +56,8 @@ func (s *EncoderSuite) TestCorrectPackWithOneEmptyObject(c *C) {
 	expectedResult = append(expectedResult, []byte{16}...)
 
 	// Zlib header
-	expectedResult = append(expectedResult, []byte{120, 156, 1, 0, 0, 255, 255, 0, 0, 0, 1}...)
+	expectedResult = append(expectedResult,
+		[]byte{120, 156, 1, 0, 0, 255, 255, 0, 0, 0, 1}...)
 
 	// + HASH
 	hb := [20]byte(hash)
@@ -70,7 +72,8 @@ func (s *EncoderSuite) TestMaxObjectSize(c *C) {
 	o := s.store.NewObject()
 	o.SetSize(9223372036854775807)
 	o.SetType(plumbing.CommitObject)
-	s.store.SetObject(o)
+	_, err := s.store.SetObject(o)
+	c.Assert(err, IsNil)
 	hash, err := s.enc.Encode([]plumbing.Hash{o.Hash()})
 	c.Assert(err, IsNil)
 	c.Assert(hash.IsZero(), Not(Equals), true)
@@ -81,8 +84,10 @@ func (s *EncoderSuite) TestDeltaNotSupported(c *C) {
 	oOne.SetType(plumbing.OFSDeltaObject)
 	oTwo := s.store.NewObject()
 	oTwo.SetType(plumbing.REFDeltaObject)
-	s.store.SetObject(oOne)
-	s.store.SetObject(oTwo)
+	_, err := s.store.SetObject(oOne)
+	c.Assert(err, IsNil)
+	_, err = s.store.SetObject(oTwo)
+	c.Assert(err, IsNil)
 	hash, err := s.enc.Encode([]plumbing.Hash{oOne.Hash()})
 	c.Assert(err, NotNil)
 	c.Assert(hash.IsZero(), Equals, true)
@@ -136,6 +141,7 @@ func (s *EncoderSuite) TestDecodeEncodeDecode(c *C) {
 
 			return nil
 		})
+		c.Assert(err, IsNil)
 		c.Assert(len(obtainedObjects), Equals, len(objects))
 
 		equals := 0
