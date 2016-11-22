@@ -49,6 +49,24 @@ func (s *ReaderSuite) TestDecode(c *C) {
 	})
 }
 
+func (s *ReaderSuite) TestDecodeMultipleTimes(c *C) {
+	f := fixtures.Basic().ByTag("packfile").One()
+	scanner := packfile.NewScanner(f.Packfile())
+	storage := memory.NewStorage()
+
+	d, err := packfile.NewDecoder(scanner, storage)
+	c.Assert(err, IsNil)
+	defer d.Close()
+
+	ch, err := d.Decode()
+	c.Assert(err, IsNil)
+	c.Assert(ch, Equals, f.PackfileHash)
+
+	ch, err = d.Decode()
+	c.Assert(err, Equals, packfile.ErrAlreadyDecoded)
+	c.Assert(ch, Equals, plumbing.ZeroHash)
+}
+
 func (s *ReaderSuite) TestDecodeInMemory(c *C) {
 	fixtures.Basic().ByTag("packfile").Test(c, func(f *fixtures.Fixture) {
 		scanner := packfile.NewScanner(f.Packfile())
@@ -76,7 +94,11 @@ func (s *ReaderSuite) TestDecodeNoSeekableWithTxStorer(c *C) {
 		}
 
 		scanner := packfile.NewScanner(reader)
-		storage := memory.NewStorage()
+
+		var storage storer.ObjectStorer = memory.NewStorage()
+		_, isTxStorer := storage.(storer.Transactioner)
+		c.Assert(isTxStorer, Equals, true)
+
 		d, err := packfile.NewDecoder(scanner, storage)
 		c.Assert(err, IsNil)
 		defer d.Close()
@@ -89,14 +111,19 @@ func (s *ReaderSuite) TestDecodeNoSeekableWithTxStorer(c *C) {
 	})
 }
 
-func (s *ReaderSuite) TestDecodeNoSeekableWithNoTxStorer(c *C) {
+func (s *ReaderSuite) TestDecodeNoSeekableWithoutTxStorer(c *C) {
 	fixtures.Basic().ByTag("packfile").Test(c, func(f *fixtures.Fixture) {
 		reader := nonSeekableReader{
 			r: f.Packfile(),
 		}
 
 		scanner := packfile.NewScanner(reader)
-		storage, _ := filesystem.NewStorage(fs.New())
+
+		var storage storer.ObjectStorer
+		storage, _ = filesystem.NewStorage(fs.New())
+		_, isTxStorer := storage.(storer.Transactioner)
+		c.Assert(isTxStorer, Equals, false)
+
 		d, err := packfile.NewDecoder(scanner, storage)
 		c.Assert(err, IsNil)
 		defer d.Close()
@@ -176,7 +203,7 @@ func (s *ReaderSuite) TestReadObjectAt(c *C) {
 
 	// the objects at reference 186, is a delta, so should be recall,
 	// without being read before.
-	obj, err := d.ReadObjectAt(186)
+	obj, err := d.DecodeObjectAt(186)
 	c.Assert(err, IsNil)
 	c.Assert(obj.Hash().String(), Equals, "6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
 }
