@@ -1,16 +1,15 @@
-// Package clients includes the implementation for different transport protocols
+// Package transport includes the implementation for different transport
+// protocols.
 //
-// go-git needs the packfile and the refs of the repo. The
-// `NewUploadPackService` function returns an object that allows to
-// download them.
+// `Client` can be used to fetch and send packfiles to a git server.
+// The `client` package provides higher level functions to instantiate the
+// appropiate `Client` based on the repository URL.
 //
-// go-git supports HTTP and SSH (see `Protocols`) for downloading the packfile
-// and the refs, but you can also install your own protocols (see
-// `InstallProtocol` below).
+// Go-git supports HTTP and SSH (see `Protocols`), but you can also install
+// your own protocols (see the `client` package).
 //
-// Each protocol has its own implementation of
-// `NewUploadPackService`, but you should generally not use them
-// directly, use this package's `NewUploadPackService` instead.
+// Each protocol has its own implementation of `Client`, but you should
+// generally not use them directly, use `client.NewClient` instead.
 package transport
 
 import (
@@ -53,21 +52,29 @@ type AuthMethod interface {
 }
 
 // FetchPackSession represents a git-fetch-pack session.
+// A git-fetch-pack session has two steps: reference discovery
+// (`AdvertisedReferences` function) and fetching pack (`FetchPack` function).
+// In that order.
 type FetchPackSession interface {
 	Session
 	// AdvertisedReferences retrieves the advertised references for a
-	// repository. It must be called before Pack.
+	// repository. It should be called before FetchPack, and it cannot be
+	// called after FetchPack.
 	AdvertisedReferences() (*UploadPackInfo, error)
 	// FetchPack takes a request and returns a reader for the packfile
 	// received from the server.
 	FetchPack(req *UploadPackRequest) (io.ReadCloser, error)
 }
 
-// SendPackSession represents a git-fetch-pack session.
+// FetchPackSession represents a git-send-pack session.
+// A git-send-pack session has two steps: reference discovery
+// (`AdvertisedReferences` function) and sending pack (`SendPack` function).
+// In that order.
 type SendPackSession interface {
 	Session
 	// AdvertisedReferences retrieves the advertised references for a
-	// repository. It must be called before SendPack.
+	// repository. It should be called before FetchPack, and it cannot be
+	// called after FetchPack.
 	AdvertisedReferences() (*UploadPackInfo, error)
 	// UpdateReferences sends an update references request and returns a
 	// writer to be used for packfile writing.
