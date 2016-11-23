@@ -8,10 +8,10 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/fixtures"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/client"
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
 	. "gopkg.in/check.v1"
@@ -36,9 +36,10 @@ func (s *BaseSuite) SetUpSuite(c *C) {
 }
 
 func (s *BaseSuite) installMockProtocol(c *C) {
-	clients.InstallProtocol("https", func(end common.Endpoint) common.GitUploadPackService {
-		return &MockGitUploadPackService{endpoint: end}
-	})
+	f := func(end transport.Endpoint) transport.Client {
+		return &MockClient{endpoint: end}
+	}
+	client.InstallProtocol("https", f)
 }
 
 func (s *BaseSuite) buildRepository(c *C) {
@@ -68,38 +69,38 @@ func (s *BaseSuite) buildRepositories(c *C, f fixtures.Fixtures) {
 
 const RepositoryFixture = "https://github.com/git-fixtures/basic.git"
 
-type MockGitUploadPackService struct {
+type MockClient struct {
 	connected bool
-	endpoint  common.Endpoint
-	auth      common.AuthMethod
+	endpoint  transport.Endpoint
+	auth      transport.AuthMethod
 }
 
-func (p *MockGitUploadPackService) Connect() error {
-	p.connected = true
+func (c *MockClient) Connect() error {
+	c.connected = true
 	return nil
 }
 
-func (p *MockGitUploadPackService) SetAuth(auth common.AuthMethod) error {
-	p.auth = auth
+func (c *MockClient) SetAuth(auth transport.AuthMethod) error {
+	c.auth = auth
 	return nil
 }
 
-func (p *MockGitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
-	if !p.connected {
+func (c *MockClient) FetchPackInfo() (*transport.UploadPackInfo, error) {
+	if !c.connected {
 		return nil, errors.New("not connected")
 	}
 
-	h := fixtures.ByURL(p.endpoint.String()).One().Head
+	h := fixtures.ByURL(c.endpoint.String()).One().Head
 
-	c := packp.NewCapabilities()
-	c.Decode("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEADmulti_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master agent=git/2:2.4.8~dbussink-fix-enterprise-tokens-compilation-1167-gc7006cf")
+	cap := packp.NewCapabilities()
+	cap.Decode("6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEADmulti_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master agent=git/2:2.4.8~dbussink-fix-enterprise-tokens-compilation-1167-gc7006cf")
 
 	ref := plumbing.ReferenceName("refs/heads/master")
 	branch := plumbing.ReferenceName("refs/heads/branch")
 	tag := plumbing.ReferenceName("refs/tags/v1.0.0")
 
-	return &common.GitUploadPackInfo{
-		Capabilities: c,
+	return &transport.UploadPackInfo{
+		Capabilities: cap,
 		Refs: map[plumbing.ReferenceName]*plumbing.Reference{
 			plumbing.HEAD: plumbing.NewSymbolicReference(plumbing.HEAD, ref),
 			ref:           plumbing.NewHashReference(ref, h),
@@ -109,12 +110,12 @@ func (p *MockGitUploadPackService) Info() (*common.GitUploadPackInfo, error) {
 	}, nil
 }
 
-func (p *MockGitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.ReadCloser, error) {
-	if !p.connected {
+func (c *MockClient) FetchPack(r *transport.UploadPackRequest) (io.ReadCloser, error) {
+	if !c.connected {
 		return nil, errors.New("not connected")
 	}
 
-	f := fixtures.ByURL(p.endpoint.String())
+	f := fixtures.ByURL(c.endpoint.String())
 
 	if len(r.Wants) == 1 {
 		return f.Exclude("single-branch").One().Packfile(), nil
@@ -123,8 +124,8 @@ func (p *MockGitUploadPackService) Fetch(r *common.GitUploadPackRequest) (io.Rea
 	return f.One().Packfile(), nil
 }
 
-func (p *MockGitUploadPackService) Disconnect() error {
-	p.connected = false
+func (c *MockClient) Disconnect() error {
+	c.connected = false
 	return nil
 }
 

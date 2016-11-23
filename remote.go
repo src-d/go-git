@@ -7,11 +7,11 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/client"
-	"gopkg.in/src-d/go-git.v4/plumbing/client/common"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packp"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
 )
 
 var NoErrAlreadyUpToDate = errors.New("already up-to-date")
@@ -22,8 +22,8 @@ type Remote struct {
 	s Storer
 
 	// cache fields, there during the connection is open
-	upSrv  common.GitUploadPackService
-	upInfo *common.GitUploadPackInfo
+	client transport.Client
+	upInfo *transport.UploadPackInfo
 }
 
 func newRemote(s Storer, c *config.RemoteConfig) *Remote {
@@ -45,27 +45,28 @@ func (r *Remote) Connect() error {
 }
 
 func (r *Remote) connectUploadPackService() error {
-	endpoint, err := common.NewEndpoint(r.c.URL)
+	endpoint, err := transport.NewEndpoint(r.c.URL)
 	if err != nil {
 		return err
 	}
 
-	r.upSrv, err = clients.NewGitUploadPackService(endpoint)
+	c, err := client.NewClient(endpoint)
 	if err != nil {
 		return err
 	}
 
-	return r.upSrv.Connect()
+	r.client = c
+	return r.client.Connect()
 }
 
 func (r *Remote) retrieveUpInfo() error {
 	var err error
-	r.upInfo, err = r.upSrv.Info()
+	r.upInfo, err = r.client.FetchPackInfo()
 	return err
 }
 
 // Info returns the git-upload-pack info
-func (r *Remote) Info() *common.GitUploadPackInfo {
+func (r *Remote) Info() *transport.UploadPackInfo {
 	return r.upInfo
 }
 
@@ -98,7 +99,7 @@ func (r *Remote) Fetch(o *FetchOptions) (err error) {
 		return err
 	}
 
-	reader, err := r.upSrv.Fetch(req)
+	reader, err := r.client.FetchPack(req)
 	if err != nil {
 		return err
 	}
@@ -149,8 +150,8 @@ func (r *Remote) getWantedReferences(spec []config.RefSpec) ([]*plumbing.Referen
 
 func (r *Remote) buildRequest(
 	s storer.ReferenceStorer, o *FetchOptions, refs []*plumbing.Reference,
-) (*common.GitUploadPackRequest, error) {
-	req := &common.GitUploadPackRequest{}
+) (*transport.UploadPackRequest, error) {
+	req := &transport.UploadPackRequest{}
 	req.Depth = o.Depth
 
 	for _, ref := range refs {
@@ -264,7 +265,7 @@ func (r *Remote) Refs() (storer.ReferenceIter, error) {
 // Disconnect from the remote and save the config
 func (r *Remote) Disconnect() error {
 	r.upInfo = nil
-	return r.upSrv.Disconnect()
+	return r.client.Disconnect()
 }
 
 func (r *Remote) String() string {
