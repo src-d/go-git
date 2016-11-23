@@ -18,6 +18,7 @@ import (
 type Encoder struct {
 	storage storer.ObjectStorer
 	w       io.Writer
+	zw      *zlib.Writer
 	hash    hash.Hash
 }
 
@@ -26,15 +27,17 @@ type Encoder struct {
 func NewEncoder(w io.Writer, s storer.ObjectStorer) *Encoder {
 	h := sha1.New()
 	mw := io.MultiWriter(w, h)
+	zw := zlib.NewWriter(mw)
 	return &Encoder{
 		storage: s,
 		w:       mw,
+		zw:      zw,
 		hash:    h,
 	}
 }
 
-// Encode encodes objects specified using a list of hashes. This objects must
-// exists into the storer
+// Encode creates a packfile containing all the objects referenced in hashes
+// and writes it to the writer in the Encoder.
 func (e *Encoder) Encode(hashes []plumbing.Hash) (plumbing.Hash, error) {
 	if err := e.head(len(hashes)); err != nil {
 		return plumbing.ZeroHash, err
@@ -74,17 +77,17 @@ func (e *Encoder) entry(o plumbing.Object) error {
 		return err
 	}
 
-	zw := zlib.NewWriter(e.w)
+	e.zw.Reset(e.w)
 	or, err := o.Reader()
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(zw, or)
+	_, err = io.Copy(e.zw, or)
 	if err != nil {
 		return err
 	}
 
-	return zw.Close()
+	return e.zw.Close()
 }
 
 func (e *Encoder) entryHead(typeNum plumbing.ObjectType, size int64) error {

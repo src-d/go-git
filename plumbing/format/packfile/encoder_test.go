@@ -79,24 +79,6 @@ func (s *EncoderSuite) TestMaxObjectSize(c *C) {
 	c.Assert(hash.IsZero(), Not(Equals), true)
 }
 
-func (s *EncoderSuite) TestDeltaNotSupported(c *C) {
-	oOne := s.store.NewObject()
-	oOne.SetType(plumbing.OFSDeltaObject)
-	oTwo := s.store.NewObject()
-	oTwo.SetType(plumbing.REFDeltaObject)
-	_, err := s.store.SetObject(oOne)
-	c.Assert(err, IsNil)
-	_, err = s.store.SetObject(oTwo)
-	c.Assert(err, IsNil)
-	hash, err := s.enc.Encode([]plumbing.Hash{oOne.Hash()})
-	c.Assert(err, NotNil)
-	c.Assert(hash.IsZero(), Equals, true)
-
-	hash, err = s.enc.Encode([]plumbing.Hash{oTwo.Hash()})
-	c.Assert(err, NotNil)
-	c.Assert(hash.IsZero(), Equals, true)
-}
-
 func (s *EncoderSuite) TestDecodeEncodeDecode(c *C) {
 	fixtures.Basic().ByTag("packfile").Test(c, func(f *fixtures.Fixture) {
 		scanner := NewScanner(f.Packfile())
