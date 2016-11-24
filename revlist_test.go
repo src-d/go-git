@@ -65,10 +65,10 @@ func (s *RevListSuite) TestRevListObjects(c *C) {
 	secondCommit, err := s.r.Commit(plumbing.NewHash(secondCommit))
 	c.Assert(err, IsNil)
 
-	localHist, err := RevListObjects([]*Commit{initCommit}, nil, s.r)
+	localHist, err := RevListObjects(s.r, []*Commit{initCommit}, nil)
 	c.Assert(err, IsNil)
 
-	remoteHist, err := RevListObjects([]*Commit{secondCommit}, localHist, s.r)
+	remoteHist, err := RevListObjects(s.r, []*Commit{secondCommit}, localHist)
 	c.Assert(err, IsNil)
 
 	for _, h := range remoteHist {
@@ -84,10 +84,10 @@ func (s *RevListSuite) TestRevListObjectsReverse(c *C) {
 	secondCommit, err := s.r.Commit(plumbing.NewHash(secondCommit))
 	c.Assert(err, IsNil)
 
-	localHist, err := RevListObjects([]*Commit{secondCommit}, nil, s.r)
+	localHist, err := RevListObjects(s.r, []*Commit{secondCommit}, nil)
 	c.Assert(err, IsNil)
 
-	remoteHist, err := RevListObjects([]*Commit{initCommit}, localHist, s.r)
+	remoteHist, err := RevListObjects(s.r, []*Commit{initCommit}, localHist)
 	c.Assert(err, IsNil)
 
 	c.Assert(len(remoteHist), Equals, 0)
@@ -97,10 +97,10 @@ func (s *RevListSuite) TestRevListObjectsSameCommit(c *C) {
 	commit, err := s.r.Commit(plumbing.NewHash(secondCommit))
 	c.Assert(err, IsNil)
 
-	localHist, err := RevListObjects([]*Commit{commit}, nil, s.r)
+	localHist, err := RevListObjects(s.r, []*Commit{commit}, nil)
 	c.Assert(err, IsNil)
 
-	remoteHist, err := RevListObjects([]*Commit{commit}, localHist, s.r)
+	remoteHist, err := RevListObjects(s.r, []*Commit{commit}, localHist)
 	c.Assert(err, IsNil)
 
 	c.Assert(len(remoteHist), Equals, 0)
@@ -121,11 +121,11 @@ func (s *RevListSuite) TestRevListObjectsNewBranch(c *C) {
 	someCommitOtherBranch, err := s.r.Commit(plumbing.NewHash(someCommitOtherBranch))
 	c.Assert(err, IsNil)
 
-	localHist, err := RevListObjects([]*Commit{someCommit}, nil, s.r)
+	localHist, err := RevListObjects(s.r, []*Commit{someCommit}, nil)
 	c.Assert(err, IsNil)
 
 	remoteHist, err := RevListObjects(
-		[]*Commit{someCommitBranch, someCommitOtherBranch}, localHist, s.r)
+		s.r, []*Commit{someCommitBranch, someCommitOtherBranch}, localHist)
 	c.Assert(err, IsNil)
 
 	revList := map[string]bool{

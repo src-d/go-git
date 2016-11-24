@@ -7,24 +7,24 @@ import (
 )
 
 // RevListObjects gets all the hashes from all the reachable objects from the
-// given commits. Ignore hashes are objects that you don't want back into the
+// given commits. Ignore param are object hashes that we want to ignore on the
 // result. All that objects must be accessible from the Repository.
 func RevListObjects(
+	r *Repository,
 	commits []*Commit,
-	ignore []plumbing.Hash,
-	r *Repository) ([]plumbing.Hash, error) {
+	ignore []plumbing.Hash) ([]plumbing.Hash, error) {
 
 	seen := hashListToSet(ignore)
 	result := make(map[plumbing.Hash]bool)
 	for _, c := range commits {
-		err := iterateAll(c, seen, func(h plumbing.Hash) error {
+		err := iterateAll(r, c, seen, func(h plumbing.Hash) error {
 			if !seen[h] {
 				result[h] = true
 				seen[h] = true
 			}
 
 			return nil
-		}, r)
+		})
 
 		if err != nil {
 			return nil, err
@@ -63,9 +63,9 @@ func iterateCommits(commit *Commit, cb func(c *Commit) error) error {
 }
 
 func iterateCommitTrees(
+	repository *Repository,
 	commit *Commit,
-	cb func(h plumbing.Hash) error,
-	repository *Repository) error {
+	cb func(h plumbing.Hash) error) error {
 
 	tree, err := commit.Tree()
 	if err != nil {
@@ -94,10 +94,10 @@ func iterateCommitTrees(
 }
 
 func iterateAll(
+	r *Repository,
 	commit *Commit,
 	seen map[plumbing.Hash]bool,
-	cb func(h plumbing.Hash) error,
-	r *Repository) error {
+	cb func(h plumbing.Hash) error) error {
 
 	return iterateCommits(commit, func(commit *Commit) error {
 		if seen[commit.Hash] {
@@ -108,8 +108,8 @@ func iterateAll(
 			return err
 		}
 
-		return iterateCommitTrees(commit, func(h plumbing.Hash) error {
+		return iterateCommitTrees(r, commit, func(h plumbing.Hash) error {
 			return cb(h)
-		}, r)
+		})
 	})
 }
