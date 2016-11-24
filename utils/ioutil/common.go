@@ -46,7 +46,7 @@ func (r *readCloser) Close() error {
 }
 
 // NewReadCloser creates an `io.ReadCloser` with the given `io.Reader` and
-// `io.ReadCloser`.
+// `io.Closer`.
 func NewReadCloser(r io.Reader, c io.Closer) io.ReadCloser {
 	return &readCloser{Reader: r, closer: c}
 }
