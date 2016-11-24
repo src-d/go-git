@@ -1,16 +1,14 @@
 package packfile
 
 import (
+	"compress/zlib"
 	"crypto/sha1"
 	"fmt"
-	"hash"
 	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/utils/binary"
-
-	"github.com/klauspost/compress/zlib"
 )
 
 // Encoder gets the data from the storage and write it into the writer in PACK
@@ -19,20 +17,22 @@ type Encoder struct {
 	storage storer.ObjectStorer
 	w       io.Writer
 	zw      *zlib.Writer
-	hash    hash.Hash
+	hasher  plumbing.Hasher
 }
 
 // NewEncoder creates a new packfile encoder using a specific Writer and
 // ObjectStorer
 func NewEncoder(w io.Writer, s storer.ObjectStorer) *Encoder {
-	h := sha1.New()
+	h := plumbing.Hasher{
+		Hash: sha1.New(),
+	}
 	mw := io.MultiWriter(w, h)
 	zw := zlib.NewWriter(mw)
 	return &Encoder{
 		storage: s,
 		w:       mw,
 		zw:      zw,
-		hash:    h,
+		hasher:  h,
 	}
 }
 
@@ -111,8 +111,6 @@ func (e *Encoder) entryHead(typeNum plumbing.ObjectType, size int64) error {
 }
 
 func (e *Encoder) footer() (plumbing.Hash, error) {
-	b := e.hash.Sum(nil)
-	var h plumbing.Hash
-	copy(h[:], b)
+	h := e.hasher.Sum()
 	return h, binary.Write(e.w, h)
 }
