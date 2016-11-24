@@ -4,10 +4,14 @@
 package test
 
 import (
+	"bytes"
+	"io"
 	"io/ioutil"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/storage/memory"
 
 	. "gopkg.in/check.v1"
 )
@@ -87,9 +91,7 @@ func (s *FetchPackSuite) TestFullFetchPack(c *C) {
 	reader, err := r.FetchPack(req)
 	c.Assert(err, IsNil)
 
-	b, err := ioutil.ReadAll(reader)
-	c.Assert(err, IsNil)
-	c.Assert(b, HasLen, 85374)
+	s.checkObjectNumber(c, reader, 28)
 }
 
 func (s *FetchPackSuite) TestFetchPack(c *C) {
@@ -103,9 +105,7 @@ func (s *FetchPackSuite) TestFetchPack(c *C) {
 	reader, err := r.FetchPack(req)
 	c.Assert(err, IsNil)
 
-	b, err := ioutil.ReadAll(reader)
-	c.Assert(err, IsNil)
-	c.Assert(b, HasLen, 85374)
+	s.checkObjectNumber(c, reader, 28)
 }
 
 func (s *FetchPackSuite) TestFetchPackNoChanges(c *C) {
@@ -134,9 +134,7 @@ func (s *FetchPackSuite) TestFetchPackMulti(c *C) {
 	reader, err := r.FetchPack(req)
 	c.Assert(err, IsNil)
 
-	b, err := ioutil.ReadAll(reader)
-	c.Assert(err, IsNil)
-	c.Assert(b, HasLen, 85585)
+	s.checkObjectNumber(c, reader, 31)
 }
 
 func (s *FetchPackSuite) TestFetchError(c *C) {
@@ -152,4 +150,17 @@ func (s *FetchPackSuite) TestFetchError(c *C) {
 
 	//XXX: We do not test Close error, since implementations might return
 	//     different errors if a previous error was found.
+}
+
+func (s *FetchPackSuite) checkObjectNumber(c *C, r io.Reader, n int) {
+	b, err := ioutil.ReadAll(r)
+	c.Assert(err, IsNil)
+	buf := bytes.NewBuffer(b)
+	scanner := packfile.NewScanner(buf)
+	storage := memory.NewStorage()
+	d, err := packfile.NewDecoder(scanner, storage)
+	c.Assert(err, IsNil)
+	_, err = d.Decode()
+	c.Assert(err, IsNil)
+	c.Assert(len(storage.Objects), Equals, n)
 }
