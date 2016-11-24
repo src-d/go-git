@@ -6,9 +6,11 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
-// RevListObjects gets all the hashes from all the reachable objects from the
-// given commits. Ignore param are object hashes that we want to ignore on the
-// result. All that objects must be accessible from the Repository.
+// RevListObjects applies a complementary set. It gets all the hashes from all
+// the reachable objects from the given commits. Ignore param are object hashes
+// that we want to ignore on the result. It is a list because is
+// easier to interact with other porcelain elements, but internally it is
+// converted to a map. All that objects must be accessible from the Repository.
 func RevListObjects(
 	r *Repository,
 	commits []*Commit,
@@ -17,7 +19,7 @@ func RevListObjects(
 	seen := hashListToSet(ignore)
 	result := make(map[plumbing.Hash]bool)
 	for _, c := range commits {
-		err := iterateAll(r, c, seen, func(h plumbing.Hash) error {
+		err := reachableObjects(r, c, seen, func(h plumbing.Hash) error {
 			if !seen[h] {
 				result[h] = true
 				seen[h] = true
@@ -34,24 +36,32 @@ func RevListObjects(
 	return hashSetToList(result), nil
 }
 
-func hashSetToList(hashes map[plumbing.Hash]bool) []plumbing.Hash {
-	var result []plumbing.Hash
-	for key := range hashes {
-		result = append(result, key)
-	}
+// reachableObjects returns, using the callback function, all the reachable
+// objects from the specified commit. To avoid to iterate over seen commits,
+// if a commit hash is into the 'seen' set, we will not iterate all his trees
+// and blobs objects.
+func reachableObjects(
+	r *Repository,
+	commit *Commit,
+	seen map[plumbing.Hash]bool,
+	cb func(h plumbing.Hash) error) error {
 
-	return result
+	return iterateCommits(commit, func(commit *Commit) error {
+		if seen[commit.Hash] {
+			return nil
+		}
+
+		if err := cb(commit.Hash); err != nil {
+			return err
+		}
+
+		return iterateCommitTrees(r, commit, func(h plumbing.Hash) error {
+			return cb(h)
+		})
+	})
 }
 
-func hashListToSet(hashes []plumbing.Hash) map[plumbing.Hash]bool {
-	result := make(map[plumbing.Hash]bool)
-	for _, h := range hashes {
-		result[h] = true
-	}
-
-	return result
-}
-
+// iterateCommits iterate all reachable commits from the given one
 func iterateCommits(commit *Commit, cb func(c *Commit) error) error {
 	if err := cb(commit); err != nil {
 		return err
@@ -62,6 +72,7 @@ func iterateCommits(commit *Commit, cb func(c *Commit) error) error {
 	})
 }
 
+// iterateCommitTrees iterate all reachable trees from the given commit
 func iterateCommitTrees(
 	repository *Repository,
 	commit *Commit,
@@ -93,23 +104,20 @@ func iterateCommitTrees(
 	return nil
 }
 
-func iterateAll(
-	r *Repository,
-	commit *Commit,
-	seen map[plumbing.Hash]bool,
-	cb func(h plumbing.Hash) error) error {
+func hashSetToList(hashes map[plumbing.Hash]bool) []plumbing.Hash {
+	var result []plumbing.Hash
+	for key := range hashes {
+		result = append(result, key)
+	}
 
-	return iterateCommits(commit, func(commit *Commit) error {
-		if seen[commit.Hash] {
-			return nil
-		}
+	return result
+}
 
-		if err := cb(commit.Hash); err != nil {
-			return err
-		}
+func hashListToSet(hashes []plumbing.Hash) map[plumbing.Hash]bool {
+	result := make(map[plumbing.Hash]bool)
+	for _, h := range hashes {
+		result[h] = true
+	}
 
-		return iterateCommitTrees(r, commit, func(h plumbing.Hash) error {
-			return cb(h)
-		})
-	})
+	return result
 }

@@ -23,6 +23,8 @@ const (
 	someCommitOtherBranch = "6ecf0ef2c2dffb796033e5a02219af86ec6584e5"
 )
 
+// Created using: git log --graph --oneline --all
+//
 // Basic fixture repository commits tree:
 //
 // * 6ecf0ef vendor stuff
