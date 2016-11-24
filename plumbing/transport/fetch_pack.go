@@ -129,13 +129,13 @@ func (r *UploadPackRequest) Have(h ...plumbing.Hash) {
 }
 
 func (r *UploadPackRequest) IsEmpty() bool {
-	if len(r.Haves) < len(r.Wants) {
-		return false
-	}
+	return isSubset(r.Wants, r.Haves)
+}
 
-	for _, h := range r.Wants {
+func isSubset(needle []plumbing.Hash, haystack []plumbing.Hash) bool {
+	for _, h := range needle {
 		found := false
-		for _, oh := range r.Haves {
+		for _, oh := range haystack {
 			if h == oh {
 				found = true
 				break
