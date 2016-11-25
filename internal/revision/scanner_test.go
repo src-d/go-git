@@ -109,6 +109,14 @@ func (s *ScannerSuite) TestReadMinus(c *C) {
 	c.Assert(tok, Equals, minus)
 }
 
+func (s *ScannerSuite) TestReadAt(c *C) {
+	scanner := newScanner(bytes.NewBufferString("@"))
+	tok, data := scanner.scan()
+
+	c.Assert(data, Equals, "@")
+	c.Assert(tok, Equals, at)
+}
+
 func (s *ScannerSuite) TestReadWord(c *C) {
 	scanner := newScanner(bytes.NewBufferString("abcde"))
 	tok, data := scanner.scan()

@@ -6,6 +6,7 @@ type token int
 const (
 	eof token = iota
 
+	at
 	caret
 	cbrace
 	char

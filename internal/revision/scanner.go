@@ -54,6 +54,8 @@ func (s *scanner) scan() (token, string) {
 		return cbrace, string(ch)
 	case '-':
 		return minus, string(ch)
+	case '@':
+		return at, string(ch)
 	}
 
 	if unicode.IsSpace(ch) {
