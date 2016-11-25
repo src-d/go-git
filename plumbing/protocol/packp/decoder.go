@@ -1,4 +1,4 @@
-package advrefs
+package packp
 
 import (
 	"bytes"
@@ -206,18 +206,6 @@ func decodeCaps(p *Decoder) decoderStateFn {
 	}
 
 	return decodeOtherRefs
-}
-
-// Capabilities are a single string or a name=value.
-// Even though we are only going to read at moust 1 value, we return
-// a slice of values, as Capability.Add receives that.
-func readCapability(data []byte) (name string, values []string) {
-	pair := bytes.SplitN(data, []byte{'='}, 2)
-	if len(pair) == 2 {
-		values = append(values, string(pair[1]))
-	}
-
-	return string(pair[0]), values
 }
 
 // The refs are either tips (obj-id SP refname) or a peeled (obj-id SP refname^{}).

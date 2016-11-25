@@ -1,4 +1,4 @@
-package advrefs_test
+package packp_test
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
-	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/advrefs"
 
 	. "gopkg.in/check.v1"
 )
@@ -18,38 +17,38 @@ type SuiteDecoder struct{}
 var _ = Suite(&SuiteDecoder{})
 
 func (s *SuiteDecoder) TestEmpty(c *C) {
-	ar := advrefs.New()
+	ar := packp.New()
 	var buf bytes.Buffer
-	d := advrefs.NewDecoder(&buf)
+	d := packp.NewDecoder(&buf)
 
 	err := d.Decode(ar)
-	c.Assert(err, Equals, advrefs.ErrEmpty)
+	c.Assert(err, Equals, packp.ErrEmpty)
 }
 
 func (s *SuiteDecoder) TestEmptyFlush(c *C) {
-	ar := advrefs.New()
+	ar := packp.New()
 	var buf bytes.Buffer
 	e := pktline.NewEncoder(&buf)
 	e.Flush()
 
-	d := advrefs.NewDecoder(&buf)
+	d := packp.NewDecoder(&buf)
 
 	err := d.Decode(ar)
-	c.Assert(err, Equals, advrefs.ErrEmpty)
+	c.Assert(err, Equals, packp.ErrEmpty)
 }
 
 func (s *SuiteDecoder) TestEmptyPrefixFlush(c *C) {
-	ar := advrefs.New()
+	ar := packp.New()
 	var buf bytes.Buffer
 	e := pktline.NewEncoder(&buf)
 	e.EncodeString("# service=git-upload-pack")
 	e.Flush()
 	e.Flush()
 
-	d := advrefs.NewDecoder(&buf)
+	d := packp.NewDecoder(&buf)
 
 	err := d.Decode(ar)
-	c.Assert(err, Equals, advrefs.ErrEmpty)
+	c.Assert(err, Equals, packp.ErrEmpty)
 }
 
 func (s *SuiteDecoder) TestShortForHash(c *C) {
@@ -71,8 +70,8 @@ func toPktLines(c *C, payloads []string) io.Reader {
 }
 
 func testDecoderErrorMatches(c *C, input io.Reader, pattern string) {
-	ar := advrefs.New()
-	d := advrefs.NewDecoder(input)
+	ar := packp.New()
+	d := packp.NewDecoder(input)
 
 	err := d.Decode(ar)
 	c.Assert(err, ErrorMatches, pattern)
@@ -96,14 +95,14 @@ func (s *SuiteDecoder) TestZeroId(c *C) {
 	c.Assert(ar.Head, IsNil)
 }
 
-func testDecodeOK(c *C, payloads []string) *advrefs.AdvRefs {
+func testDecodeOK(c *C, payloads []string) *packp.AdvRefs {
 	var buf bytes.Buffer
 	e := pktline.NewEncoder(&buf)
 	err := e.EncodeString(payloads...)
 	c.Assert(err, IsNil)
 
-	ar := advrefs.New()
-	d := advrefs.NewDecoder(&buf)
+	ar := packp.New()
+	d := packp.NewDecoder(&buf)
 
 	err = d.Decode(ar)
 	c.Assert(err, IsNil)

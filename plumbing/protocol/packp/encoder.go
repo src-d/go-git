@@ -1,4 +1,4 @@
-package advrefs
+package packp
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
-	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
 )
 
 // An Encoder writes AdvRefs values to an output stream.
@@ -87,7 +86,7 @@ func formatSeparator(h *plumbing.Hash) string {
 	return head
 }
 
-func formatCaps(c *packp.Capabilities) string {
+func formatCaps(c *Capabilities) string {
 	if c == nil {
 		return ""
 	}

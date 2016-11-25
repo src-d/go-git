@@ -1,4 +1,4 @@
-package advrefs_test
+package packp_test
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
-	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/advrefs"
 
 	. "gopkg.in/check.v1"
 )
@@ -26,9 +25,9 @@ func pktlines(c *C, payloads ...[]byte) []byte {
 	return buf.Bytes()
 }
 
-func testEncode(c *C, input *advrefs.AdvRefs, expected []byte) {
+func testEncode(c *C, input *packp.AdvRefs, expected []byte) {
 	var buf bytes.Buffer
-	e := advrefs.NewEncoder(&buf)
+	e := packp.NewEncoder(&buf)
 	err := e.Encode(input)
 	c.Assert(err, IsNil)
 	obtained := buf.Bytes()
@@ -39,7 +38,7 @@ func testEncode(c *C, input *advrefs.AdvRefs, expected []byte) {
 }
 
 func (s *SuiteEncoder) TestZeroValue(c *C) {
-	ar := &advrefs.AdvRefs{}
+	ar := &packp.AdvRefs{}
 
 	expected := pktlines(c,
 		[]byte("0000000000000000000000000000000000000000 capabilities^{}\x00\n"),
@@ -51,7 +50,7 @@ func (s *SuiteEncoder) TestZeroValue(c *C) {
 
 func (s *SuiteEncoder) TestHead(c *C) {
 	hash := plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
-	ar := &advrefs.AdvRefs{
+	ar := &packp.AdvRefs{
 		Head: &hash,
 	}
 
@@ -68,7 +67,7 @@ func (s *SuiteEncoder) TestCapsNoHead(c *C) {
 	capabilities.Add("symref", "HEAD:/refs/heads/master")
 	capabilities.Add("ofs-delta")
 	capabilities.Add("multi_ack")
-	ar := &advrefs.AdvRefs{
+	ar := &packp.AdvRefs{
 		Capabilities: capabilities,
 	}
 
@@ -86,7 +85,7 @@ func (s *SuiteEncoder) TestCapsWithHead(c *C) {
 	capabilities.Add("symref", "HEAD:/refs/heads/master")
 	capabilities.Add("ofs-delta")
 	capabilities.Add("multi_ack")
-	ar := &advrefs.AdvRefs{
+	ar := &packp.AdvRefs{
 		Head:         &hash,
 		Capabilities: capabilities,
 	}
@@ -107,7 +106,7 @@ func (s *SuiteEncoder) TestRefs(c *C) {
 		"refs/tags/v2.6.13-tree": plumbing.NewHash("2222222222222222222222222222222222222222"),
 		"refs/tags/v2.6.11-tree": plumbing.NewHash("5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c"),
 	}
-	ar := &advrefs.AdvRefs{
+	ar := &packp.AdvRefs{
 		References: references,
 	}
 
@@ -136,7 +135,7 @@ func (s *SuiteEncoder) TestPeeled(c *C) {
 		"refs/tags/v2.7.13-tree": plumbing.NewHash("4444444444444444444444444444444444444444"),
 		"refs/tags/v2.6.12-tree": plumbing.NewHash("5555555555555555555555555555555555555555"),
 	}
-	ar := &advrefs.AdvRefs{
+	ar := &packp.AdvRefs{
 		References: references,
 		Peeled:     peeled,
 	}
@@ -163,7 +162,7 @@ func (s *SuiteEncoder) TestShallow(c *C) {
 		plumbing.NewHash("3333333333333333333333333333333333333333"),
 		plumbing.NewHash("2222222222222222222222222222222222222222"),
 	}
-	ar := &advrefs.AdvRefs{
+	ar := &packp.AdvRefs{
 		Shallows: shallows,
 	}
 
@@ -207,7 +206,7 @@ func (s *SuiteEncoder) TestAll(c *C) {
 		plumbing.NewHash("2222222222222222222222222222222222222222"),
 	}
 
-	ar := &advrefs.AdvRefs{
+	ar := &packp.AdvRefs{
 		Head:         &hash,
 		Capabilities: capabilities,
 		References:   references,
@@ -238,12 +237,12 @@ func (s *SuiteEncoder) TestErrorTooLong(c *C) {
 	references := map[string]plumbing.Hash{
 		strings.Repeat("a", pktline.MaxPayloadSize): plumbing.NewHash("a6930aaee06755d1bdcfd943fbf614e4d92bb0c7"),
 	}
-	ar := &advrefs.AdvRefs{
+	ar := &packp.AdvRefs{
 		References: references,
 	}
 
 	var buf bytes.Buffer
-	e := advrefs.NewEncoder(&buf)
+	e := packp.NewEncoder(&buf)
 	err := e.Encode(ar)
 	c.Assert(err, ErrorMatches, ".*payload is too long.*")
 }

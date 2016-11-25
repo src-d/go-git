@@ -9,7 +9,6 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
-	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/advrefs"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 
@@ -49,7 +48,7 @@ func (s *fetchPackSession) AdvertisedReferences() (*transport.UploadPackInfo, er
 
 	i := transport.NewUploadPackInfo()
 	if err := i.Decode(s.stdout); err != nil {
-		if err != advrefs.ErrEmpty {
+		if err != packp.ErrEmpty {
 			return nil, err
 		}
 
