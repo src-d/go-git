@@ -59,7 +59,7 @@ func (s *UploadPackSuite) TestUploadPackInfoEmpty(c *C) {
 
 	i := NewUploadPackInfo()
 	err := i.Decode(b)
-	c.Assert(err, Equals, packp.ErrEmpty)
+	c.Assert(err, Equals, packp.ErrEmptyAdvRefs)
 }
 
 func (s *UploadPackSuite) TestUploadPackEncode(c *C) {

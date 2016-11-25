@@ -26,10 +26,9 @@ func NewUploadPackInfo() *UploadPackInfo {
 }
 
 func (i *UploadPackInfo) Decode(r io.Reader) error {
-	d := packp.NewAdvRefsDecoder(r)
 	ar := packp.NewAdvRefs()
-	if err := d.Decode(ar); err != nil {
-		if err == packp.ErrEmpty {
+	if err := ar.Decode(r); err != nil {
+		if err == packp.ErrEmptyAdvRefs {
 			return err
 		}
 		return plumbing.NewUnexpectedError(err)

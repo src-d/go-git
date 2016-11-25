@@ -64,7 +64,7 @@ func (s *fetchPackSession) AdvertisedReferences() (*transport.UploadPackInfo,
 
 	i := transport.NewUploadPackInfo()
 	if err := i.Decode(res.Body); err != nil {
-		if err == packp.ErrEmpty {
+		if err == packp.ErrEmptyAdvRefs {
 			err = transport.ErrEmptyRemoteRepository
 		}
 

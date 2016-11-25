@@ -48,7 +48,7 @@ func (s *fetchPackSession) AdvertisedReferences() (*transport.UploadPackInfo, er
 
 	i := transport.NewUploadPackInfo()
 	if err := i.Decode(s.stdout); err != nil {
-		if err != packp.ErrEmpty {
+		if err != packp.ErrEmptyAdvRefs {
 			return nil, err
 		}
 
