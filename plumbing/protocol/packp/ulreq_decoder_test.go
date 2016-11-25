@@ -19,7 +19,7 @@ var _ = Suite(&UlReqDecodeSuite{})
 func (s *UlReqDecodeSuite) TestEmpty(c *C) {
 	ur := NewUploadRequest()
 	var buf bytes.Buffer
-	d := NewUlReqDecoder(&buf)
+	d := newUlReqDecoder(&buf)
 
 	err := d.Decode(ur)
 	c.Assert(err, ErrorMatches, "pkt-line 1: EOF")
@@ -36,7 +36,7 @@ func (s *UlReqDecodeSuite) TestNoWant(c *C) {
 
 func (s *UlReqDecodeSuite) testDecoderErrorMatches(c *C, input io.Reader, pattern string) {
 	ur := NewUploadRequest()
-	d := NewUlReqDecoder(input)
+	d := newUlReqDecoder(input)
 
 	err := d.Decode(ur)
 	c.Assert(err, ErrorMatches, pattern)
@@ -70,7 +70,7 @@ func (s *UlReqDecodeSuite) testDecodeOK(c *C, payloads []string) *UploadRequest 
 	c.Assert(err, IsNil)
 
 	ur := NewUploadRequest()
-	d := NewUlReqDecoder(&buf)
+	d := newUlReqDecoder(&buf)
 
 	err = d.Decode(ur)
 	c.Assert(err, IsNil)

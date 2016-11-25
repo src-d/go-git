@@ -163,11 +163,11 @@ var (
 func fetchPack(w io.WriteCloser, r io.Reader,
 	req *packp.UploadPackRequest) error {
 
-	if err := sendUlReq(w, req.UploadRequest); err != nil {
+	if err := req.UploadRequest.Encode(w); err != nil {
 		return fmt.Errorf("sending upload-req message: %s", err)
 	}
 
-	if err := sendHaves(w, req.UploadHaves); err != nil {
+	if err := req.UploadHaves.Encode(w); err != nil {
 		return fmt.Errorf("sending haves message: %s", err)
 	}
 
@@ -181,29 +181,6 @@ func fetchPack(w io.WriteCloser, r io.Reader,
 
 	if err := readNAK(r); err != nil {
 		return fmt.Errorf("reading NAK: %s", err)
-	}
-
-	return nil
-}
-
-func sendUlReq(w io.Writer, req *packp.UploadRequest) error {
-	e := packp.NewUlReqEncoder(w)
-
-	return e.Encode(req)
-}
-
-func sendHaves(w io.Writer, req *packp.UploadHaves) error {
-	e := pktline.NewEncoder(w)
-	for _, have := range req.Haves {
-		if err := e.Encodef("have %s\n", have); err != nil {
-			return fmt.Errorf("sending haves for %q: %s", have, err)
-		}
-	}
-
-	if len(req.Haves) != 0 {
-		if err := e.Flush(); err != nil {
-			return fmt.Errorf("sending flush-pkt after haves: %s", err)
-		}
 	}
 
 	return nil

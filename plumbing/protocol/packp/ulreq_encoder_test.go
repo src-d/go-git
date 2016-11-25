@@ -16,7 +16,7 @@ var _ = Suite(&UlReqEncodeSuite{})
 
 func testUlReqEncode(c *C, ur *UploadRequest, expectedPayloads []string) {
 	var buf bytes.Buffer
-	e := NewUlReqEncoder(&buf)
+	e := newUlReqEncoder(&buf)
 
 	err := e.Encode(ur)
 	c.Assert(err, IsNil)
@@ -31,7 +31,7 @@ func testUlReqEncode(c *C, ur *UploadRequest, expectedPayloads []string) {
 
 func testUlReqEncodeError(c *C, ur *UploadRequest, expectedErrorRegEx string) {
 	var buf bytes.Buffer
-	e := NewUlReqEncoder(&buf)
+	e := newUlReqEncoder(&buf)
 
 	err := e.Encode(ur)
 	c.Assert(err, ErrorMatches, expectedErrorRegEx)

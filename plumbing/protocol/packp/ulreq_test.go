@@ -32,7 +32,7 @@ func ExampleUlReqEncoder_Encode() {
 	ur.Depth = DepthSince(since)
 
 	// Create a new Encode for the stdout...
-	e := NewUlReqEncoder(os.Stdout)
+	e := newUlReqEncoder(os.Stdout)
 	// ...and encode the upload-request to it.
 	_ = e.Encode(ur) // ignoring errors for brevity
 	// Output:
@@ -60,7 +60,7 @@ func ExampleUlReqDecoder_Decode() {
 	input := strings.NewReader(raw)
 
 	// Create the Decoder reading from our input.
-	d := NewUlReqDecoder(input)
+	d := newUlReqDecoder(input)
 
 	// Decode the input into a newly allocated UlReq value.
 	ur := NewUploadRequest()
