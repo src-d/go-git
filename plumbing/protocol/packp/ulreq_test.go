@@ -10,7 +10,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 )
 
-func ExampleEncoder_Encode() {
+func ExampleUlReqEncoder_Encode() {
 	// Create an empty UlReq with the contents you want...
 	ur := NewUlReq()
 
@@ -45,7 +45,7 @@ func ExampleEncoder_Encode() {
 	// 0000
 }
 
-func ExampleDecoder_Decode() {
+func ExampleUlReqDecoder_Decode() {
 	// Here is a raw advertised-ref message.
 	raw := "" +
 		"005bwant 1111111111111111111111111111111111111111 ofs-delta sysref=HEAD:/refs/heads/master\n" +
