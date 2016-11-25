@@ -117,6 +117,38 @@ func (s *ScannerSuite) TestReadAt(c *C) {
 	c.Assert(tok, Equals, at)
 }
 
+func (s *ScannerSuite) TestReadAntislash(c *C) {
+	scanner := newScanner(bytes.NewBufferString("\\"))
+	tok, data := scanner.scan()
+
+	c.Assert(data, Equals, "\\")
+	c.Assert(tok, Equals, aslash)
+}
+
+func (s *ScannerSuite) TestReadQuestionMark(c *C) {
+	scanner := newScanner(bytes.NewBufferString("?"))
+	tok, data := scanner.scan()
+
+	c.Assert(data, Equals, "?")
+	c.Assert(tok, Equals, qmark)
+}
+
+func (s *ScannerSuite) TestReadAsterisk(c *C) {
+	scanner := newScanner(bytes.NewBufferString("*"))
+	tok, data := scanner.scan()
+
+	c.Assert(data, Equals, "*")
+	c.Assert(tok, Equals, asterisk)
+}
+
+func (s *ScannerSuite) TestReadOpenBracket(c *C) {
+	scanner := newScanner(bytes.NewBufferString("["))
+	tok, data := scanner.scan()
+
+	c.Assert(data, Equals, "[")
+	c.Assert(tok, Equals, obracket)
+}
+
 func (s *ScannerSuite) TestReadWord(c *C) {
 	scanner := newScanner(bytes.NewBufferString("abcde"))
 	tok, data := scanner.scan()

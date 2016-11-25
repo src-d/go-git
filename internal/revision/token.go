@@ -6,6 +6,8 @@ type token int
 const (
 	eof token = iota
 
+	aslash
+	asterisk
 	at
 	caret
 	cbrace
@@ -16,6 +18,8 @@ const (
 	minus
 	number
 	obrace
+	obracket
+	qmark
 	slash
 	space
 	tilde
