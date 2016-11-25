@@ -38,14 +38,12 @@ func (e *UlReqEncoder) Encode(v *UlReq) error {
 	e.data = v
 	e.sortedWants = sortHashes(v.Wants)
 
-	for state := encodeFirstWant; state != nil; {
-		state = state(e)
+	for state := e.encodeFirstWant; state != nil; {
+		state = state()
 	}
 
 	return e.err
 }
-
-type encoderStateFn func(*UlReqEncoder) encoderStateFn
 
 func sortHashes(list []plumbing.Hash) []string {
 	sorted := make([]string, len(list))
@@ -57,7 +55,7 @@ func sortHashes(list []plumbing.Hash) []string {
 	return sorted
 }
 
-func encodeFirstWant(e *UlReqEncoder) encoderStateFn {
+func (e *UlReqEncoder) encodeFirstWant() stateFn {
 	var err error
 	if e.data.Capabilities.IsEmpty() {
 		err = e.pe.Encodef("want %s\n", e.sortedWants[0])
@@ -74,10 +72,10 @@ func encodeFirstWant(e *UlReqEncoder) encoderStateFn {
 		return nil
 	}
 
-	return encodeAditionalWants
+	return e.encodeAditionalWants
 }
 
-func encodeAditionalWants(e *UlReqEncoder) encoderStateFn {
+func (e *UlReqEncoder) encodeAditionalWants() stateFn {
 	for _, w := range e.sortedWants[1:] {
 		if err := e.pe.Encodef("want %s\n", w); err != nil {
 			e.err = fmt.Errorf("encoding want %q: %s", w, err)
@@ -85,10 +83,10 @@ func encodeAditionalWants(e *UlReqEncoder) encoderStateFn {
 		}
 	}
 
-	return encodeShallows
+	return e.encodeShallows
 }
 
-func encodeShallows(e *UlReqEncoder) encoderStateFn {
+func (e *UlReqEncoder) encodeShallows() stateFn {
 	sorted := sortHashes(e.data.Shallows)
 	for _, s := range sorted {
 		if err := e.pe.Encodef("shallow %s\n", s); err != nil {
@@ -97,10 +95,10 @@ func encodeShallows(e *UlReqEncoder) encoderStateFn {
 		}
 	}
 
-	return encodeDepth
+	return e.encodeDepth
 }
 
-func encodeDepth(e *UlReqEncoder) encoderStateFn {
+func (e *UlReqEncoder) encodeDepth() stateFn {
 	switch depth := e.data.Depth.(type) {
 	case DepthCommits:
 		if depth != 0 {
@@ -127,10 +125,10 @@ func encodeDepth(e *UlReqEncoder) encoderStateFn {
 		return nil
 	}
 
-	return encodeFlush
+	return e.encodeFlush
 }
 
-func encodeFlush(e *UlReqEncoder) encoderStateFn {
+func (e *UlReqEncoder) encodeFlush() stateFn {
 	if err := e.pe.Flush(); err != nil {
 		e.err = fmt.Errorf("encoding flush-pkt: %s", err)
 		return nil
