@@ -19,7 +19,7 @@ var _ = Suite(&UlReqDecodeSuite{})
 func (s *UlReqDecodeSuite) TestEmpty(c *C) {
 	ur := NewUlReq()
 	var buf bytes.Buffer
-	d := NewDecoder(&buf)
+	d := NewUlReqDecoder(&buf)
 
 	err := d.Decode(ur)
 	c.Assert(err, ErrorMatches, "pkt-line 1: EOF")
@@ -45,7 +45,7 @@ func toPktLines(c *C, payloads []string) io.Reader {
 
 func testDecoderErrorMatches(c *C, input io.Reader, pattern string) {
 	ur := NewUlReq()
-	d := NewDecoder(input)
+	d := NewUlReqDecoder(input)
 
 	err := d.Decode(ur)
 	c.Assert(err, ErrorMatches, pattern)
@@ -79,7 +79,7 @@ func testDecodeOK(c *C, payloads []string) *UlReq {
 	c.Assert(err, IsNil)
 
 	ur := NewUlReq()
-	d := NewDecoder(&buf)
+	d := NewUlReqDecoder(&buf)
 
 	err = d.Decode(ur)
 	c.Assert(err, IsNil)

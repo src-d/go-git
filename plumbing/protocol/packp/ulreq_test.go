@@ -60,7 +60,7 @@ func ExampleDecoder_Decode() {
 	input := strings.NewReader(raw)
 
 	// Create the Decoder reading from our input.
-	d := NewDecoder(input)
+	d := NewUlReqDecoder(input)
 
 	// Decode the input into a newly allocated UlReq value.
 	ur := NewUlReq()
