@@ -31,8 +31,7 @@ func newFetchPackSession(c *http.Client,
 	}
 }
 
-func (s *fetchPackSession) AdvertisedReferences() (*transport.UploadPackInfo,
-	error) {
+func (s *fetchPackSession) AdvertisedReferences() (*packp.AdvRefs, error) {
 	if s.advRefsRun {
 		return nil, transport.ErrAdvertistedReferencesAlreadyCalled
 	}
@@ -62,8 +61,8 @@ func (s *fetchPackSession) AdvertisedReferences() (*transport.UploadPackInfo,
 		return nil, transport.ErrAuthorizationRequired
 	}
 
-	i := transport.NewUploadPackInfo()
-	if err := i.Decode(res.Body); err != nil {
+	ar := packp.NewAdvRefs()
+	if err := ar.Decode(res.Body); err != nil {
 		if err == packp.ErrEmptyAdvRefs {
 			err = transport.ErrEmptyRemoteRepository
 		}
@@ -71,7 +70,7 @@ func (s *fetchPackSession) AdvertisedReferences() (*transport.UploadPackInfo,
 		return nil, err
 	}
 
-	return i, nil
+	return ar, nil
 }
 
 func (s *fetchPackSession) FetchPack(r *packp.UploadPackRequest) (io.ReadCloser, error) {

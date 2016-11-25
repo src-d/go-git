@@ -64,7 +64,7 @@ type FetchPackSession interface {
 	// AdvertisedReferences retrieves the advertised references for a
 	// repository. It should be called before FetchPack, and it cannot be
 	// called after FetchPack.
-	AdvertisedReferences() (*UploadPackInfo, error)
+	AdvertisedReferences() (*packp.AdvRefs, error)
 	// FetchPack takes a request and returns a reader for the packfile
 	// received from the server.
 	FetchPack(req *packp.UploadPackRequest) (io.ReadCloser, error)
@@ -79,7 +79,7 @@ type SendPackSession interface {
 	// AdvertisedReferences retrieves the advertised references for a
 	// repository. It should be called before FetchPack, and it cannot be
 	// called after FetchPack.
-	AdvertisedReferences() (*UploadPackInfo, error)
+	AdvertisedReferences() (*packp.AdvRefs, error)
 	// UpdateReferences sends an update references request and returns a
 	// writer to be used for packfile writing.
 	//TODO: Complete signature.

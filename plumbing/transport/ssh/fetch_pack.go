@@ -35,7 +35,7 @@ func newFetchPackSession(ep transport.Endpoint) (*fetchPackSession, error) {
 	return s, nil
 }
 
-func (s *fetchPackSession) AdvertisedReferences() (*transport.UploadPackInfo, error) {
+func (s *fetchPackSession) AdvertisedReferences() (*packp.AdvRefs, error) {
 	if s.advRefsRun {
 		return nil, transport.ErrAdvertistedReferencesAlreadyCalled
 	}
@@ -46,8 +46,8 @@ func (s *fetchPackSession) AdvertisedReferences() (*transport.UploadPackInfo, er
 		return nil, err
 	}
 
-	i := transport.NewUploadPackInfo()
-	if err := i.Decode(s.stdout); err != nil {
+	ar := packp.NewAdvRefs()
+	if err := ar.Decode(s.stdout); err != nil {
 		if err != packp.ErrEmptyAdvRefs {
 			return nil, err
 		}
@@ -65,7 +65,7 @@ func (s *fetchPackSession) AdvertisedReferences() (*transport.UploadPackInfo, er
 		return nil, err
 	}
 
-	return i, nil
+	return ar, nil
 }
 
 // FetchPack returns a packfile for a given upload request.
