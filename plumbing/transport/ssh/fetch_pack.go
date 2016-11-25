@@ -163,7 +163,7 @@ var (
 func fetchPack(w io.WriteCloser, r io.Reader,
 	req *packp.UploadPackRequest) error {
 
-	if err := sendUlReq(w, req.UlReq); err != nil {
+	if err := sendUlReq(w, req.UploadRequest); err != nil {
 		return fmt.Errorf("sending upload-req message: %s", err)
 	}
 
@@ -186,7 +186,7 @@ func fetchPack(w io.WriteCloser, r io.Reader,
 	return nil
 }
 
-func sendUlReq(w io.Writer, req *packp.UlReq) error {
+func sendUlReq(w io.Writer, req *packp.UploadRequest) error {
 	e := packp.NewUlReqEncoder(w)
 
 	return e.Encode(req)

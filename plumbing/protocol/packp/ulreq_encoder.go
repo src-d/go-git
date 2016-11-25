@@ -13,7 +13,7 @@ import (
 // An UlReqEncoder writes UlReq values to an output stream.
 type UlReqEncoder struct {
 	pe          *pktline.Encoder // where to write the encoded data
-	data        *UlReq           // the data to encode
+	data        *UploadRequest   // the data to encode
 	sortedWants []string
 	err         error // sticky error
 }
@@ -30,7 +30,7 @@ func NewUlReqEncoder(w io.Writer) *UlReqEncoder {
 // All the payloads will end with a newline character.  Wants and
 // shallows are sorted alphabetically.  A depth of 0 means no depth
 // request is sent.
-func (e *UlReqEncoder) Encode(v *UlReq) error {
+func (e *UlReqEncoder) Encode(v *UploadRequest) error {
 	if len(v.Wants) == 0 {
 		return fmt.Errorf("empty wants provided")
 	}

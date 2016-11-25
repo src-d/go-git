@@ -13,7 +13,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
-//TODO: Replace this by packpAdvRefs.
 type UploadPackInfo struct {
 	Capabilities *packp.Capabilities
 	Refs         memory.ReferenceStorage

@@ -12,7 +12,7 @@ import (
 
 func ExampleUlReqEncoder_Encode() {
 	// Create an empty UlReq with the contents you want...
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 
 	// Add a couple of wants
 	ur.Wants = append(ur.Wants, plumbing.NewHash("3333333333333333333333333333333333333333"))
@@ -63,7 +63,7 @@ func ExampleUlReqDecoder_Decode() {
 	d := NewUlReqDecoder(input)
 
 	// Decode the input into a newly allocated UlReq value.
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	_ = d.Decode(ur) // error check ignored for brevity
 
 	// Do something interesting with the UlReq, e.g. print its contents.

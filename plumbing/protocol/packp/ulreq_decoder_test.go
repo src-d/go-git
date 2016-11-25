@@ -17,7 +17,7 @@ type UlReqDecodeSuite struct{}
 var _ = Suite(&UlReqDecodeSuite{})
 
 func (s *UlReqDecodeSuite) TestEmpty(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	var buf bytes.Buffer
 	d := NewUlReqDecoder(&buf)
 
@@ -35,7 +35,7 @@ func (s *UlReqDecodeSuite) TestNoWant(c *C) {
 }
 
 func (s *UlReqDecodeSuite) testDecoderErrorMatches(c *C, input io.Reader, pattern string) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	d := NewUlReqDecoder(input)
 
 	err := d.Decode(ur)
@@ -63,13 +63,13 @@ func (s *UlReqDecodeSuite) TestWantOK(c *C) {
 	})
 }
 
-func (s *UlReqDecodeSuite) testDecodeOK(c *C, payloads []string) *UlReq {
+func (s *UlReqDecodeSuite) testDecodeOK(c *C, payloads []string) *UploadRequest {
 	var buf bytes.Buffer
 	e := pktline.NewEncoder(&buf)
 	err := e.EncodeString(payloads...)
 	c.Assert(err, IsNil)
 
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	d := NewUlReqDecoder(&buf)
 
 	err = d.Decode(ur)

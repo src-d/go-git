@@ -18,15 +18,15 @@ func (r *UploadHaves) Have(h ...plumbing.Hash) {
 // UploadPackRequest represents a upload-pack request.
 // Zero-value is not safe, use NewUploadPackRequest instead.
 type UploadPackRequest struct {
-	*UlReq
+	*UploadRequest
 	*UploadHaves
 }
 
 // NewUploadPackRequest creates a new UploadPackRequest and returns a pointer.
 func NewUploadPackRequest() *UploadPackRequest {
 	return &UploadPackRequest{
-		UploadHaves: &UploadHaves{},
-		UlReq:       NewUlReq(),
+		UploadHaves:   &UploadHaves{},
+		UploadRequest: NewUploadRequest(),
 	}
 }
 

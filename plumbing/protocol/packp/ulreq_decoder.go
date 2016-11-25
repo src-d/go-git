@@ -18,7 +18,7 @@ type UlReqDecoder struct {
 	line  []byte           // current pkt-line contents, use parser.nextLine() to make it advance
 	nLine int              // current pkt-line number for debugging, begins at 1
 	err   error            // sticky error, use the parser.error() method to fill this out
-	data  *UlReq           // parsed data is stored here
+	data  *UploadRequest   // parsed data is stored here
 }
 
 // NewUlReqDecoder returns a new decoder that reads from r.
@@ -32,7 +32,7 @@ func NewUlReqDecoder(r io.Reader) *UlReqDecoder {
 
 // Decode reads the next upload-request form its input and
 // stores it in the value pointed to by v.
-func (d *UlReqDecoder) Decode(v *UlReq) error {
+func (d *UlReqDecoder) Decode(v *UploadRequest) error {
 	d.data = v
 
 	for state := d.decodeFirstWant; state != nil; {
