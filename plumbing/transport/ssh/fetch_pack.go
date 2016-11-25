@@ -70,7 +70,7 @@ func (s *fetchPackSession) AdvertisedReferences() (*transport.UploadPackInfo, er
 
 // FetchPack returns a packfile for a given upload request.
 // Closing the returned reader will close the SSH session.
-func (s *fetchPackSession) FetchPack(req *transport.UploadPackRequest) (
+func (s *fetchPackSession) FetchPack(req *packp.UploadPackRequest) (
 	io.ReadCloser, error) {
 
 	if req.IsEmpty() {
@@ -161,13 +161,13 @@ var (
 // TODO support acks for common objects
 // TODO build a proper state machine for all these processing options
 func fetchPack(w io.WriteCloser, r io.Reader,
-	req *transport.UploadPackRequest) error {
+	req *packp.UploadPackRequest) error {
 
-	if err := sendUlReq(w, req); err != nil {
+	if err := sendUlReq(w, req.UlReq); err != nil {
 		return fmt.Errorf("sending upload-req message: %s", err)
 	}
 
-	if err := sendHaves(w, req); err != nil {
+	if err := sendHaves(w, req.UploadHaves); err != nil {
 		return fmt.Errorf("sending haves message: %s", err)
 	}
 
@@ -186,16 +186,13 @@ func fetchPack(w io.WriteCloser, r io.Reader,
 	return nil
 }
 
-func sendUlReq(w io.Writer, req *transport.UploadPackRequest) error {
-	ur := packp.NewUlReq()
-	ur.Wants = req.Wants
-	ur.Depth = packp.DepthCommits(req.Depth)
+func sendUlReq(w io.Writer, req *packp.UlReq) error {
 	e := packp.NewUlReqEncoder(w)
 
-	return e.Encode(ur)
+	return e.Encode(req)
 }
 
-func sendHaves(w io.Writer, req *transport.UploadPackRequest) error {
+func sendHaves(w io.Writer, req *packp.UploadHaves) error {
 	e := pktline.NewEncoder(w)
 	for _, have := range req.Haves {
 		if err := e.Encodef("have %s\n", have); err != nil {

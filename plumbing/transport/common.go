@@ -20,6 +20,7 @@ import (
 	"regexp"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
 )
 
 var (
@@ -66,7 +67,7 @@ type FetchPackSession interface {
 	AdvertisedReferences() (*UploadPackInfo, error)
 	// FetchPack takes a request and returns a reader for the packfile
 	// received from the server.
-	FetchPack(req *UploadPackRequest) (io.ReadCloser, error)
+	FetchPack(req *packp.UploadPackRequest) (io.ReadCloser, error)
 }
 
 // FetchPackSession represents a git-send-pack session.

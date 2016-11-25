@@ -81,39 +81,3 @@ func (s *UploadPackSuite) TestUploadPackEncode(c *C) {
 			"0000",
 	)
 }
-
-func (s *UploadPackSuite) TestUploadPackRequest(c *C) {
-	r := &UploadPackRequest{}
-	r.Want(plumbing.NewHash("d82f291cde9987322c8a0c81a325e1ba6159684c"))
-	r.Want(plumbing.NewHash("2b41ef280fdb67a9b250678686a0c3e03b0a9989"))
-	r.Have(plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
-
-	c.Assert(r.String(), Equals,
-		"0032want d82f291cde9987322c8a0c81a325e1ba6159684c\n"+
-			"0032want 2b41ef280fdb67a9b250678686a0c3e03b0a9989\n"+
-			"0032have 6ecf0ef2c2dffb796033e5a02219af86ec6584e5\n0000"+
-			"0009done\n",
-	)
-}
-
-func (s *UploadPackSuite) TestUploadPackRequest_IsEmpty(c *C) {
-	r := &UploadPackRequest{}
-	r.Want(plumbing.NewHash("d82f291cde9987322c8a0c81a325e1ba6159684c"))
-	r.Want(plumbing.NewHash("2b41ef280fdb67a9b250678686a0c3e03b0a9989"))
-	r.Have(plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
-
-	c.Assert(r.IsEmpty(), Equals, false)
-
-	r = &UploadPackRequest{}
-	r.Want(plumbing.NewHash("d82f291cde9987322c8a0c81a325e1ba6159684c"))
-	r.Want(plumbing.NewHash("2b41ef280fdb67a9b250678686a0c3e03b0a9989"))
-	r.Have(plumbing.NewHash("d82f291cde9987322c8a0c81a325e1ba6159684c"))
-
-	c.Assert(r.IsEmpty(), Equals, false)
-
-	r = &UploadPackRequest{}
-	r.Want(plumbing.NewHash("d82f291cde9987322c8a0c81a325e1ba6159684c"))
-	r.Have(plumbing.NewHash("d82f291cde9987322c8a0c81a325e1ba6159684c"))
-
-	c.Assert(r.IsEmpty(), Equals, true)
-}

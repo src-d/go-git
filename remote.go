@@ -162,9 +162,9 @@ func (r *Remote) getWantedReferences(spec []config.RefSpec) ([]*plumbing.Referen
 
 func (r *Remote) buildRequest(
 	s storer.ReferenceStorer, o *FetchOptions, refs []*plumbing.Reference,
-) (*transport.UploadPackRequest, error) {
-	req := &transport.UploadPackRequest{}
-	req.Depth = o.Depth
+) (*packp.UploadPackRequest, error) {
+	req := packp.NewUploadPackRequest()
+	req.Depth = packp.DepthCommits(o.Depth)
 
 	for _, ref := range refs {
 		req.Want(ref.Hash())

@@ -117,7 +117,7 @@ func (c *MockFetchPackSession) AdvertisedReferences() (
 }
 
 func (c *MockFetchPackSession) FetchPack(
-	r *transport.UploadPackRequest) (io.ReadCloser, error) {
+	r *packp.UploadPackRequest) (io.ReadCloser, error) {
 
 	f := fixtures.ByURL(c.endpoint.String())
 

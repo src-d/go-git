@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -111,67 +110,4 @@ func (i *UploadPackInfo) Bytes() []byte {
 	e.Flush()
 
 	return buf.Bytes()
-}
-
-type UploadPackRequest struct {
-	Wants []plumbing.Hash
-	Haves []plumbing.Hash
-	Depth int
-}
-
-func (r *UploadPackRequest) Want(h ...plumbing.Hash) {
-	r.Wants = append(r.Wants, h...)
-}
-
-func (r *UploadPackRequest) Have(h ...plumbing.Hash) {
-	r.Haves = append(r.Haves, h...)
-}
-
-func (r *UploadPackRequest) IsEmpty() bool {
-	return isSubset(r.Wants, r.Haves)
-}
-
-func isSubset(needle []plumbing.Hash, haystack []plumbing.Hash) bool {
-	for _, h := range needle {
-		found := false
-		for _, oh := range haystack {
-			if h == oh {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (r *UploadPackRequest) String() string {
-	b, _ := ioutil.ReadAll(r.Reader())
-	return string(b)
-}
-
-func (r *UploadPackRequest) Reader() *strings.Reader {
-	var buf bytes.Buffer
-	e := pktline.NewEncoder(&buf)
-
-	for _, want := range r.Wants {
-		_ = e.Encodef("want %s\n", want)
-	}
-
-	for _, have := range r.Haves {
-		_ = e.Encodef("have %s\n", have)
-	}
-
-	if r.Depth != 0 {
-		_ = e.Encodef("deepen %d\n", r.Depth)
-	}
-
-	_ = e.Flush()
-	_ = e.EncodeString("done\n")
-
-	return strings.NewReader(buf.String())
 }

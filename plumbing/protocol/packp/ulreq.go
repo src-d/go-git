@@ -51,3 +51,8 @@ func NewUlReq() *UlReq {
 		Depth:        DepthCommits(0),
 	}
 }
+
+// Want adds a hash reference to the 'wants' list.
+func (r *UlReq) Want(h ...plumbing.Hash) {
+	r.Wants = append(r.Wants, h...)
+}
