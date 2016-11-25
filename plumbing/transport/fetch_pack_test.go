@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/advrefs"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/advrefs"
 
 	. "gopkg.in/check.v1"
 )

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 )
 
 // An Encoder writes UlReq values to an output stream.

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/format/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
 )
 
 // UlReq values represent the information transmitted on a

@@ -6,8 +6,8 @@ import (
 	"sort"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/format/packp"
-	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
 )
 
 // An Encoder writes AdvRefs values to an output stream.

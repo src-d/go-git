@@ -8,7 +8,7 @@ import (
 	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 )
 
 // A Decoder reads and decodes AdvRef values from an input stream.
