@@ -9,7 +9,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 )
 
-// Encode writes the AdvRefs encoding of v to the stream.
+// Encode writes the AdvRefs encoding to a writer.
 //
 // All the payloads will end with a newline character.  Capabilities,
 // references and shallows are writen in alphabetical order, except for

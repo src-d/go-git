@@ -5,7 +5,12 @@ import (
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
+)
+
+const (
+	symref = "symref"
 )
 
 // AdvRefs values represent the information transmitted on an
@@ -45,13 +50,13 @@ func NewAdvRefs() *AdvRefs {
 
 func (a *AdvRefs) AddReference(r *plumbing.Reference) error {
 	switch r.Type() {
-	default:
-		return plumbing.ErrInvalidType
 	case plumbing.SymbolicReference:
 		v := fmt.Sprintf("%s:%s", r.Name().String(), r.Target().String())
-		a.Capabilities.Add("symref", v)
+		a.Capabilities.Add(symref, v)
 	case plumbing.HashReference:
 		a.References[r.Name().String()] = r.Hash()
+	default:
+		return plumbing.ErrInvalidType
 	}
 
 	return nil
@@ -66,21 +71,23 @@ func (a *AdvRefs) AllReferences() (memory.ReferenceStorage, error) {
 	return s, nil
 }
 
-func addRefs(s memory.ReferenceStorage, ar *AdvRefs) error {
+func addRefs(s storer.ReferenceStorer, ar *AdvRefs) error {
 	for name, hash := range ar.References {
 		ref := plumbing.NewReferenceFromStrings(name, hash.String())
-		s.SetReference(ref)
+		if err := s.SetReference(ref); err != nil {
+			return err
+		}
 	}
 
 	return addSymbolicRefs(s, ar)
 }
 
-func addSymbolicRefs(s memory.ReferenceStorage, ar *AdvRefs) error {
+func addSymbolicRefs(s storer.ReferenceStorer, ar *AdvRefs) error {
 	if !hasSymrefs(ar) {
 		return nil
 	}
 
-	for _, symref := range ar.Capabilities.Get("symref").Values {
+	for _, symref := range ar.Capabilities.Get(symref).Values {
 		chunks := strings.Split(symref, ":")
 		if len(chunks) != 2 {
 			err := fmt.Errorf("bad number of `:` in symref value (%q)", symref)
@@ -89,12 +96,14 @@ func addSymbolicRefs(s memory.ReferenceStorage, ar *AdvRefs) error {
 		name := plumbing.ReferenceName(chunks[0])
 		target := plumbing.ReferenceName(chunks[1])
 		ref := plumbing.NewSymbolicReference(name, target)
-		_ = s.SetReference(ref)
+		if err := s.SetReference(ref); err != nil {
+			return nil
+		}
 	}
 
 	return nil
 }
 
 func hasSymrefs(ar *AdvRefs) bool {
-	return ar.Capabilities.Supports("symref")
+	return ar.Capabilities.Supports(symref)
 }
