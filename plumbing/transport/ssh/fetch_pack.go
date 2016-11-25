@@ -188,10 +188,10 @@ func fetchPack(w io.WriteCloser, r io.Reader,
 }
 
 func sendUlReq(w io.Writer, req *transport.UploadPackRequest) error {
-	ur := packp.New()
+	ur := packp.NewUlReq()
 	ur.Wants = req.Wants
 	ur.Depth = packp.DepthCommits(req.Depth)
-	e := packp.NewEncoder(w)
+	e := packp.NewUlReqEncoder(w)
 
 	return e.Encode(ur)
 }

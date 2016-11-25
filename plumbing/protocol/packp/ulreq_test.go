@@ -12,7 +12,7 @@ import (
 
 func ExampleEncoder_Encode() {
 	// Create an empty UlReq with the contents you want...
-	ur := New()
+	ur := NewUlReq()
 
 	// Add a couple of wants
 	ur.Wants = append(ur.Wants, plumbing.NewHash("3333333333333333333333333333333333333333"))
@@ -32,7 +32,7 @@ func ExampleEncoder_Encode() {
 	ur.Depth = DepthSince(since)
 
 	// Create a new Encode for the stdout...
-	e := NewEncoder(os.Stdout)
+	e := NewUlReqEncoder(os.Stdout)
 	// ...and encode the upload-request to it.
 	_ = e.Encode(ur) // ignoring errors for brevity
 	// Output:
@@ -63,7 +63,7 @@ func ExampleDecoder_Decode() {
 	d := NewDecoder(input)
 
 	// Decode the input into a newly allocated UlReq value.
-	ur := New()
+	ur := NewUlReq()
 	_ = d.Decode(ur) // error check ignored for brevity
 
 	// Do something interesting with the UlReq, e.g. print its contents.

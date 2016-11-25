@@ -39,11 +39,11 @@ type DepthReference string
 
 func (d DepthReference) isDepth() {}
 
-// New returns a pointer to a new UlReq value, ready to be used.  It has
+// NewUlReq returns a pointer to a new UlReq value, ready to be used.  It has
 // no capabilities, wants or shallows and an infinite depth.  Please
 // note that to encode an upload-request it has to have at least one
 // wanted hash.
-func New() *UlReq {
+func NewUlReq() *UlReq {
 	return &UlReq{
 		Capabilities: NewCapabilities(),
 		Wants:        []plumbing.Hash{},
