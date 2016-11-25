@@ -1,19 +1,14 @@
-package ulreq
+package packp
 
 import (
 	"fmt"
 	"os"
 	"strings"
-	"testing"
 	"time"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
-
-	. "gopkg.in/check.v1"
 )
-
-func Test(t *testing.T) { TestingT(t) }
 
 func ExampleEncoder_Encode() {
 	// Create an empty UlReq with the contents you want...

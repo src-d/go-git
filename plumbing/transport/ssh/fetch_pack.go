@@ -8,8 +8,8 @@ import (
 	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/advrefs"
-	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/ulreq"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 
@@ -188,10 +188,10 @@ func fetchPack(w io.WriteCloser, r io.Reader,
 }
 
 func sendUlReq(w io.Writer, req *transport.UploadPackRequest) error {
-	ur := ulreq.New()
+	ur := packp.New()
 	ur.Wants = req.Wants
-	ur.Depth = ulreq.DepthCommits(req.Depth)
-	e := ulreq.NewEncoder(w)
+	ur.Depth = packp.DepthCommits(req.Depth)
+	e := packp.NewEncoder(w)
 
 	return e.Encode(ur)
 }
