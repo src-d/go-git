@@ -28,8 +28,8 @@ type AdvRefs struct {
 	Shallows     []plumbing.Hash
 }
 
-// New returns a pointer to a new AdvRefs value, ready to be used.
-func New() *AdvRefs {
+// NewAdvRefs returns a pointer to a new AdvRefs value, ready to be used.
+func NewAdvRefs() *AdvRefs {
 	return &AdvRefs{
 		Prefix:       [][]byte{},
 		Capabilities: NewCapabilities(),

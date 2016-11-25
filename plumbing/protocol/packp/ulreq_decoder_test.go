@@ -31,7 +31,7 @@ func (s *UlReqDecodeSuite) TestNoWant(c *C) {
 		pktline.FlushString,
 	}
 	r := toPktLines(c, payloads)
-	testDecoderErrorMatches(c, r, ".*missing 'want '.*")
+	s.testDecoderErrorMatches(c, r, ".*missing 'want '.*")
 }
 
 func (s *UlReqDecodeSuite) testDecoderErrorMatches(c *C, input io.Reader, pattern string) {

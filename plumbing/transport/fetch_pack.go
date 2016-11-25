@@ -28,8 +28,8 @@ func NewUploadPackInfo() *UploadPackInfo {
 }
 
 func (i *UploadPackInfo) Decode(r io.Reader) error {
-	d := packp.NewDecoder(r)
-	ar := packp.New()
+	d := packp.NewAdvRefsDecoder(r)
+	ar := packp.NewAdvRefs()
 	if err := d.Decode(ar); err != nil {
 		if err == packp.ErrEmpty {
 			return err

@@ -43,13 +43,13 @@ func (s *SuiteDecodeEncode) test(c *C, in []string, exp []string) {
 
 	var obtained []byte
 	{
-		ar := packp.New()
-		d := packp.NewDecoder(input)
+		ar := packp.NewAdvRefs()
+		d := packp.NewAdvRefsDecoder(input)
 		err = d.Decode(ar)
 		c.Assert(err, IsNil)
 
 		var buf bytes.Buffer
-		e := packp.NewEncoder(&buf)
+		e := packp.NewAdvRefsEncoder(&buf)
 		err := e.Encode(ar)
 		c.Assert(err, IsNil)
 
@@ -259,10 +259,10 @@ func ExampleDecoder_Decode() {
 	input := strings.NewReader(raw)
 
 	// Create a Decoder reading from our input.
-	d := packp.NewDecoder(input)
+	d := packp.NewAdvRefsDecoder(input)
 
 	// Decode the input into a newly allocated AdvRefs value.
-	ar := packp.New()
+	ar := packp.NewAdvRefs()
 	_ = d.Decode(ar) // error check ignored for brevity
 
 	// Do something interesting with the AdvRefs, e.g. print its contents.
@@ -278,7 +278,7 @@ func ExampleDecoder_Decode() {
 
 func ExampleEncoder_Encode() {
 	// Create an AdvRefs with the contents you want...
-	ar := packp.New()
+	ar := packp.NewAdvRefs()
 
 	// ...add a hash for the HEAD...
 	head := plumbing.NewHash("1111111111111111111111111111111111111111")
@@ -303,7 +303,7 @@ func ExampleEncoder_Encode() {
 	// You can encode into stdout too, but you will not be able
 	// see the '\x00' after "HEAD".
 	var buf bytes.Buffer
-	e := packp.NewEncoder(&buf)
+	e := packp.NewAdvRefsEncoder(&buf)
 	_ = e.Encode(ar) // error checks ignored for brevity
 
 	// Print the contents of the buffer as a quoted string.
