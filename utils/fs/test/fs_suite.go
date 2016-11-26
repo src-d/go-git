@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"bytes"
+
 	. "gopkg.in/check.v1"
 	. "gopkg.in/src-d/go-git.v4/utils/fs"
 )
@@ -256,6 +258,48 @@ func (s *FilesystemSuite) TestReadDirAndDir(c *C) {
 	c.Assert(info, HasLen, 2)
 }
 
+func (s *FilesystemSuite) TestReadDirFileInfo(c *C) {
+	f, err := s.Fs.Create("foo")
+	c.Assert(err, IsNil)
+	n, err := f.Write([]byte{'F', 'O', 'O'})
+	c.Assert(n, Equals, 3)
+	c.Assert(err, IsNil)
+	c.Assert(f.Close(), IsNil)
+
+	info, err := s.Fs.ReadDir("/")
+	c.Assert(err, IsNil)
+	c.Assert(info, HasLen, 1)
+
+	c.Assert(info[0].Size(), Equals, int64(3))
+	c.Assert(info[0].IsDir(), Equals, false)
+	c.Assert(info[0].Name(), Equals, "foo")
+}
+
+func (s *FilesystemSuite) TestReadDirFileInfoDirs(c *C) {
+	files := []string{"qux/baz/foo"}
+	for _, name := range files {
+		f, err := s.Fs.Create(name)
+		c.Assert(err, IsNil)
+		n, err := f.Write([]byte{'F', 'O', 'O'})
+		c.Assert(n, Equals, 3)
+		c.Assert(err, IsNil)
+		c.Assert(f.Close(), IsNil)
+	}
+
+	info, err := s.Fs.ReadDir("qux")
+	c.Assert(err, IsNil)
+	c.Assert(info, HasLen, 1)
+	c.Assert(info[0].IsDir(), Equals, true)
+	c.Assert(info[0].Name(), Equals, "baz")
+
+	info, err = s.Fs.ReadDir("qux/baz")
+	c.Assert(err, IsNil)
+	c.Assert(info, HasLen, 1)
+	c.Assert(info[0].Size(), Equals, int64(3))
+	c.Assert(info[0].IsDir(), Equals, false)
+	c.Assert(info[0].Name(), Equals, "foo")
+}
+
 func (s *FilesystemSuite) TestDirStat(c *C) {
 	files := []string{"foo", "bar", "qux/baz", "qux/qux"}
 	for _, name := range files {
@@ -412,4 +456,24 @@ func (s *FilesystemSuite) TestReadAtOnReadOnly(c *C) {
 	c.Assert(n, Equals, 3)
 	c.Assert(string(b), Equals, "cde")
 	c.Assert(f.Close(), IsNil)
+}
+
+func (s *FilesystemSuite) TestReadWriteLargeFile(c *C) {
+	f, err := s.Fs.Create("foo")
+	c.Assert(err, IsNil)
+
+	size := 1 << 20
+
+	n, err := f.Write(bytes.Repeat([]byte("F"), size))
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, size)
+
+	err = f.Close()
+	c.Assert(err, IsNil)
+
+	f, err = s.Fs.Open("foo")
+	c.Assert(err, IsNil)
+	b, err := ioutil.ReadAll(f)
+	c.Assert(err, IsNil)
+	c.Assert(len(b), Equals, size)
 }

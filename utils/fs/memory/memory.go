@@ -40,6 +40,7 @@ func (fs *Memory) Open(filename string) (fs.File, error) {
 func (fs *Memory) OpenFile(filename string, flag int, perm os.FileMode) (fs.File, error) {
 	fullpath := fs.Join(fs.base, filename)
 	f, ok := fs.s.files[fullpath]
+
 	if !ok && !isCreate(flag) {
 		return nil, os.ErrNotExist
 	}
@@ -91,7 +92,7 @@ func (fs *Memory) ReadDir(base string) (entries []fs.FileInfo, err error) {
 		parts := strings.Split(fullpath, string(separator))
 
 		if len(parts) == 1 {
-			entries = append(entries, newFileInfo(fs.base, fullpath, f.content.Len()))
+			entries = append(entries, &fileInfo{name: parts[0], size: f.content.Len()})
 			continue
 		}
 
@@ -194,7 +195,6 @@ func (f *file) Read(b []byte) (int, error) {
 		return 0, err
 	}
 
-	f.position += int64(n)
 	return n, err
 }
 
