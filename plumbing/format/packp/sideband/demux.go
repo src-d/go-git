@@ -5,57 +5,57 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/pktline"
+	"bytes"
+
+	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 )
 
+// ErrMaxPackedExceeded returned by Read, if the maximum packed size is exceeded
 var ErrMaxPackedExceeded = errors.New("max. packed size exceeded")
 
-type SidebandType int8
-
-const (
-	Sideband    SidebandType = iota
-	Sideband64k SidebandType = iota
-
-	MaxPackedSize    = 1000
-	MaxPackedSize64k = 65520
-)
-
-type SidebandChannel byte
-
-func (ch SidebandChannel) Bytes() []byte {
-	return []byte{byte(ch)}
+// Progress allows to read the progress information
+type Progress interface {
+	io.Reader
 }
 
-const (
-	PackData          SidebandChannel = 1
-	ProgressMessage   SidebandChannel = 2
-	FatalErrorMessage SidebandChannel = 3
-)
-
+// Demuxer demultiplex the progress reports and error info interleaved with the
+// packfile itself.
 type Demuxer struct {
-	t SidebandType
-	r io.ReadCloser
+	t Type
+	r io.Reader
 	s *pktline.Scanner
 
 	max     int
 	pending []byte
+
+	// Progress contains progress information
+	Progress Progress
 }
 
-func NewDemuxer(t SidebandType, r io.ReadCloser) io.ReadCloser {
+// NewDemuxer returns a new Demuxer for the given t and read from r
+func NewDemuxer(t Type, r io.Reader) *Demuxer {
 	max := MaxPackedSize64k
 	if t == Sideband {
 		max = MaxPackedSize
 	}
 
 	return &Demuxer{
-		t:   t,
-		r:   r,
-		max: max,
-		s:   pktline.NewScanner(r),
+		t:        t,
+		r:        r,
+		max:      max,
+		s:        pktline.NewScanner(r),
+		Progress: bytes.NewBuffer(nil),
 	}
 }
 
-func (d *Demuxer) Read(b []byte) (int, error) {
+// Read reads up to len(p) bytes from the PackData channel into p, an error can
+// be return if an error happends when reading or if a message is sent in the
+// ErrorMessage channel.
+//
+// If a ProgressMessage is read, it's not copied into b, intead of this is
+// is stored, can be read through the reader Progress, the n value returned is
+// zero, err is nil unless an error reading happends.
+func (d *Demuxer) Read(b []byte) (n int, err error) {
 	var read, req int
 
 	req = len(b)
@@ -112,12 +112,16 @@ func (d *Demuxer) nextPackData() ([]byte, error) {
 		return nil, ErrMaxPackedExceeded
 	}
 
-	switch SidebandChannel(content[0]) {
+	switch Channel(content[0]) {
 	case PackData:
 		return content[1:], err
-	default:
-		fmt.Printf("remote: %s", content[1:])
+	case ProgressMessage:
+		_, err := d.Progress.(io.Writer).Write(content[1:])
 		return nil, err
+	case ErrorMessage:
+		return nil, fmt.Errorf("unexepcted error: %s", content[1:])
+	default:
+		return nil, fmt.Errorf("unknown channel %s", content)
 	}
 }
 
@@ -130,8 +134,4 @@ func (d *Demuxer) readPending() (b []byte) {
 	d.pending = make([]byte, 0)
 
 	return content
-}
-
-func (d *Demuxer) Close() error {
-	return d.r.Close()
 }

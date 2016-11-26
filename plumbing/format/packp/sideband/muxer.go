@@ -3,44 +3,44 @@ package sideband
 import (
 	"io"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/format/packp/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 )
 
+// Muxer multiplex the packfile along with the progress messages and the error
+// information.
 type Muxer struct {
-	max  int
-	e    *pktline.Encoder
-	ch   chan *writeOp
-	quit chan bool
+	max int
+	e   *pktline.Encoder
 }
 
 const chLen = 1
 
-func NewMuxer(t SidebandType, w io.Writer) *Muxer {
+// NewMuxer returns a new Muxer for the given t that writes on w
+func NewMuxer(t Type, w io.Writer) *Muxer {
 	max := MaxPackedSize64k
 	if t == Sideband {
 		max = MaxPackedSize
 	}
 
-	m := &Muxer{
-		max:  max - chLen,
-		e:    pktline.NewEncoder(w),
-		ch:   make(chan *writeOp),
-		quit: make(chan bool),
+	return &Muxer{
+		max: max - chLen,
+		e:   pktline.NewEncoder(w),
 	}
-
-	go m.doWrite()
-	return m
 }
 
+// Write writes p in the PackData channel
 func (m *Muxer) Write(p []byte) (int, error) {
 	return m.WriteChannel(PackData, p)
 }
 
-func (m *Muxer) WriteChannel(t SidebandChannel, p []byte) (int, error) {
+// WriteChannel writes p in the given channel. This method can be used with any
+// channel, but is recommend use it only for the ProgressMessage and
+// ErrorMessage channels and use Write for the PackData channel
+func (m *Muxer) WriteChannel(t Channel, p []byte) (int, error) {
 	wrote := 0
 	size := len(p)
 	for wrote < size {
-		n, err := m.send(t, p[wrote:])
+		n, err := m.doWrite(t, p[wrote:])
 		wrote += n
 
 		if err != nil {
@@ -51,45 +51,11 @@ func (m *Muxer) WriteChannel(t SidebandChannel, p []byte) (int, error) {
 	return wrote, nil
 }
 
-func (m *Muxer) send(t SidebandChannel, p []byte) (int, error) {
+func (m *Muxer) doWrite(ch Channel, p []byte) (int, error) {
 	sz := len(p)
 	if sz > m.max {
 		sz = m.max
 	}
 
-	op := newWriteOp(t, p[:sz])
-	m.ch <- op
-	return sz, <-op.err
-}
-
-func (m *Muxer) doWrite() {
-	for {
-		select {
-		case <-m.quit:
-			return
-		case op := <-m.ch:
-			op.err <- m.e.Encode(append(op.ch.Bytes(), op.b...))
-		}
-	}
-}
-
-func (m *Muxer) Close() error {
-	m.quit <- true
-	close(m.quit)
-	close(m.ch)
-	return nil
-}
-
-func newWriteOp(ch SidebandChannel, b []byte) *writeOp {
-	return &writeOp{
-		ch:  ch,
-		b:   b,
-		err: make(chan error),
-	}
-}
-
-type writeOp struct {
-	ch  SidebandChannel
-	b   []byte
-	err chan error
+	return sz, m.e.Encode(append(ch.Bytes(), p[:sz]...))
 }

@@ -10,7 +10,6 @@ func (s *SidebandSuite) TestMuxerWrite(c *C) {
 	buf := bytes.NewBuffer(nil)
 
 	m := NewMuxer(Sideband, buf)
-	defer m.Close()
 
 	n, err := m.Write(bytes.Repeat([]byte{'F'}, (MaxPackedSize-1)*2))
 	c.Assert(err, IsNil)
@@ -22,7 +21,6 @@ func (s *SidebandSuite) TestMuxerWriteChannelMultipleChannels(c *C) {
 	buf := bytes.NewBuffer(nil)
 
 	m := NewMuxer(Sideband, buf)
-	defer m.Close()
 
 	n, err := m.WriteChannel(PackData, bytes.Repeat([]byte{'D'}, 4))
 	c.Assert(err, IsNil)
