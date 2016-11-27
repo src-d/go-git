@@ -10,19 +10,20 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
 //TODO: Replace this by packpAdvRefs.
 type UploadPackInfo struct {
-	Capabilities *packp.Capabilities
+	Capabilities *capability.List
 	Refs         memory.ReferenceStorage
 }
 
 func NewUploadPackInfo() *UploadPackInfo {
 	return &UploadPackInfo{
-		Capabilities: packp.NewCapabilities(),
+		Capabilities: capability.NewList(),
 		Refs:         make(memory.ReferenceStorage, 0),
 	}
 }

@@ -4,13 +4,14 @@ import (
 	"time"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 )
 
 // UlReq values represent the information transmitted on a
 // upload-request message.  Values from this type are not zero-value
 // safe, use the New function instead.
 type UlReq struct {
-	Capabilities *Capabilities
+	Capabilities *capability.List
 	Wants        []plumbing.Hash
 	Shallows     []plumbing.Hash
 	Depth        Depth
@@ -45,7 +46,7 @@ func (d DepthReference) isDepth() {}
 // wanted hash.
 func NewUlReq() *UlReq {
 	return &UlReq{
-		Capabilities: NewCapabilities(),
+		Capabilities: capability.NewList(),
 		Wants:        []plumbing.Hash{},
 		Shallows:     []plumbing.Hash{},
 		Depth:        DepthCommits(0),

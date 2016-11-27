@@ -2,6 +2,7 @@ package packp
 
 import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 )
 
 // AdvRefs values represent the information transmitted on an
@@ -22,7 +23,7 @@ import (
 type AdvRefs struct {
 	Prefix       [][]byte // payloads of the prefix
 	Head         *plumbing.Hash
-	Capabilities *Capabilities
+	Capabilities *capability.List
 	References   map[string]plumbing.Hash
 	Peeled       map[string]plumbing.Hash
 	Shallows     []plumbing.Hash
@@ -32,7 +33,7 @@ type AdvRefs struct {
 func NewAdvRefs() *AdvRefs {
 	return &AdvRefs{
 		Prefix:       [][]byte{},
-		Capabilities: NewCapabilities(),
+		Capabilities: capability.NewList(),
 		References:   make(map[string]plumbing.Hash),
 		Peeled:       make(map[string]plumbing.Hash),
 		Shallows:     []plumbing.Hash{},

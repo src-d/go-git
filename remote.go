@@ -8,7 +8,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
-	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
@@ -83,7 +83,7 @@ func (r *Remote) Info() *transport.UploadPackInfo {
 }
 
 // Capabilities returns the remote capabilities
-func (r *Remote) Capabilities() *packp.Capabilities {
+func (r *Remote) Capabilities() *capability.List {
 	return r.upInfo.Capabilities
 }
 

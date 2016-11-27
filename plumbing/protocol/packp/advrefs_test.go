@@ -10,6 +10,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 
 	. "gopkg.in/check.v1"
 )
@@ -285,7 +286,7 @@ func ExampleEncoder_Encode() {
 	ar.Head = &head
 
 	// ...add some server capabilities...
-	ar.Capabilities.Add("symref", "HEAD:/refs/heads/master")
+	ar.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
 	ar.Capabilities.Add("ofs-delta")
 	ar.Capabilities.Add("multi_ack")
 
