@@ -52,18 +52,23 @@ func (p *parser) parseRef() (string, error) {
 	var prevTok token
 	var lit string
 	var buf string
+	var endOfRef bool
 
 	for {
 		tok, lit = p.scan()
 
-		err := p.checkRefFormat(tok, lit, prevTok, buf)
+		switch tok {
+		case eof, at, colon, tilde, caret:
+			endOfRef = true
+		}
+
+		err := p.checkRefFormat(tok, lit, prevTok, buf, endOfRef)
 
 		if err != nil {
 			return "", err
 		}
 
-		switch tok {
-		case eof:
+		if endOfRef {
 			return buf, nil
 		}
 
@@ -74,7 +79,7 @@ func (p *parser) parseRef() (string, error) {
 
 // checkRefFormat ensure reference name follow rules defined here :
 // https://git-scm.com/docs/git-check-ref-format
-func (p *parser) checkRefFormat(token token, literal string, previousToken token, buffer string) error {
+func (p *parser) checkRefFormat(token token, literal string, previousToken token, buffer string, endOfRef bool) error {
 	switch token {
 	case aslash, space, control, qmark, asterisk, obracket:
 		return &ErrInvalidRevision{fmt.Sprintf(`must not contains "%s"`, literal)}
@@ -84,11 +89,11 @@ func (p *parser) checkRefFormat(token token, literal string, previousToken token
 		return &ErrInvalidRevision{fmt.Sprintf(`must not start with "%s"`, literal)}
 	}
 
-	if previousToken == slash && token == eof {
+	if previousToken == slash && endOfRef {
 		return &ErrInvalidRevision{`must not end with "/"`}
 	}
 
-	if previousToken == dot && token == eof {
+	if previousToken == dot && endOfRef {
 		return &ErrInvalidRevision{`must not end with "."`}
 	}
 
@@ -104,7 +109,7 @@ func (p *parser) checkRefFormat(token token, literal string, previousToken token
 		return &ErrInvalidRevision{`must not contains consecutively "/"`}
 	}
 
-	if (token == slash || token == eof) && len(buffer) > 4 && buffer[len(buffer)-5:] == ".lock" {
+	if (token == slash || endOfRef) && len(buffer) > 4 && buffer[len(buffer)-5:] == ".lock" {
 		return &ErrInvalidRevision{"cannot end with .lock"}
 	}
 
