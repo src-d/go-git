@@ -84,7 +84,7 @@ func addSymbolicRefs(s storer.ReferenceStorer, ar *AdvRefs) error {
 		return nil
 	}
 
-	for _, symref := range ar.Capabilities.Get(capability.SymRef).Values {
+	for _, symref := range ar.Capabilities.Get(capability.SymRef) {
 		chunks := strings.Split(symref, ":")
 		if len(chunks) != 2 {
 			err := fmt.Errorf("bad number of `:` in symref value (%q)", symref)

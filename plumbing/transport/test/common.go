@@ -66,8 +66,8 @@ func (s *FetchPackSuite) TestDefaultBranch(c *C) {
 	info, err := r.AdvertisedReferences()
 	c.Assert(err, IsNil)
 	symrefs := info.Capabilities.Get(capability.SymRef)
-	c.Assert(symrefs.Values, HasLen, 1)
-	c.Assert(symrefs.Values[0], Equals, "HEAD:refs/heads/master")
+	c.Assert(symrefs, HasLen, 1)
+	c.Assert(symrefs[0], Equals, "HEAD:refs/heads/master")
 }
 
 func (s *FetchPackSuite) TestCapabilities(c *C) {
@@ -77,7 +77,7 @@ func (s *FetchPackSuite) TestCapabilities(c *C) {
 
 	info, err := r.AdvertisedReferences()
 	c.Assert(err, IsNil)
-	c.Assert(info.Capabilities.Get("agent").Values, HasLen, 1)
+	c.Assert(info.Capabilities.Get(capability.Agent), HasLen, 1)
 }
 
 func (s *FetchPackSuite) TestFullFetchPack(c *C) {

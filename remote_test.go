@@ -74,7 +74,7 @@ func (s *RemoteSuite) TestCapabilities(c *C) {
 	r.client = &MockClient{}
 
 	c.Assert(r.Connect(), IsNil)
-	c.Assert(r.Capabilities().Get(capability.Agent).Values, HasLen, 1)
+	c.Assert(r.Capabilities().Get(capability.Agent), HasLen, 1)
 }
 
 func (s *RemoteSuite) TestFetch(c *C) {

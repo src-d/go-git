@@ -23,8 +23,8 @@ func (s *SuiteCapabilities) TestDecode(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	c.Assert(cap.m, check.HasLen, 2)
-	c.Assert(cap.Get(SymRef).Values, check.DeepEquals, []string{"foo", "qux"})
-	c.Assert(cap.Get(ThinPack).Values, check.IsNil)
+	c.Assert(cap.Get(SymRef), check.DeepEquals, []string{"foo", "qux"})
+	c.Assert(cap.Get(ThinPack), check.IsNil)
 }
 
 func (s *SuiteCapabilities) TestDecodeWithErrArguments(c *check.C) {
@@ -39,7 +39,7 @@ func (s *SuiteCapabilities) TestDecodeWithEqual(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	c.Assert(cap.m, check.HasLen, 1)
-	c.Assert(cap.Get(Agent).Values, check.DeepEquals, []string{"foo=bar"})
+	c.Assert(cap.Get(Agent), check.DeepEquals, []string{"foo=bar"})
 }
 
 func (s *SuiteCapabilities) TestDecodeWithErrUnknownCapability(c *check.C) {
@@ -74,7 +74,7 @@ func (s *SuiteCapabilities) TestSet(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	c.Assert(cap.m, check.HasLen, 1)
-	c.Assert(cap.Get(SymRef).Values, check.DeepEquals, []string{"bar"})
+	c.Assert(cap.Get(SymRef), check.DeepEquals, []string{"bar"})
 }
 
 func (s *SuiteCapabilities) TestSetEmpty(c *check.C) {
@@ -82,7 +82,7 @@ func (s *SuiteCapabilities) TestSetEmpty(c *check.C) {
 	err := cap.Set(Agent, "bar")
 	c.Assert(err, check.IsNil)
 
-	c.Assert(cap.Get(Agent).Values, check.HasLen, 1)
+	c.Assert(cap.Get(Agent), check.HasLen, 1)
 }
 
 func (s *SuiteCapabilities) TestAdd(c *check.C) {

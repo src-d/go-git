@@ -177,27 +177,32 @@ func (s *AdvRefsDecodeSuite) TestNoCaps(c *C) {
 }
 
 func (s *AdvRefsDecodeSuite) TestCaps(c *C) {
+	type entry struct {
+		Name   capability.Capability
+		Values []string
+	}
+
 	for _, test := range [...]struct {
 		input        []string
-		capabilities []capability.Entry
+		capabilities []entry
 	}{{
 		input: []string{
 			"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00",
 			pktline.FlushString,
 		},
-		capabilities: []capability.Entry{},
+		capabilities: []entry{},
 	}, {
 		input: []string{
 			"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00\n",
 			pktline.FlushString,
 		},
-		capabilities: []capability.Entry{},
+		capabilities: []entry{},
 	}, {
 		input: []string{
 			"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta",
 			pktline.FlushString,
 		},
-		capabilities: []capability.Entry{
+		capabilities: []entry{
 			{
 				Name:   capability.OFSDelta,
 				Values: []string(nil),
@@ -208,7 +213,7 @@ func (s *AdvRefsDecodeSuite) TestCaps(c *C) {
 			"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta multi_ack",
 			pktline.FlushString,
 		},
-		capabilities: []capability.Entry{
+		capabilities: []entry{
 			{Name: capability.OFSDelta, Values: []string(nil)},
 			{Name: capability.MultiACK, Values: []string(nil)},
 		},
@@ -217,7 +222,7 @@ func (s *AdvRefsDecodeSuite) TestCaps(c *C) {
 			"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00ofs-delta multi_ack\n",
 			pktline.FlushString,
 		},
-		capabilities: []capability.Entry{
+		capabilities: []entry{
 			{Name: capability.OFSDelta, Values: []string(nil)},
 			{Name: capability.MultiACK, Values: []string(nil)},
 		},
@@ -226,7 +231,7 @@ func (s *AdvRefsDecodeSuite) TestCaps(c *C) {
 			"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:refs/heads/master agent=foo=bar\n",
 			pktline.FlushString,
 		},
-		capabilities: []capability.Entry{
+		capabilities: []entry{
 			{Name: capability.SymRef, Values: []string{"HEAD:refs/heads/master"}},
 			{Name: capability.Agent, Values: []string{"foo=bar"}},
 		},
@@ -235,7 +240,7 @@ func (s *AdvRefsDecodeSuite) TestCaps(c *C) {
 		for _, fixCap := range test.capabilities {
 			c.Assert(ar.Capabilities.Supports(fixCap.Name), Equals, true,
 				Commentf("input = %q, capability = %q", test.input, fixCap.Name))
-			c.Assert(ar.Capabilities.Get(fixCap.Name).Values, DeepEquals, fixCap.Values,
+			c.Assert(ar.Capabilities.Get(fixCap.Name), DeepEquals, fixCap.Values,
 				Commentf("input = %q, capability = %q", test.input, fixCap.Name))
 		}
 	}

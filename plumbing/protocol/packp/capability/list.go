@@ -26,22 +26,19 @@ var (
 
 // List represents a list of capabilities
 type List struct {
-	m map[Capability]*Entry
+	m map[Capability]*entry
 	o []string
 }
 
-// Entry represents a server capability
-type Entry struct {
-	// Name of the capability
-	Name Capability
-	// Values, values of the capability, only a few capabilities supports values
+type entry struct {
+	Name   Capability
 	Values []string
 }
 
 // NewList returns a new List of capabilities
 func NewList() *List {
 	return &List{
-		m: make(map[Capability]*Entry),
+		m: make(map[Capability]*entry),
 	}
 }
 
@@ -73,8 +70,8 @@ func (l *List) Decode(raw []byte) error {
 }
 
 // Get returns the values for a capability
-func (l *List) Get(capability Capability) *Entry {
-	return l.m[capability]
+func (l *List) Get(capability Capability) []string {
+	return l.m[capability].Values
 }
 
 // Set sets a capability removing the previous values
@@ -93,7 +90,7 @@ func (l *List) Add(c Capability, values ...string) error {
 	}
 
 	if !l.Supports(c) {
-		l.m[c] = &Entry{Name: c}
+		l.m[c] = &entry{Name: c}
 		l.o = append(l.o, c.String())
 	}
 
