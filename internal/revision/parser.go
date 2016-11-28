@@ -85,31 +85,20 @@ func (p *parser) checkRefFormat(token token, literal string, previousToken token
 		return &ErrInvalidRevision{fmt.Sprintf(`must not contains "%s"`, literal)}
 	}
 
-	if (token == dot || token == slash) && buffer == "" {
+	switch {
+	case (token == dot || token == slash) && buffer == "":
 		return &ErrInvalidRevision{fmt.Sprintf(`must not start with "%s"`, literal)}
-	}
-
-	if previousToken == slash && endOfRef {
+	case previousToken == slash && endOfRef:
 		return &ErrInvalidRevision{`must not end with "/"`}
-	}
-
-	if previousToken == dot && endOfRef {
+	case previousToken == dot && endOfRef:
 		return &ErrInvalidRevision{`must not end with "."`}
-	}
-
-	if token == dot && previousToken == slash {
+	case token == dot && previousToken == slash:
 		return &ErrInvalidRevision{`must not contains "/."`}
-	}
-
-	if previousToken == dot && token == dot {
+	case previousToken == dot && token == dot:
 		return &ErrInvalidRevision{`must not contains ".."`}
-	}
-
-	if previousToken == slash && token == slash {
+	case previousToken == slash && token == slash:
 		return &ErrInvalidRevision{`must not contains consecutively "/"`}
-	}
-
-	if (token == slash || endOfRef) && len(buffer) > 4 && buffer[len(buffer)-5:] == ".lock" {
+	case (token == slash || endOfRef) && len(buffer) > 4 && buffer[len(buffer)-5:] == ".lock":
 		return &ErrInvalidRevision{"cannot end with .lock"}
 	}
 
