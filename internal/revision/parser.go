@@ -46,6 +46,32 @@ func (p *parser) scan() (tok token, lit string) {
 // unscan pushes the previously read token back onto the buffer.
 func (p *parser) unscan() { p.buf.n = 1 }
 
+// parseRevSuffix extract part following revision
+func (p *parser) parseRevSuffix() ([]string, error) {
+	var tok token
+	var nextTok token
+	var lit string
+	var nextLit string
+	var components []string
+
+	for {
+		tok, lit = p.scan()
+		nextTok, nextLit = p.scan()
+
+		switch {
+		case (tok == caret || tok == tilde) && nextTok == number:
+			components = append(components, lit+nextLit)
+		case (tok == caret || tok == tilde):
+			components = append(components, lit)
+			p.unscan()
+		case tok == eof:
+			return components, nil
+		default:
+			return []string{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix component`, lit)}
+		}
+	}
+}
+
 // parseRef extract reference name
 func (p *parser) parseRef() (string, error) {
 	var tok token

@@ -69,6 +69,38 @@ func (s *ParserSuite) TestUnscan(c *C) {
 	c.Assert(tok, Equals, word)
 }
 
+func (s *ParserSuite) TestParseRevSuffixWithValidExpression(c *C) {
+	datas := map[string][]string{
+		"^": []string{"^"},
+		"~": []string{"~"},
+		"~^^1~2~10~^100^~1000": []string{"~", "^", "^1", "~2", "~10", "~", "^100", "^", "~1000"},
+	}
+
+	for d, expected := range datas {
+		parser := newParser(bytes.NewBufferString(d))
+
+		result, err := parser.parseRevSuffix()
+
+		c.Assert(err, Equals, nil)
+		c.Assert(result, DeepEquals, expected)
+	}
+}
+
+func (s *ParserSuite) TestParseRevSuffixWithUnValidExpression(c *C) {
+	datas := map[string]error{
+		"a":         &ErrInvalidRevision{`"a" is not a valid revision suffix component`},
+		"~^~10a^10": &ErrInvalidRevision{`"a" is not a valid revision suffix component`},
+	}
+
+	for s, e := range datas {
+		parser := newParser(bytes.NewBufferString(s))
+
+		_, err := parser.parseRevSuffix()
+
+		c.Assert(err, DeepEquals, e)
+	}
+}
+
 func (s *ParserSuite) TestParseRefWithValidName(c *C) {
 	datas := []string{
 		"lock",
