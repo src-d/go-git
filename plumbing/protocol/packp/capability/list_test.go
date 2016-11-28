@@ -66,17 +66,6 @@ func (s *SuiteCapabilities) TestStringSort(c *check.C) {
 	c.Assert(cap.String(), check.Equals, "agent=bar symref=foo:qux thin-pack")
 }
 
-func (s *SuiteCapabilities) TestSymbolicReference(c *check.C) {
-	cap := NewList()
-	c.Assert(cap.SymbolicReference("not-initialized"), check.Equals, "")
-
-	err := cap.Set(SymRef, "foo:qux", "invalid")
-	c.Assert(err, check.IsNil)
-
-	c.Assert(cap.SymbolicReference("foo"), check.Equals, "qux")
-	c.Assert(cap.SymbolicReference("invalid"), check.Equals, "")
-}
-
 func (s *SuiteCapabilities) TestSet(c *check.C) {
 	cap := NewList()
 	err := cap.Add(SymRef, "foo", "qux")

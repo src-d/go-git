@@ -141,26 +141,6 @@ func (l *List) Supports(capability Capability) bool {
 	return ok
 }
 
-// SymbolicReference returns the target for a given symbolic reference
-func (l *List) SymbolicReference(sym string) string {
-	if !l.Supports(SymRef) {
-		return ""
-	}
-
-	for _, symref := range l.Get(SymRef).Values {
-		parts := strings.Split(symref, ":")
-		if len(parts) != 2 {
-			continue
-		}
-
-		if parts[0] == sym {
-			return parts[1]
-		}
-	}
-
-	return ""
-}
-
 func (l *List) String() string {
 	sort.Strings(l.o)
 
