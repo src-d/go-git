@@ -109,6 +109,7 @@ func (s *session) AdvertisedReferences() (*packp.AdvRefs, error) {
 		}
 
 		_ = s.Stdin.Close()
+		err = transport.ErrEmptyRemoteRepository
 
 		scan := bufio.NewScanner(s.Stderr)
 		if !scan.Scan() {
@@ -168,6 +169,7 @@ func (s *session) Close() error {
 const (
 	githubRepoNotFoundErr    = "ERROR: Repository not found."
 	bitbucketRepoNotFoundErr = "conq: repository does not exist."
+	localRepoNotFoundErr     = "does not appear to be a git repository"
 )
 
 func isRepoNotFoundError(s string) bool {
@@ -176,6 +178,10 @@ func isRepoNotFoundError(s string) bool {
 	}
 
 	if strings.HasPrefix(s, bitbucketRepoNotFoundErr) {
+		return true
+	}
+
+	if strings.HasSuffix(s, localRepoNotFoundErr) {
 		return true
 	}
 
