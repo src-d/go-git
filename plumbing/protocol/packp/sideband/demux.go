@@ -1,11 +1,10 @@
 package sideband
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
-
-	"bytes"
 
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 )
@@ -20,6 +19,18 @@ type Progress interface {
 
 // Demuxer demultiplex the progress reports and error info interleaved with the
 // packfile itself.
+//
+// A sideband has three diferent channels the main one call PackData contains
+// the packfile data, the ErrorMessage channel, that contains server errors and
+// the last one ProgressMessage channel containing information about the ongoing
+// tast happening in the server (optinal, can be suppressed sending NoProgress
+// or Quiet capabilities to the server)
+//
+// In order to demultiplex the data stream, method `Read` should be called to
+// retrieve the PackData channel, the incoming data from the ProgressMessage is
+// stored and can be read from `Progress` field, if any message is retrieved
+// from the ErrorMessage channel an error is returned and we can assume that the
+// conection has been closed.
 type Demuxer struct {
 	t Type
 	r io.Reader
@@ -52,9 +63,9 @@ func NewDemuxer(t Type, r io.Reader) *Demuxer {
 // be return if an error happends when reading or if a message is sent in the
 // ErrorMessage channel.
 //
-// If a ProgressMessage is read, it's not copied into b, intead of this is
-// is stored, can be read through the reader Progress, the n value returned is
-// zero, err is nil unless an error reading happends.
+// If a ProgressMessage is read, it won't be copied to b. Instead of this, it is
+// stored and can be read through the reader Progress. If the n value returned
+// is zero, err will be nil unless an error reading happens.
 func (d *Demuxer) Read(b []byte) (n int, err error) {
 	var read, req int
 
@@ -119,7 +130,7 @@ func (d *Demuxer) nextPackData() ([]byte, error) {
 		_, err := d.Progress.(io.Writer).Write(content[1:])
 		return nil, err
 	case ErrorMessage:
-		return nil, fmt.Errorf("unexepcted error: %s", content[1:])
+		return nil, fmt.Errorf("unexpected error: %s", content[1:])
 	default:
 		return nil, fmt.Errorf("unknown channel %s", content)
 	}

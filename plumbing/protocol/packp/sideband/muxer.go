@@ -7,7 +7,7 @@ import (
 )
 
 // Muxer multiplex the packfile along with the progress messages and the error
-// information.
+// information. The multiplex is perform using pktline format.
 type Muxer struct {
 	max int
 	e   *pktline.Encoder
@@ -15,7 +15,11 @@ type Muxer struct {
 
 const chLen = 1
 
-// NewMuxer returns a new Muxer for the given t that writes on w
+// NewMuxer returns a new Muxer for the given t that writes on w.
+//
+// If t is equal to `Sideband` the max pack size is set to MaxPackedSize, in any
+// other value is given, max pack is set to MaxPackedSize64k, that is the
+// maximum lenght of a line in pktline format.
 func NewMuxer(t Type, w io.Writer) *Muxer {
 	max := MaxPackedSize64k
 	if t == Sideband {
