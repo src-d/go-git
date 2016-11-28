@@ -61,5 +61,5 @@ func (m *Muxer) doWrite(ch Channel, p []byte) (int, error) {
 		sz = m.max
 	}
 
-	return sz, m.e.Encode(append(ch.Bytes(), p[:sz]...))
+	return sz, m.e.Encode(ch.WithPayload(p[:sz]))
 }

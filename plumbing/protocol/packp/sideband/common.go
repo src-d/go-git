@@ -18,9 +18,9 @@ const (
 // Channel sideband channel
 type Channel byte
 
-// Bytes returns the channel as an slice of bytes
-func (ch Channel) Bytes() []byte {
-	return []byte{byte(ch)}
+// WithPayload encode the payload as a message
+func (ch Channel) WithPayload(payload []byte) []byte {
+	return append([]byte{byte(ch)}, payload...)
 }
 
 const (

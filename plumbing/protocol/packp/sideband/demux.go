@@ -92,7 +92,7 @@ func (d *Demuxer) doRead(b []byte) (int, error) {
 	wanted := len(b)
 
 	if size > wanted {
-		d.pending = read[wanted:size]
+		d.pending = read[wanted:]
 	}
 
 	if wanted > size {
@@ -104,7 +104,7 @@ func (d *Demuxer) doRead(b []byte) (int, error) {
 }
 
 func (d *Demuxer) nextPackData() ([]byte, error) {
-	content := d.readPending()
+	content := d.getPending()
 	if len(content) != 0 {
 		return content, nil
 	}
@@ -136,13 +136,13 @@ func (d *Demuxer) nextPackData() ([]byte, error) {
 	}
 }
 
-func (d *Demuxer) readPending() (b []byte) {
+func (d *Demuxer) getPending() (b []byte) {
 	if len(d.pending) == 0 {
 		return nil
 	}
 
 	content := d.pending
-	d.pending = make([]byte, 0)
+	d.pending = nil
 
 	return content
 }
