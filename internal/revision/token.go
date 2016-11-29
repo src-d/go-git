@@ -15,6 +15,7 @@ const (
 	colon
 	control
 	dot
+	emark
 	minus
 	number
 	obrace

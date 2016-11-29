@@ -64,6 +64,8 @@ func (s *scanner) scan() (token, string) {
 		return asterisk, string(ch)
 	case '[':
 		return obracket, string(ch)
+	case '!':
+		return emark, string(ch)
 	}
 
 	if unicode.IsSpace(ch) {

@@ -149,6 +149,14 @@ func (s *ScannerSuite) TestReadOpenBracket(c *C) {
 	c.Assert(tok, Equals, obracket)
 }
 
+func (s *ScannerSuite) TestReadExclamationMark(c *C) {
+	scanner := newScanner(bytes.NewBufferString("!"))
+	tok, data := scanner.scan()
+
+	c.Assert(data, Equals, "!")
+	c.Assert(tok, Equals, emark)
+}
+
 func (s *ScannerSuite) TestReadWord(c *C) {
 	scanner := newScanner(bytes.NewBufferString("abcde"))
 	tok, data := scanner.scan()

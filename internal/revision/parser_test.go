@@ -34,7 +34,7 @@ func (s *ParserSuite) TestScan(c *C) {
 			" ",
 		},
 		{
-			char,
+			emark,
 			"!",
 		},
 	}
