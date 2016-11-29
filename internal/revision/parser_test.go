@@ -70,11 +70,20 @@ func (s *ParserSuite) TestUnscan(c *C) {
 }
 
 func (s *ParserSuite) TestParseRevSuffixWithValidExpression(c *C) {
-	datas := map[string][]string{
-		"^": []string{"^"},
-		"~": []string{"~"},
-		"~^^1~2~10~^100^~1000": []string{"~", "^", "^1", "~2", "~10", "~", "^100", "^", "~1000"},
-	}
+	datas := map[string][]revSuffixer{
+		"^": []revSuffixer{revSuffixPath{"^", 1}},
+		"~": []revSuffixer{revSuffixPath{"~", 1}},
+		"~^^1~2~10~^100^~1000": []revSuffixer{
+			revSuffixPath{"~", 1},
+			revSuffixPath{"^", 1},
+			revSuffixPath{"^", 1},
+			revSuffixPath{"~", 2},
+			revSuffixPath{"~", 10},
+			revSuffixPath{"~", 1},
+			revSuffixPath{"^", 100},
+			revSuffixPath{"^", 1},
+			revSuffixPath{"~", 1000},
+		}}
 
 	for d, expected := range datas {
 		parser := newParser(bytes.NewBufferString(d))

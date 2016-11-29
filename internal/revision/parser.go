@@ -3,6 +3,7 @@ package revision
 import (
 	"fmt"
 	"io"
+	"strconv"
 )
 
 // ErrInvalidRevision is emitted if string doesn't match valid revision
@@ -16,6 +17,16 @@ func (e *ErrInvalidRevision) Error() string {
 
 // ref represents a reference name
 type ref string
+
+// revSuffixer represents a generic revision suffix
+type revSuffixer interface {
+}
+
+// revSuffixPath represents ^ or ~ revision suffix
+type revSuffixPath struct {
+	suffix string
+	deep   int
+}
 
 // parser represents a parser.
 type parser struct {
@@ -50,12 +61,12 @@ func (p *parser) scan() (tok token, lit string) {
 func (p *parser) unscan() { p.buf.n = 1 }
 
 // parseRevSuffix extract part following revision
-func (p *parser) parseRevSuffix() ([]string, error) {
+func (p *parser) parseRevSuffix() ([]revSuffixer, error) {
 	var tok token
 	var nextTok token
 	var lit string
 	var nextLit string
-	var components []string
+	var components []revSuffixer
 
 	for {
 		tok, lit = p.scan()
@@ -63,14 +74,22 @@ func (p *parser) parseRevSuffix() ([]string, error) {
 
 		switch {
 		case (tok == caret || tok == tilde) && nextTok == number:
-			components = append(components, lit+nextLit)
+			n, err := strconv.Atoi(nextLit)
+
+			if err != nil {
+				return []revSuffixer{}, nil
+			}
+
+			r := revSuffixPath{lit, n}
+
+			components = append(components, r)
 		case (tok == caret || tok == tilde):
-			components = append(components, lit)
+			components = append(components, revSuffixPath{lit, 1})
 			p.unscan()
 		case tok == eof:
 			return components, nil
 		default:
-			return []string{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix component`, lit)}
+			return []revSuffixer{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix component`, lit)}
 		}
 	}
 }
