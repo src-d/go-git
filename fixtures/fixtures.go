@@ -120,8 +120,7 @@ var fixtures = Fixtures{{
 	URL:          "https://github.com/git-fixtures/empty.git",
 	DotGitHash:   plumbing.NewHash("4abe340d8d378baf7c2bfb2854c0fa498642bac3"),
 	ObjectsCount: 0,
-},
-}
+}}
 
 func All() Fixtures {
 	return fixtures

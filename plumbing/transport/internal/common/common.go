@@ -1,3 +1,8 @@
+// Package common implements the git pack protocol with a pluggable transport.
+// This is a low-level package to implement new transports. Use a concrete
+// implementation instead (e.g. http, file, ssh).
+//
+// A simple example of usage can be found in the file package.
 package common
 
 import (
@@ -14,35 +19,67 @@ import (
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
-type Command interface {
-	SetAuth(transport.AuthMethod) error
-	Start() error
-	StderrPipe() (io.Reader, error)
-	StdinPipe() (io.WriteCloser, error)
-	StdoutPipe() (io.Reader, error)
-	Wait() error
-	io.Closer
+// Commander creates Command instances. This is the main entry point for
+// transport implementations.
+type Commander interface {
+	// Command creates a new Command for the given git command and
+	// endpoint. cmd can be git-upload-pack or git-receive-pack. An
+	// error should be returned if the endpoint is not supported or the
+	// command cannot be created (e.g. binary does not exist, connection
+	// cannot be established).
+	Command(cmd string, ep transport.Endpoint) (Command, error)
 }
 
-type Commander interface {
-	Command(cmd string, ep transport.Endpoint) (Command, error)
+// Command is used for a single command execution.
+// This interface is modeled after exec.Cmd and ssh.Session in the standard
+// library.
+type Command interface {
+	// SetAuth sets the authentication method.
+	SetAuth(transport.AuthMethod) error
+	// StderrPipe returns a pipe that will be connected to the command's
+	// standard error when the command starts. It should not be called after
+	// Start.
+	StderrPipe() (io.Reader, error)
+	// StdinPipe returns a pipe that will be connected to the command's
+	// standard input when the command starts. It should not be called after
+	// Start. The pipe should be closed when no more input is expected.
+	StdinPipe() (io.WriteCloser, error)
+	// StdoutPipe returns a pipe that will be connected to the command's
+	// standard output when the command starts. It should not be called after
+	// Start.
+	StdoutPipe() (io.Reader, error)
+	// Start starts the specified command. It does not wait for it to
+	// complete.
+	Start() error
+	// Wait waits for the command to exit. It must have been started by
+	// Start. The returned error is nil if the command runs, has no
+	// problems copying stdin, stdout, and stderr, and exits with a zero
+	// exit status.
+	Wait() error
+	// Close closes the command without waiting for it to exit and releases
+	// any resources. It can be called to forcibly finish the command
+	// without calling to Wait or to release resources after calling
+	// Wait.
+	Close() error
 }
 
 type client struct {
 	cmdr Commander
 }
 
-// NewClient creates a new client using a CommandRunner.
+// NewClient creates a new client using the given Commander.
 func NewClient(runner Commander) transport.Client {
 	return &client{runner}
 }
 
+// NewFetchPackSession creates a new FetchPackSession.
 func (c *client) NewFetchPackSession(ep transport.Endpoint) (
 	transport.FetchPackSession, error) {
 
 	return c.newSession(transport.UploadPackServiceName, ep)
 }
 
+// NewSendPackSession creates a new SendPackSession.
 func (c *client) NewSendPackSession(ep transport.Endpoint) (
 	transport.SendPackSession, error) {
 
@@ -91,10 +128,12 @@ func (c *client) newSession(s string, ep transport.Endpoint) (*session, error) {
 	}, nil
 }
 
+// SetAuth delegates to the command's SetAuth.
 func (s *session) SetAuth(auth transport.AuthMethod) error {
 	return s.Command.SetAuth(auth)
 }
 
+// AdvertisedReferences retrieves the advertised references from the server.
 func (s *session) AdvertisedReferences() (*packp.AdvRefs, error) {
 	if s.advRefsRun {
 		return nil, transport.ErrAdvertistedReferencesAlreadyCalled
@@ -126,8 +165,8 @@ func (s *session) AdvertisedReferences() (*packp.AdvRefs, error) {
 	return ar, nil
 }
 
-// FetchPack returns a packfile for a given upload request.
-// Closing the returned reader will close the SSH session.
+// FetchPack performs a request to the server to fetch a packfile. A reader is
+// returned with the packfile content. The reader must be closed after reading.
 func (s *session) FetchPack(req *packp.UploadPackRequest) (io.ReadCloser, error) {
 	if req.IsEmpty() {
 		return nil, transport.ErrEmptyUploadPackRequest

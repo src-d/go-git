@@ -23,7 +23,8 @@ func InstallProtocol(scheme string, c transport.Client) {
 }
 
 // NewClient returns the appropriate client among of the set of known protocols:
-// HTTP, SSH or local. See `InstallProtocol` to add or modify protocols.
+// http://, https://, ssh:// and file://.
+// See `InstallProtocol` to add or modify protocols.
 func NewClient(endpoint transport.Endpoint) (transport.Client, error) {
 	f, ok := Protocols[endpoint.Scheme]
 	if !ok {
