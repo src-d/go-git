@@ -33,3 +33,7 @@ var (
 	// updreq
 	shallowNoSp = []byte("shallow")
 )
+
+func isFlush(payload []byte) bool {
+	return len(payload) == 0
+}
