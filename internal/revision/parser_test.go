@@ -120,7 +120,7 @@ func (s *ParserSuite) TestParseRefWithValidName(c *C) {
 		result, err := parser.parseRef()
 
 		c.Assert(err, Equals, nil)
-		c.Assert(result, Equals, d)
+		c.Assert(result, Equals, ref(d))
 	}
 }
 

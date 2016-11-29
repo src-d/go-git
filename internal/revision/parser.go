@@ -14,6 +14,9 @@ func (e *ErrInvalidRevision) Error() string {
 	return "Revision invalid : " + e.s
 }
 
+// ref represents a reference name
+type ref string
+
 // parser represents a parser.
 type parser struct {
 	s   *scanner
@@ -73,7 +76,7 @@ func (p *parser) parseRevSuffix() ([]string, error) {
 }
 
 // parseRef extract reference name
-func (p *parser) parseRef() (string, error) {
+func (p *parser) parseRef() (ref, error) {
 	var tok token
 	var prevTok token
 	var lit string
@@ -95,7 +98,7 @@ func (p *parser) parseRef() (string, error) {
 		}
 
 		if endOfRef {
-			return buf, nil
+			return ref(buf), nil
 		}
 
 		buf += lit
