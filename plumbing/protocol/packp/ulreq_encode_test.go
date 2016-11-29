@@ -60,11 +60,11 @@ func (s *UlReqEncodeSuite) TestOneWant(c *C) {
 func (s *UlReqEncodeSuite) TestOneWantWithCapabilities(c *C) {
 	ur := NewUploadRequest()
 	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
-	ur.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
 	ur.Capabilities.Add(capability.MultiACK)
-	ur.Capabilities.Add(capability.ThinPack)
-	ur.Capabilities.Add(capability.Sideband)
 	ur.Capabilities.Add(capability.OFSDelta)
+	ur.Capabilities.Add(capability.Sideband)
+	ur.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
+	ur.Capabilities.Add(capability.ThinPack)
 
 	expected := []string{
 		"want 1111111111111111111111111111111111111111 multi_ack ofs-delta side-band symref=HEAD:/refs/heads/master thin-pack\n",
@@ -102,11 +102,11 @@ func (s *UlReqEncodeSuite) TestWantsWithCapabilities(c *C) {
 	ur.Wants = append(ur.Wants, plumbing.NewHash("2222222222222222222222222222222222222222"))
 	ur.Wants = append(ur.Wants, plumbing.NewHash("5555555555555555555555555555555555555555"))
 
-	ur.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
 	ur.Capabilities.Add(capability.MultiACK)
-	ur.Capabilities.Add(capability.ThinPack)
-	ur.Capabilities.Add(capability.Sideband)
 	ur.Capabilities.Add(capability.OFSDelta)
+	ur.Capabilities.Add(capability.Sideband)
+	ur.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
+	ur.Capabilities.Add(capability.ThinPack)
 
 	expected := []string{
 		"want 1111111111111111111111111111111111111111 multi_ack ofs-delta side-band symref=HEAD:/refs/heads/master thin-pack\n",
@@ -226,11 +226,11 @@ func (s *UlReqEncodeSuite) TestAll(c *C) {
 	ur.Wants = append(ur.Wants, plumbing.NewHash("2222222222222222222222222222222222222222"))
 	ur.Wants = append(ur.Wants, plumbing.NewHash("5555555555555555555555555555555555555555"))
 
-	ur.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
 	ur.Capabilities.Add(capability.MultiACK)
-	ur.Capabilities.Add(capability.ThinPack)
-	ur.Capabilities.Add(capability.Sideband)
 	ur.Capabilities.Add(capability.OFSDelta)
+	ur.Capabilities.Add(capability.Sideband)
+	ur.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
+	ur.Capabilities.Add(capability.ThinPack)
 
 	ur.Shallows = append(ur.Shallows, plumbing.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))
 	ur.Shallows = append(ur.Shallows, plumbing.NewHash("dddddddddddddddddddddddddddddddddddddddd"))

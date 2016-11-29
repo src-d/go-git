@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 )
 
@@ -26,8 +25,8 @@ var (
 
 // List represents a list of capabilities
 type List struct {
-	m map[Capability]*entry
-	o []string
+	m    map[Capability]*entry
+	sort []string
 }
 
 type entry struct {
@@ -44,7 +43,7 @@ func NewList() *List {
 
 // IsEmpty returns true if the List is empty
 func (l *List) IsEmpty() bool {
-	return len(l.o) == 0
+	return len(l.sort) == 0
 }
 
 // Decode decodes list of capabilities from raw into the list
@@ -71,6 +70,10 @@ func (l *List) Decode(raw []byte) error {
 
 // Get returns the values for a capability
 func (l *List) Get(capability Capability) []string {
+	if _, ok := l.m[capability]; !ok {
+		return nil
+	}
+
 	return l.m[capability].Values
 }
 
@@ -91,7 +94,7 @@ func (l *List) Add(c Capability, values ...string) error {
 
 	if !l.Supports(c) {
 		l.m[c] = &entry{Name: c}
-		l.o = append(l.o, c.String())
+		l.sort = append(l.sort, c.String())
 	}
 
 	if len(values) == 0 {
@@ -138,21 +141,21 @@ func (l *List) Supports(capability Capability) bool {
 	return ok
 }
 
+// String generates the capabilities strings, the capabilities are sorted in
+// insertion order
 func (l *List) String() string {
-	sort.Strings(l.o)
-
-	var o string
-	for _, key := range l.o {
+	var o []string
+	for _, key := range l.sort {
 		cap := l.m[Capability(key)]
 		if len(cap.Values) == 0 {
-			o += key + " "
+			o = append(o, key)
 			continue
 		}
 
 		for _, value := range cap.Values {
-			o += fmt.Sprintf("%s=%s ", key, value)
+			o = append(o, fmt.Sprintf("%s=%s", key, value))
 		}
 	}
 
-	return strings.Trim(o, " ")
+	return strings.Join(o, " ")
 }

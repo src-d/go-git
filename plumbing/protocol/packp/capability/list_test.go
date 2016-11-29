@@ -59,9 +59,9 @@ func (s *SuiteCapabilities) TestString(c *check.C) {
 
 func (s *SuiteCapabilities) TestStringSort(c *check.C) {
 	cap := NewList()
+	cap.Set(Agent, "bar")
 	cap.Set(SymRef, "foo:qux")
 	cap.Set(ThinPack)
-	cap.Set(Agent, "bar")
 
 	c.Assert(cap.String(), check.Equals, "agent=bar symref=foo:qux thin-pack")
 }
@@ -83,6 +83,11 @@ func (s *SuiteCapabilities) TestSetEmpty(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	c.Assert(cap.Get(Agent), check.HasLen, 1)
+}
+
+func (s *SuiteCapabilities) TestGetEmpty(c *check.C) {
+	cap := NewList()
+	c.Assert(cap.Get(Agent), check.HasLen, 0)
 }
 
 func (s *SuiteCapabilities) TestAdd(c *check.C) {

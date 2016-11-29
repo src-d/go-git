@@ -21,8 +21,8 @@ func ExampleUlReqEncoder_Encode() {
 	ur.Wants = append(ur.Wants, plumbing.NewHash("2222222222222222222222222222222222222222"))
 
 	// And some capabilities you will like the server to use
+	ur.Capabilities.Add(capability.OFSDelta)
 	ur.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
-	ur.Capabilities.Add("ofs-delta")
 
 	// Add a couple of shallows
 	ur.Shallows = append(ur.Shallows, plumbing.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))

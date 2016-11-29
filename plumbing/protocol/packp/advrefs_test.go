@@ -53,9 +53,7 @@ func (s *SuiteDecodeEncode) test(c *C, in []string, exp []string) {
 		obtained = buf.Bytes()
 	}
 
-	c.Assert(obtained, DeepEquals, expected,
-		Commentf("input = %v\nobtained = %q\nexpected = %q\n",
-			in, string(obtained), string(expected)))
+	c.Assert(string(obtained), DeepEquals, string(expected))
 }
 
 func (s *SuiteDecodeEncode) TestNoHead(c *C) {
@@ -116,7 +114,7 @@ func (s *SuiteDecodeEncode) TestRefs(c *C) {
 	}
 
 	expected := []string{
-		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"7777777777777777777777777777777777777777 refs/tags/v2.6.12-tree\n",
@@ -138,7 +136,7 @@ func (s *SuiteDecodeEncode) TestPeeled(c *C) {
 	}
 
 	expected := []string{
-		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
@@ -164,7 +162,7 @@ func (s *SuiteDecodeEncode) TestAll(c *C) {
 	}
 
 	expected := []string{
-		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
@@ -196,7 +194,7 @@ func (s *SuiteDecodeEncode) TestAllSmart(c *C) {
 	expected := []string{
 		"# service=git-upload-pack\n",
 		pktline.FlushString,
-		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
@@ -228,7 +226,7 @@ func (s *SuiteDecodeEncode) TestAllSmartBug(c *C) {
 	expected := []string{
 		"# service=git-upload-pack\n",
 		pktline.FlushString,
-		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
@@ -279,9 +277,9 @@ func ExampleEncoder_Encode() {
 	ar.Head = &head
 
 	// ...add some server capabilities...
+	ar.Capabilities.Add(capability.MultiACK)
+	ar.Capabilities.Add(capability.OFSDelta)
 	ar.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
-	ar.Capabilities.Add("ofs-delta")
-	ar.Capabilities.Add("multi_ack")
 
 	// ...add a couple of references...
 	ar.References["refs/heads/master"] = plumbing.NewHash("2222222222222222222222222222222222222222")
