@@ -70,6 +70,7 @@ func (s *fetchPackSession) AdvertisedReferences() (*packp.AdvRefs, error) {
 		return nil, err
 	}
 
+	transport.FilterUnsupportedCapabilities(ar.Capabilities)
 	return ar, nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -28,4 +29,12 @@ func (s *SuiteCommon) TestNewEndpointWrongForgat(c *C) {
 	e, err := NewEndpoint("foo")
 	c.Assert(err, Not(IsNil))
 	c.Assert(e.Host, Equals, "")
+}
+
+func (s *SuiteCommon) TestFilterUnsupportedCapabilities(c *C) {
+	l := capability.NewList()
+	l.Set(capability.MultiACK)
+
+	FilterUnsupportedCapabilities(l)
+	c.Assert(l.Supports(capability.MultiACK), Equals, false)
 }
