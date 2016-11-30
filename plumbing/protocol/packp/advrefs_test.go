@@ -10,6 +10,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 
 	. "gopkg.in/check.v1"
 )
@@ -44,21 +45,15 @@ func (s *SuiteDecodeEncode) test(c *C, in []string, exp []string) {
 	var obtained []byte
 	{
 		ar := packp.NewAdvRefs()
-		d := packp.NewAdvRefsDecoder(input)
-		err = d.Decode(ar)
-		c.Assert(err, IsNil)
+		c.Assert(ar.Decode(input), IsNil)
 
 		var buf bytes.Buffer
-		e := packp.NewAdvRefsEncoder(&buf)
-		err := e.Encode(ar)
-		c.Assert(err, IsNil)
+		c.Assert(ar.Encode(&buf), IsNil)
 
 		obtained = buf.Bytes()
 	}
 
-	c.Assert(obtained, DeepEquals, expected,
-		Commentf("input = %v\nobtained = %q\nexpected = %q\n",
-			in, string(obtained), string(expected)))
+	c.Assert(string(obtained), DeepEquals, string(expected))
 }
 
 func (s *SuiteDecodeEncode) TestNoHead(c *C) {
@@ -119,7 +114,7 @@ func (s *SuiteDecodeEncode) TestRefs(c *C) {
 	}
 
 	expected := []string{
-		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"7777777777777777777777777777777777777777 refs/tags/v2.6.12-tree\n",
@@ -141,7 +136,7 @@ func (s *SuiteDecodeEncode) TestPeeled(c *C) {
 	}
 
 	expected := []string{
-		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
@@ -167,7 +162,7 @@ func (s *SuiteDecodeEncode) TestAll(c *C) {
 	}
 
 	expected := []string{
-		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
@@ -199,7 +194,7 @@ func (s *SuiteDecodeEncode) TestAllSmart(c *C) {
 	expected := []string{
 		"# service=git-upload-pack\n",
 		pktline.FlushString,
-		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
@@ -231,7 +226,7 @@ func (s *SuiteDecodeEncode) TestAllSmartBug(c *C) {
 	expected := []string{
 		"# service=git-upload-pack\n",
 		pktline.FlushString,
-		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00multi_ack ofs-delta symref=HEAD:/refs/heads/master\n",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 HEAD\x00symref=HEAD:/refs/heads/master ofs-delta multi_ack\n",
 		"a6930aaee06755d1bdcfd943fbf614e4d92bb0c7 refs/heads/master\n",
 		"5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11-tree\n",
 		"c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11-tree^{}\n",
@@ -258,12 +253,9 @@ func ExampleDecoder_Decode() {
 	// Use the raw message as our input.
 	input := strings.NewReader(raw)
 
-	// Create a Decoder reading from our input.
-	d := packp.NewAdvRefsDecoder(input)
-
 	// Decode the input into a newly allocated AdvRefs value.
 	ar := packp.NewAdvRefs()
-	_ = d.Decode(ar) // error check ignored for brevity
+	_ = ar.Decode(input) // error check ignored for brevity
 
 	// Do something interesting with the AdvRefs, e.g. print its contents.
 	fmt.Println("head =", ar.Head)
@@ -285,9 +277,9 @@ func ExampleEncoder_Encode() {
 	ar.Head = &head
 
 	// ...add some server capabilities...
-	ar.Capabilities.Add("symref", "HEAD:/refs/heads/master")
-	ar.Capabilities.Add("ofs-delta")
-	ar.Capabilities.Add("multi_ack")
+	ar.Capabilities.Add(capability.MultiACK)
+	ar.Capabilities.Add(capability.OFSDelta)
+	ar.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
 
 	// ...add a couple of references...
 	ar.References["refs/heads/master"] = plumbing.NewHash("2222222222222222222222222222222222222222")
@@ -303,8 +295,7 @@ func ExampleEncoder_Encode() {
 	// You can encode into stdout too, but you will not be able
 	// see the '\x00' after "HEAD".
 	var buf bytes.Buffer
-	e := packp.NewAdvRefsEncoder(&buf)
-	_ = e.Encode(ar) // error checks ignored for brevity
+	_ = ar.Encode(&buf) // error checks ignored for brevity
 
 	// Print the contents of the buffer as a quoted string.
 	// Printing is as a non-quoted string will be prettier but you

@@ -8,15 +8,16 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 )
 
 type UlReqEncodeSuite struct{}
 
 var _ = Suite(&UlReqEncodeSuite{})
 
-func testUlReqEncode(c *C, ur *UlReq, expectedPayloads []string) {
+func testUlReqEncode(c *C, ur *UploadRequest, expectedPayloads []string) {
 	var buf bytes.Buffer
-	e := NewUlReqEncoder(&buf)
+	e := newUlReqEncoder(&buf)
 
 	err := e.Encode(ur)
 	c.Assert(err, IsNil)
@@ -29,23 +30,23 @@ func testUlReqEncode(c *C, ur *UlReq, expectedPayloads []string) {
 	c.Assert(obtained, DeepEquals, expected, comment)
 }
 
-func testUlReqEncodeError(c *C, ur *UlReq, expectedErrorRegEx string) {
+func testUlReqEncodeError(c *C, ur *UploadRequest, expectedErrorRegEx string) {
 	var buf bytes.Buffer
-	e := NewUlReqEncoder(&buf)
+	e := newUlReqEncoder(&buf)
 
 	err := e.Encode(ur)
 	c.Assert(err, ErrorMatches, expectedErrorRegEx)
 }
 
 func (s *UlReqEncodeSuite) TestZeroValue(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	expectedErrorRegEx := ".*empty wants.*"
 
 	testUlReqEncodeError(c, ur, expectedErrorRegEx)
 }
 
 func (s *UlReqEncodeSuite) TestOneWant(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 
 	expected := []string{
@@ -57,16 +58,16 @@ func (s *UlReqEncodeSuite) TestOneWant(c *C) {
 }
 
 func (s *UlReqEncodeSuite) TestOneWantWithCapabilities(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
-	ur.Capabilities.Add("sysref", "HEAD:/refs/heads/master")
-	ur.Capabilities.Add("multi_ack")
-	ur.Capabilities.Add("thin-pack")
-	ur.Capabilities.Add("side-band")
-	ur.Capabilities.Add("ofs-delta")
+	ur.Capabilities.Add(capability.MultiACK)
+	ur.Capabilities.Add(capability.OFSDelta)
+	ur.Capabilities.Add(capability.Sideband)
+	ur.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
+	ur.Capabilities.Add(capability.ThinPack)
 
 	expected := []string{
-		"want 1111111111111111111111111111111111111111 multi_ack ofs-delta side-band sysref=HEAD:/refs/heads/master thin-pack\n",
+		"want 1111111111111111111111111111111111111111 multi_ack ofs-delta side-band symref=HEAD:/refs/heads/master thin-pack\n",
 		pktline.FlushString,
 	}
 
@@ -74,7 +75,7 @@ func (s *UlReqEncodeSuite) TestOneWantWithCapabilities(c *C) {
 }
 
 func (s *UlReqEncodeSuite) TestWants(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	ur.Wants = append(ur.Wants, plumbing.NewHash("4444444444444444444444444444444444444444"))
 	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	ur.Wants = append(ur.Wants, plumbing.NewHash("3333333333333333333333333333333333333333"))
@@ -94,21 +95,21 @@ func (s *UlReqEncodeSuite) TestWants(c *C) {
 }
 
 func (s *UlReqEncodeSuite) TestWantsWithCapabilities(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	ur.Wants = append(ur.Wants, plumbing.NewHash("4444444444444444444444444444444444444444"))
 	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	ur.Wants = append(ur.Wants, plumbing.NewHash("3333333333333333333333333333333333333333"))
 	ur.Wants = append(ur.Wants, plumbing.NewHash("2222222222222222222222222222222222222222"))
 	ur.Wants = append(ur.Wants, plumbing.NewHash("5555555555555555555555555555555555555555"))
 
-	ur.Capabilities.Add("sysref", "HEAD:/refs/heads/master")
-	ur.Capabilities.Add("multi_ack")
-	ur.Capabilities.Add("thin-pack")
-	ur.Capabilities.Add("side-band")
-	ur.Capabilities.Add("ofs-delta")
+	ur.Capabilities.Add(capability.MultiACK)
+	ur.Capabilities.Add(capability.OFSDelta)
+	ur.Capabilities.Add(capability.Sideband)
+	ur.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
+	ur.Capabilities.Add(capability.ThinPack)
 
 	expected := []string{
-		"want 1111111111111111111111111111111111111111 multi_ack ofs-delta side-band sysref=HEAD:/refs/heads/master thin-pack\n",
+		"want 1111111111111111111111111111111111111111 multi_ack ofs-delta side-band symref=HEAD:/refs/heads/master thin-pack\n",
 		"want 2222222222222222222222222222222222222222\n",
 		"want 3333333333333333333333333333333333333333\n",
 		"want 4444444444444444444444444444444444444444\n",
@@ -120,9 +121,9 @@ func (s *UlReqEncodeSuite) TestWantsWithCapabilities(c *C) {
 }
 
 func (s *UlReqEncodeSuite) TestShallow(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
-	ur.Capabilities.Add("multi_ack")
+	ur.Capabilities.Add(capability.MultiACK)
 	ur.Shallows = append(ur.Shallows, plumbing.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
 
 	expected := []string{
@@ -135,9 +136,9 @@ func (s *UlReqEncodeSuite) TestShallow(c *C) {
 }
 
 func (s *UlReqEncodeSuite) TestManyShallows(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
-	ur.Capabilities.Add("multi_ack")
+	ur.Capabilities.Add(capability.MultiACK)
 	ur.Shallows = append(ur.Shallows, plumbing.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))
 	ur.Shallows = append(ur.Shallows, plumbing.NewHash("dddddddddddddddddddddddddddddddddddddddd"))
 	ur.Shallows = append(ur.Shallows, plumbing.NewHash("cccccccccccccccccccccccccccccccccccccccc"))
@@ -156,7 +157,7 @@ func (s *UlReqEncodeSuite) TestManyShallows(c *C) {
 }
 
 func (s *UlReqEncodeSuite) TestDepthCommits(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	ur.Depth = DepthCommits(1234)
 
@@ -170,7 +171,7 @@ func (s *UlReqEncodeSuite) TestDepthCommits(c *C) {
 }
 
 func (s *UlReqEncodeSuite) TestDepthSinceUTC(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	since := time.Date(2015, time.January, 2, 3, 4, 5, 0, time.UTC)
 	ur.Depth = DepthSince(since)
@@ -185,7 +186,7 @@ func (s *UlReqEncodeSuite) TestDepthSinceUTC(c *C) {
 }
 
 func (s *UlReqEncodeSuite) TestDepthSinceNonUTC(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	berlin, err := time.LoadLocation("Europe/Berlin")
 	c.Assert(err, IsNil)
@@ -204,7 +205,7 @@ func (s *UlReqEncodeSuite) TestDepthSinceNonUTC(c *C) {
 }
 
 func (s *UlReqEncodeSuite) TestDepthReference(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	ur.Depth = DepthReference("refs/heads/feature-foo")
 
@@ -218,18 +219,18 @@ func (s *UlReqEncodeSuite) TestDepthReference(c *C) {
 }
 
 func (s *UlReqEncodeSuite) TestAll(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	ur.Wants = append(ur.Wants, plumbing.NewHash("4444444444444444444444444444444444444444"))
 	ur.Wants = append(ur.Wants, plumbing.NewHash("1111111111111111111111111111111111111111"))
 	ur.Wants = append(ur.Wants, plumbing.NewHash("3333333333333333333333333333333333333333"))
 	ur.Wants = append(ur.Wants, plumbing.NewHash("2222222222222222222222222222222222222222"))
 	ur.Wants = append(ur.Wants, plumbing.NewHash("5555555555555555555555555555555555555555"))
 
-	ur.Capabilities.Add("sysref", "HEAD:/refs/heads/master")
-	ur.Capabilities.Add("multi_ack")
-	ur.Capabilities.Add("thin-pack")
-	ur.Capabilities.Add("side-band")
-	ur.Capabilities.Add("ofs-delta")
+	ur.Capabilities.Add(capability.MultiACK)
+	ur.Capabilities.Add(capability.OFSDelta)
+	ur.Capabilities.Add(capability.Sideband)
+	ur.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
+	ur.Capabilities.Add(capability.ThinPack)
 
 	ur.Shallows = append(ur.Shallows, plumbing.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))
 	ur.Shallows = append(ur.Shallows, plumbing.NewHash("dddddddddddddddddddddddddddddddddddddddd"))
@@ -240,7 +241,7 @@ func (s *UlReqEncodeSuite) TestAll(c *C) {
 	ur.Depth = DepthSince(since)
 
 	expected := []string{
-		"want 1111111111111111111111111111111111111111 multi_ack ofs-delta side-band sysref=HEAD:/refs/heads/master thin-pack\n",
+		"want 1111111111111111111111111111111111111111 multi_ack ofs-delta side-band symref=HEAD:/refs/heads/master thin-pack\n",
 		"want 2222222222222222222222222222222222222222\n",
 		"want 3333333333333333333333333333333333333333\n",
 		"want 4444444444444444444444444444444444444444\n",

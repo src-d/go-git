@@ -8,11 +8,12 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 )
 
 func ExampleUlReqEncoder_Encode() {
 	// Create an empty UlReq with the contents you want...
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 
 	// Add a couple of wants
 	ur.Wants = append(ur.Wants, plumbing.NewHash("3333333333333333333333333333333333333333"))
@@ -20,8 +21,8 @@ func ExampleUlReqEncoder_Encode() {
 	ur.Wants = append(ur.Wants, plumbing.NewHash("2222222222222222222222222222222222222222"))
 
 	// And some capabilities you will like the server to use
-	ur.Capabilities.Add("sysref", "HEAD:/refs/heads/master")
-	ur.Capabilities.Add("ofs-delta")
+	ur.Capabilities.Add(capability.OFSDelta)
+	ur.Capabilities.Add(capability.SymRef, "HEAD:/refs/heads/master")
 
 	// Add a couple of shallows
 	ur.Shallows = append(ur.Shallows, plumbing.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))
@@ -32,11 +33,11 @@ func ExampleUlReqEncoder_Encode() {
 	ur.Depth = DepthSince(since)
 
 	// Create a new Encode for the stdout...
-	e := NewUlReqEncoder(os.Stdout)
+	e := newUlReqEncoder(os.Stdout)
 	// ...and encode the upload-request to it.
 	_ = e.Encode(ur) // ignoring errors for brevity
 	// Output:
-	// 005bwant 1111111111111111111111111111111111111111 ofs-delta sysref=HEAD:/refs/heads/master
+	// 005bwant 1111111111111111111111111111111111111111 ofs-delta symref=HEAD:/refs/heads/master
 	// 0032want 2222222222222222222222222222222222222222
 	// 0032want 3333333333333333333333333333333333333333
 	// 0035shallow aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -48,7 +49,7 @@ func ExampleUlReqEncoder_Encode() {
 func ExampleUlReqDecoder_Decode() {
 	// Here is a raw advertised-ref message.
 	raw := "" +
-		"005bwant 1111111111111111111111111111111111111111 ofs-delta sysref=HEAD:/refs/heads/master\n" +
+		"005bwant 1111111111111111111111111111111111111111 ofs-delta symref=HEAD:/refs/heads/master\n" +
 		"0032want 2222222222222222222222222222222222222222\n" +
 		"0032want 3333333333333333333333333333333333333333\n" +
 		"0035shallow aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n" +
@@ -60,10 +61,10 @@ func ExampleUlReqDecoder_Decode() {
 	input := strings.NewReader(raw)
 
 	// Create the Decoder reading from our input.
-	d := NewUlReqDecoder(input)
+	d := newUlReqDecoder(input)
 
 	// Decode the input into a newly allocated UlReq value.
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	_ = d.Decode(ur) // error check ignored for brevity
 
 	// Do something interesting with the UlReq, e.g. print its contents.
@@ -79,7 +80,7 @@ func ExampleUlReqDecoder_Decode() {
 		fmt.Println("depth =", string(depth))
 	}
 	// Output:
-	// capabilities = ofs-delta sysref=HEAD:/refs/heads/master
+	// capabilities = ofs-delta symref=HEAD:/refs/heads/master
 	// wants = [1111111111111111111111111111111111111111 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333]
 	// shallows = [aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb]
 	// depth = 2015-01-02 03:04:05 +0000 UTC

@@ -20,6 +20,7 @@ import (
 	"regexp"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
 )
 
 var (
@@ -33,7 +34,8 @@ var (
 )
 
 const (
-	UploadPackServiceName = "git-upload-pack"
+	UploadPackServiceName  = "git-upload-pack"
+	ReceivePackServiceName = "git-receive-pack"
 )
 
 // Client can initiate git-fetch-pack and git-send-pack processes.
@@ -63,10 +65,10 @@ type FetchPackSession interface {
 	// AdvertisedReferences retrieves the advertised references for a
 	// repository. It should be called before FetchPack, and it cannot be
 	// called after FetchPack.
-	AdvertisedReferences() (*UploadPackInfo, error)
+	AdvertisedReferences() (*packp.AdvRefs, error)
 	// FetchPack takes a request and returns a reader for the packfile
 	// received from the server.
-	FetchPack(req *UploadPackRequest) (io.ReadCloser, error)
+	FetchPack(req *packp.UploadPackRequest) (io.ReadCloser, error)
 }
 
 // FetchPackSession represents a git-send-pack session.
@@ -78,7 +80,7 @@ type SendPackSession interface {
 	// AdvertisedReferences retrieves the advertised references for a
 	// repository. It should be called before FetchPack, and it cannot be
 	// called after FetchPack.
-	AdvertisedReferences() (*UploadPackInfo, error)
+	AdvertisedReferences() (*packp.AdvRefs, error)
 	// UpdateReferences sends an update references request and returns a
 	// writer to be used for packfile writing.
 	//TODO: Complete signature.

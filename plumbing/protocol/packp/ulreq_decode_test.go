@@ -10,6 +10,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 )
 
 type UlReqDecodeSuite struct{}
@@ -17,9 +18,9 @@ type UlReqDecodeSuite struct{}
 var _ = Suite(&UlReqDecodeSuite{})
 
 func (s *UlReqDecodeSuite) TestEmpty(c *C) {
-	ur := NewUlReq()
+	ur := NewUploadRequest()
 	var buf bytes.Buffer
-	d := NewUlReqDecoder(&buf)
+	d := newUlReqDecoder(&buf)
 
 	err := d.Decode(ur)
 	c.Assert(err, ErrorMatches, "pkt-line 1: EOF")
@@ -35,8 +36,8 @@ func (s *UlReqDecodeSuite) TestNoWant(c *C) {
 }
 
 func (s *UlReqDecodeSuite) testDecoderErrorMatches(c *C, input io.Reader, pattern string) {
-	ur := NewUlReq()
-	d := NewUlReqDecoder(input)
+	ur := NewUploadRequest()
+	d := newUlReqDecoder(input)
 
 	err := d.Decode(ur)
 	c.Assert(err, ErrorMatches, pattern)
@@ -63,14 +64,14 @@ func (s *UlReqDecodeSuite) TestWantOK(c *C) {
 	})
 }
 
-func (s *UlReqDecodeSuite) testDecodeOK(c *C, payloads []string) *UlReq {
+func (s *UlReqDecodeSuite) testDecodeOK(c *C, payloads []string) *UploadRequest {
 	var buf bytes.Buffer
 	e := pktline.NewEncoder(&buf)
 	err := e.EncodeString(payloads...)
 	c.Assert(err, IsNil)
 
-	ur := NewUlReq()
-	d := NewUlReqDecoder(&buf)
+	ur := NewUploadRequest()
+	d := newUlReqDecoder(&buf)
 
 	err = d.Decode(ur)
 	c.Assert(err, IsNil)
@@ -87,8 +88,8 @@ func (s *UlReqDecodeSuite) TestWantWithCapabilities(c *C) {
 	c.Assert(ur.Wants, DeepEquals, []plumbing.Hash{
 		plumbing.NewHash("1111111111111111111111111111111111111111")})
 
-	c.Assert(ur.Capabilities.Supports("ofs-delta"), Equals, true)
-	c.Assert(ur.Capabilities.Supports("multi_ack"), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.OFSDelta), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.MultiACK), Equals, true)
 }
 
 func (s *UlReqDecodeSuite) TestManyWantsNoCapabilities(c *C) {
@@ -168,8 +169,8 @@ func (s *UlReqDecodeSuite) TestManyWantsWithCapabilities(c *C) {
 	sort.Sort(byHash(expected))
 	c.Assert(ur.Wants, DeepEquals, expected)
 
-	c.Assert(ur.Capabilities.Supports("ofs-delta"), Equals, true)
-	c.Assert(ur.Capabilities.Supports("multi_ack"), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.OFSDelta), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.MultiACK), Equals, true)
 }
 
 func (s *UlReqDecodeSuite) TestSingleShallowSingleWant(c *C) {
@@ -189,8 +190,8 @@ func (s *UlReqDecodeSuite) TestSingleShallowSingleWant(c *C) {
 	}
 
 	c.Assert(ur.Wants, DeepEquals, expectedWants)
-	c.Assert(ur.Capabilities.Supports("ofs-delta"), Equals, true)
-	c.Assert(ur.Capabilities.Supports("multi_ack"), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.OFSDelta), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.MultiACK), Equals, true)
 
 	c.Assert(ur.Shallows, DeepEquals, expectedShallows)
 }
@@ -220,8 +221,8 @@ func (s *UlReqDecodeSuite) TestSingleShallowManyWants(c *C) {
 
 	sort.Sort(byHash(ur.Wants))
 	c.Assert(ur.Wants, DeepEquals, expectedWants)
-	c.Assert(ur.Capabilities.Supports("ofs-delta"), Equals, true)
-	c.Assert(ur.Capabilities.Supports("multi_ack"), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.OFSDelta), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.MultiACK), Equals, true)
 
 	c.Assert(ur.Shallows, DeepEquals, expectedShallows)
 }
@@ -250,8 +251,8 @@ func (s *UlReqDecodeSuite) TestManyShallowSingleWant(c *C) {
 	sort.Sort(byHash(expectedShallows))
 
 	c.Assert(ur.Wants, DeepEquals, expectedWants)
-	c.Assert(ur.Capabilities.Supports("ofs-delta"), Equals, true)
-	c.Assert(ur.Capabilities.Supports("multi_ack"), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.OFSDelta), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.MultiACK), Equals, true)
 
 	sort.Sort(byHash(ur.Shallows))
 	c.Assert(ur.Shallows, DeepEquals, expectedShallows)
@@ -289,8 +290,8 @@ func (s *UlReqDecodeSuite) TestManyShallowManyWants(c *C) {
 
 	sort.Sort(byHash(ur.Wants))
 	c.Assert(ur.Wants, DeepEquals, expectedWants)
-	c.Assert(ur.Capabilities.Supports("ofs-delta"), Equals, true)
-	c.Assert(ur.Capabilities.Supports("multi_ack"), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.OFSDelta), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.MultiACK), Equals, true)
 
 	sort.Sort(byHash(ur.Shallows))
 	c.Assert(ur.Shallows, DeepEquals, expectedShallows)
@@ -500,9 +501,8 @@ func (s *UlReqDecodeSuite) TestAll(c *C) {
 	sort.Sort(byHash(expectedWants))
 	sort.Sort(byHash(ur.Wants))
 	c.Assert(ur.Wants, DeepEquals, expectedWants)
-
-	c.Assert(ur.Capabilities.Supports("ofs-delta"), Equals, true)
-	c.Assert(ur.Capabilities.Supports("multi_ack"), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.OFSDelta), Equals, true)
+	c.Assert(ur.Capabilities.Supports(capability.MultiACK), Equals, true)
 
 	expectedShallows := []plumbing.Hash{
 		plumbing.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),

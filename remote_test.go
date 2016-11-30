@@ -19,6 +19,7 @@ import (
 	osfs "gopkg.in/src-d/go-git.v4/utils/fs/os"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 )
 
 const FixRefSpec = config.RefSpec("+refs/heads/*:refs/remotes/origin/*")
@@ -54,10 +55,10 @@ func (s *RemoteSuite) TestInfo(c *C) {
 	r := newRemote(nil, &config.RemoteConfig{Name: "foo", URL: RepositoryFixture})
 	r.client = &MockClient{}
 
-	c.Assert(r.Info(), IsNil)
+	c.Assert(r.AdvertisedReferences(), IsNil)
 	c.Assert(r.Connect(), IsNil)
-	c.Assert(r.Info(), NotNil)
-	c.Assert(r.Info().Capabilities.Get("ofs-delta"), NotNil)
+	c.Assert(r.AdvertisedReferences(), NotNil)
+	c.Assert(r.AdvertisedReferences().Capabilities.Get(capability.Agent), NotNil)
 }
 
 func (s *RemoteSuite) TestDefaultBranch(c *C) {
@@ -73,7 +74,7 @@ func (s *RemoteSuite) TestCapabilities(c *C) {
 	r.client = &MockClient{}
 
 	c.Assert(r.Connect(), IsNil)
-	c.Assert(r.Capabilities().Get("agent").Values, HasLen, 1)
+	c.Assert(r.Capabilities().Get(capability.Agent), HasLen, 1)
 }
 
 func (s *RemoteSuite) TestFetch(c *C) {
@@ -180,11 +181,11 @@ func (s *RemoteSuite) TestRef(c *C) {
 	err := r.Connect()
 	c.Assert(err, IsNil)
 
-	ref, err := r.Ref(plumbing.HEAD, false)
+	ref, err := r.Reference(plumbing.HEAD, false)
 	c.Assert(err, IsNil)
 	c.Assert(ref.Name(), Equals, plumbing.HEAD)
 
-	ref, err = r.Ref(plumbing.HEAD, true)
+	ref, err = r.Reference(plumbing.HEAD, true)
 	c.Assert(err, IsNil)
 	c.Assert(ref.Name(), Equals, plumbing.ReferenceName("refs/heads/master"))
 }
@@ -196,7 +197,7 @@ func (s *RemoteSuite) TestRefs(c *C) {
 	err := r.Connect()
 	c.Assert(err, IsNil)
 
-	iter, err := r.Refs()
+	iter, err := r.References()
 	c.Assert(err, IsNil)
 	c.Assert(iter, NotNil)
 }
