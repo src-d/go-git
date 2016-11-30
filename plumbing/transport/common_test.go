@@ -3,8 +3,9 @@ package transport
 import (
 	"testing"
 
-	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
+
+	. "gopkg.in/check.v1"
 )
 
 func Test(t *testing.T) { TestingT(t) }

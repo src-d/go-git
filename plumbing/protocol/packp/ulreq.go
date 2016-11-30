@@ -1,9 +1,8 @@
 package packp
 
 import (
-	"time"
-
 	"fmt"
+	"time"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
@@ -137,7 +136,7 @@ func (r *UploadRequest) validateRequiredCapabilities() error {
 }
 
 func (r *UploadRequest) validateConflictCapabilities() error {
-	msg := "capabilities %s and %s mutually exclusive"
+	msg := "capabilities %s and %s are mutually exclusive"
 	if r.Capabilities.Supports(capability.Sideband) &&
 		r.Capabilities.Supports(capability.Sideband64k) {
 		return fmt.Errorf(msg, capability.Sideband, capability.Sideband64k)
