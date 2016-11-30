@@ -74,10 +74,6 @@ func (d *Demuxer) Read(b []byte) (n int, err error) {
 		n, err := d.doRead(b[read:req])
 		read += n
 
-		if err == io.EOF {
-			break
-		}
-
 		if err != nil {
 			return read, err
 		}
@@ -110,22 +106,25 @@ func (d *Demuxer) nextPackData() ([]byte, error) {
 	}
 
 	if !d.s.Scan() {
+		if err := d.s.Err(); err != nil {
+			return nil, err
+		}
+
 		return nil, io.EOF
 	}
 
 	content = d.s.Bytes()
-	err := d.s.Err()
 
 	size := len(content)
 	if size == 0 {
-		return nil, err
+		return nil, nil
 	} else if size > d.max {
 		return nil, ErrMaxPackedExceeded
 	}
 
 	switch Channel(content[0]) {
 	case PackData:
-		return content[1:], err
+		return content[1:], nil
 	case ProgressMessage:
 		_, err := d.Progress.(io.Writer).Write(content[1:])
 		return nil, err
