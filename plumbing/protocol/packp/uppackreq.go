@@ -35,7 +35,8 @@ func NewUploadPackRequestFromCapabilities(adv *capability.List) *UploadPackReque
 	}
 }
 
-// IsEmpty returns true if the request wants is equal to zero
+// IsEmpty a request if empty if Haves are contained in the Wants, or if Wants
+// length is zero
 func (r *UploadPackRequest) IsEmpty() bool {
 	return isSubset(r.Wants, r.Haves)
 }

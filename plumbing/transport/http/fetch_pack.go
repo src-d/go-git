@@ -79,6 +79,10 @@ func (s *fetchPackSession) FetchPack(r *packp.UploadPackRequest) (io.ReadCloser,
 		return nil, transport.ErrEmptyUploadPackRequest
 	}
 
+	if err := r.Validate(); err != nil {
+		return nil, err
+	}
+
 	url := fmt.Sprintf(
 		"%s/%s",
 		s.endpoint.String(), transport.UploadPackServiceName,

@@ -122,6 +122,20 @@ func (s *FetchPackSuite) TestFetchPack(c *C) {
 	s.checkObjectNumber(c, reader, 28)
 }
 
+func (s *FetchPackSuite) TestFetchPackInvalidReq(c *C) {
+	r, err := s.Client.NewFetchPackSession(s.Endpoint)
+	c.Assert(err, IsNil)
+	defer func() { c.Assert(r.Close(), IsNil) }()
+
+	req := packp.NewUploadPackRequest()
+	req.Wants = append(req.Wants, plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	req.Capabilities.Set(capability.Sideband)
+	req.Capabilities.Set(capability.Sideband64k)
+
+	_, err = r.FetchPack(req)
+	c.Assert(err, NotNil)
+}
+
 func (s *FetchPackSuite) TestFetchPackNoChanges(c *C) {
 	r, err := s.Client.NewFetchPackSession(s.Endpoint)
 	c.Assert(err, IsNil)

@@ -173,6 +173,10 @@ func (s *session) FetchPack(req *packp.UploadPackRequest) (io.ReadCloser, error)
 		return nil, transport.ErrEmptyUploadPackRequest
 	}
 
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
 	if !s.advRefsRun {
 		if _, err := s.AdvertisedReferences(); err != nil {
 			return nil, err
