@@ -28,6 +28,17 @@ type revSuffixPath struct {
 	deep   int
 }
 
+// revSuffixReg represents ^{/foo bar} revision suffix
+type revSuffixReg struct {
+	re     string
+	negate bool
+}
+
+// revSuffixType represents ^{commit} revision suffix
+type revSuffixType struct {
+	object string
+}
+
 // parser represents a parser.
 type parser struct {
 	s   *scanner
@@ -62,10 +73,8 @@ func (p *parser) unscan() { p.buf.n = 1 }
 
 // parseRevSuffix extract part following revision
 func (p *parser) parseRevSuffix() ([]revSuffixer, error) {
-	var tok token
-	var nextTok token
-	var lit string
-	var nextLit string
+	var tok, nextTok token
+	var lit, nextLit string
 	var components []revSuffixer
 
 	for {
@@ -73,6 +82,14 @@ func (p *parser) parseRevSuffix() ([]revSuffixer, error) {
 		nextTok, nextLit = p.scan()
 
 		switch {
+		case tok == caret && nextTok == obrace:
+			r, err := p.parseRevSuffixInBraces()
+
+			if err != nil {
+				return []revSuffixer{}, err
+			}
+
+			components = append(components, r)
 		case (tok == caret || tok == tilde) && nextTok == number:
 			n, err := strconv.Atoi(nextLit)
 
@@ -94,12 +111,49 @@ func (p *parser) parseRevSuffix() ([]revSuffixer, error) {
 	}
 }
 
+// parseRevSuffixInBraces extract revision suffix between braces
+// todo : add regexp checker
+func (p *parser) parseRevSuffixInBraces() (revSuffixer, error) {
+	var tok, nextTok token
+	var lit, _ string
+	start := true
+	reg := revSuffixReg{}
+
+	for {
+		tok, lit = p.scan()
+		nextTok, _ = p.scan()
+
+		switch {
+		case tok == word && nextTok == cbrace && (lit == "commit" || lit == "tree" || lit == "blob" || lit == "tag" || lit == "object"):
+			return revSuffixType{lit}, nil
+		case reg.re == "" && tok == cbrace:
+			return revSuffixType{"tag"}, nil
+		case reg.re == "" && tok == emark && nextTok == emark:
+			reg.re += lit
+		case reg.re == "" && tok == emark && nextTok == minus:
+			reg.negate = true
+		case reg.re == "" && tok == emark:
+			return (revSuffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
+		case reg.re == "" && tok == slash:
+			p.unscan()
+		case tok != slash && start:
+			return (revSuffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix brace component`, lit)}
+		case tok != cbrace:
+			p.unscan()
+			reg.re += lit
+		case tok == cbrace:
+			p.unscan()
+			return reg, nil
+		}
+
+		start = false
+	}
+}
+
 // parseRef extract reference name
 func (p *parser) parseRef() (ref, error) {
-	var tok token
-	var prevTok token
-	var lit string
-	var buf string
+	var tok, prevTok token
+	var lit, buf string
 	var endOfRef bool
 
 	for {

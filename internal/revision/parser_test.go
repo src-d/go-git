@@ -83,7 +83,44 @@ func (s *ParserSuite) TestParseRevSuffixWithValidExpression(c *C) {
 			revSuffixPath{"^", 100},
 			revSuffixPath{"^", 1},
 			revSuffixPath{"~", 1000},
-		}}
+		},
+		"^{}": []revSuffixer{
+			revSuffixType{"tag"},
+		},
+		"^{commit}": []revSuffixer{
+			revSuffixType{"commit"},
+		},
+		"^{tree}": []revSuffixer{
+			revSuffixType{"tree"},
+		},
+		"^{blob}": []revSuffixer{
+			revSuffixType{"blob"},
+		},
+		"^{tag}": []revSuffixer{
+			revSuffixType{"tag"},
+		},
+		"^{object}": []revSuffixer{
+			revSuffixType{"object"},
+		},
+		"^{/hello world !}": []revSuffixer{
+			revSuffixReg{"hello world !", false},
+		},
+		"^{/!-hello world !}": []revSuffixer{
+			revSuffixReg{"hello world !", true},
+		},
+		"^{/!! hello world !}": []revSuffixer{
+			revSuffixReg{"! hello world !", false},
+		},
+		"^5^~3^{/!! hello world !}~2^{/test}^": []revSuffixer{
+			revSuffixPath{"^", 5},
+			revSuffixPath{"^", 1},
+			revSuffixPath{"~", 3},
+			revSuffixReg{"! hello world !", false},
+			revSuffixPath{"~", 2},
+			revSuffixReg{"test", false},
+			revSuffixPath{"^", 1},
+		},
+	}
 
 	for d, expected := range datas {
 		parser := newParser(bytes.NewBufferString(d))
@@ -99,6 +136,8 @@ func (s *ParserSuite) TestParseRevSuffixWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"a":         &ErrInvalidRevision{`"a" is not a valid revision suffix component`},
 		"~^~10a^10": &ErrInvalidRevision{`"a" is not a valid revision suffix component`},
+		"^{test}":   &ErrInvalidRevision{`"test" is not a valid revision suffix brace component`},
+		"^{/!test}": &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
 	}
 
 	for s, e := range datas {
