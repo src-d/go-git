@@ -69,6 +69,36 @@ func (s *ParserSuite) TestUnscan(c *C) {
 	c.Assert(tok, Equals, word)
 }
 
+func (s *ParserSuite) TestParseAtSuffixWithValidExpression(c *C) {
+	datas := map[string]atSuffixer{
+		"{1}": atSuffixReflog{1},
+	}
+
+	for d, expected := range datas {
+		parser := newParser(bytes.NewBufferString(d))
+
+		result, err := parser.parseAtSuffix()
+
+		c.Assert(err, Equals, nil)
+		c.Assert(result, DeepEquals, expected)
+	}
+}
+
+func (s *ParserSuite) TestParseAtSuffixWithUnValidExpression(c *C) {
+	datas := map[string]error{
+		"test}":  &ErrInvalidRevision{`"test" found must be "{" after @`},
+		"{test}": &ErrInvalidRevision{`invalid expression "test" in @{} structure`},
+	}
+
+	for s, e := range datas {
+		parser := newParser(bytes.NewBufferString(s))
+
+		_, err := parser.parseAtSuffix()
+
+		c.Assert(err, DeepEquals, e)
+	}
+}
+
 func (s *ParserSuite) TestParseRevSuffixWithValidExpression(c *C) {
 	datas := map[string][]revSuffixer{
 		"^": []revSuffixer{revSuffixPath{"^", 1}},

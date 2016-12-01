@@ -39,6 +39,15 @@ type revSuffixType struct {
 	object string
 }
 
+// atSuffixer represents generic suffix added to @
+type atSuffixer interface {
+}
+
+// atSuffixReflog represents @{n}
+type atSuffixReflog struct {
+	deep int
+}
+
 // parser represents a parser.
 type parser struct {
 	s   *scanner
@@ -70,6 +79,36 @@ func (p *parser) scan() (tok token, lit string) {
 
 // unscan pushes the previously read token back onto the buffer.
 func (p *parser) unscan() { p.buf.n = 1 }
+
+// parseAtSuffix extract part following @
+func (p *parser) parseAtSuffix() (atSuffixer, error) {
+	var tok, nextTok token
+	var lit string
+
+	for {
+		tok, lit = p.scan()
+
+		if tok != obrace {
+			return (atSuffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "{" after @`, lit)}
+		}
+
+		tok, lit = p.scan()
+		nextTok, _ = p.scan()
+
+		switch {
+		case tok == number && nextTok == cbrace:
+			n, err := strconv.Atoi(lit)
+
+			if err != nil {
+				return []atSuffixer{}, err
+			}
+
+			return atSuffixReflog{n}, nil
+		}
+
+		return (atSuffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`invalid expression "%s" in @{} structure`, lit)}
+	}
+}
 
 // parseRevSuffix extract part following revision
 func (p *parser) parseRevSuffix() ([]revSuffixer, error) {
