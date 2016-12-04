@@ -40,12 +40,12 @@ Examples
 Retrieving the commits for a given repository:
 
 ```go
-r, err := git.NewRepository("https://github.com/src-d/go-git", nil)
-if err != nil {
-	panic(err)
+r := git.NewMemoryRepository()
+o := &git.CloneOptions{
+	URL: "https://github.com/src-d/go-git",
 }
 
-if err := r.PullDefault(); err != nil {
+if err := r.Clone(o); err != nil {
 	panic(err)
 }
 
@@ -62,10 +62,9 @@ for {
 		if err == io.EOF {
 			break
 		}
-
 		panic(err)
 	}
-
+    
 	fmt.Println(commit)
 }
 ```
@@ -93,21 +92,20 @@ Date:   2015-12-11 17:57:10 +0100 +0100
 Retrieving the latest commit for a given repository:
 
 ```go
-r, err := git.NewRepository("https://github.com/src-d/go-git", nil)
+r := git.NewMemoryRepository()
+o := &git.CloneOptions{
+	URL: "https://github.com/src-d/go-git",
+}
+if err := r.Clone(o); err != nil {
+	panic(err)
+}
+
+ref, err := r.Head()
 if err != nil {
 	panic(err)
 }
 
-if err := r.PullDefault(); err != nil {
-	panic(err)
-}
-
-hash, err := r.Remotes[git.DefaultRemoteName].Head()
-if err != nil {
-	panic(err)
-}
-
-commit, err := r.Commit(hash)
+commit, err := r.Commit(ref.Hash())
 if err != nil {
 	panic(err)
 }
@@ -134,14 +132,12 @@ import (
 	"io"
 
 	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/utils/fs"
 )
 
 func main() {
-	fs := fs.NewOS() // a simple proxy for the local host filesystem
 	path := "/tmp/go-git/.git"
 
-	repo, err := git.NewRepositoryFromFS(fs, path)
+	repo, err := git.NewFilesystemRepository(path)
 	if err != nil {
 		panic(err)
 	}
@@ -166,10 +162,10 @@ func main() {
 }
 ```
 
-Implementing your own filesystem will let you access repositories stored on
-remote services (e.g. amazon S3), see the
-[examples](https://github.com/src-d/go-git/tree/master/examples/fs_implementation/)
-directory for a simple filesystem implementation and usage.
+Implementing your own Storer for filesystem will let you access repositories stored on
+remote services (e.g. amazon S3, Aerospike), see the
+[examples](https://github.com/src-d/go-git/blob/master/examples/storage/aerospike/storage.go)
+directory for a simple implementation and usage.
 
 Wrapping
 --------
