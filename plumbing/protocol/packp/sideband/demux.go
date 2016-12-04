@@ -1,7 +1,6 @@
 package sideband
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -15,12 +14,13 @@ var ErrMaxPackedExceeded = errors.New("max. packed size exceeded")
 // Progress allows to read the progress information
 type Progress interface {
 	io.Reader
+	io.Writer
 }
 
 // Demuxer demultiplex the progress reports and error info interleaved with the
 // packfile itself.
 //
-// A sideband has three diferent channels the main one call PackData contains
+// A sideband has three diferent channels the main one, call PackData, contains
 // the packfile data, the ErrorMessage channel, that contains server errors and
 // the last one ProgressMessage channel containing information about the ongoing
 // tast happening in the server (optinal, can be suppressed sending NoProgress
@@ -28,8 +28,8 @@ type Progress interface {
 //
 // In order to demultiplex the data stream, method `Read` should be called to
 // retrieve the PackData channel, the incoming data from the ProgressMessage is
-// stored and can be read from `Progress` field, if any message is retrieved
-// from the ErrorMessage channel an error is returned and we can assume that the
+// written at `Progress` (if any), if any message is retrieved from the
+// ErrorMessage channel an error is returned and we can assume that the
 // conection has been closed.
 type Demuxer struct {
 	t Type
@@ -39,7 +39,7 @@ type Demuxer struct {
 	max     int
 	pending []byte
 
-	// Progress contains progress information
+	// Progress is where the progress messages are stored
 	Progress Progress
 }
 
@@ -51,11 +51,10 @@ func NewDemuxer(t Type, r io.Reader) *Demuxer {
 	}
 
 	return &Demuxer{
-		t:        t,
-		r:        r,
-		max:      max,
-		s:        pktline.NewScanner(r),
-		Progress: bytes.NewBuffer(nil),
+		t:   t,
+		r:   r,
+		max: max,
+		s:   pktline.NewScanner(r),
 	}
 }
 
@@ -63,9 +62,9 @@ func NewDemuxer(t Type, r io.Reader) *Demuxer {
 // be return if an error happends when reading or if a message is sent in the
 // ErrorMessage channel.
 //
-// If a ProgressMessage is read, it won't be copied to b. Instead of this, it is
-// stored and can be read through the reader Progress. If the n value returned
-// is zero, err will be nil unless an error reading happens.
+// If a ProgressMessage is read, it won't be copied to b. Instead of this,
+// Progress was set will be stored there. If the n value returned is zero, err
+// will be nil unless an error reading happens.
 func (d *Demuxer) Read(b []byte) (n int, err error) {
 	var read, req int
 
@@ -126,13 +125,17 @@ func (d *Demuxer) nextPackData() ([]byte, error) {
 	case PackData:
 		return content[1:], nil
 	case ProgressMessage:
-		_, err := d.Progress.(io.Writer).Write(content[1:])
-		return nil, err
+		if d.Progress != nil {
+			_, err := d.Progress.Write(content[1:])
+			return nil, err
+		}
 	case ErrorMessage:
 		return nil, fmt.Errorf("unexpected error: %s", content[1:])
 	default:
 		return nil, fmt.Errorf("unknown channel %s", content)
 	}
+
+	return nil, nil
 }
 
 func (d *Demuxer) getPending() (b []byte) {

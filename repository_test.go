@@ -6,6 +6,8 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 
+	"bytes"
+
 	. "gopkg.in/check.v1"
 )
 
@@ -34,6 +36,21 @@ func (s *RepositorySuite) TestCreateRemoteAndRemote(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(alt, Not(Equals), remote)
 	c.Assert(alt.Config().Name, Equals, "foo")
+}
+
+func (s *RepositorySuite) TestRemoteWithProgress(c *C) {
+	buf := bytes.NewBuffer(nil)
+
+	r := NewMemoryRepository()
+	r.Progress = buf
+
+	remote, err := r.CreateRemote(&config.RemoteConfig{
+		Name: "foo",
+		URL:  "http://foo/foo.git",
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(remote.p, Equals, buf)
 }
 
 func (s *RepositorySuite) TestCreateRemoteInvalid(c *C) {
