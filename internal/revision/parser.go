@@ -105,7 +105,7 @@ func (p *parser) parseAtSuffix() (atSuffixer, error) {
 			n, err := strconv.Atoi(lit)
 
 			if err != nil {
-				return []atSuffixer{}, err
+				return []atSuffixer{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, lit)}
 			}
 
 			return atSuffixReflog{n}, nil
@@ -113,7 +113,7 @@ func (p *parser) parseAtSuffix() (atSuffixer, error) {
 			n, err := strconv.Atoi(nextLit)
 
 			if err != nil {
-				return []atSuffixer{}, err
+				return []atSuffixer{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, nextLit)}
 			}
 
 			t, _ := p.scan()
@@ -152,7 +152,7 @@ func (p *parser) parseRevSuffix() ([]revSuffixer, error) {
 			n, err := strconv.Atoi(nextLit)
 
 			if err != nil {
-				return []revSuffixer{}, nil
+				return []revSuffixer{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, nextLit)}
 			}
 
 			r := revSuffixPath{lit, n}
