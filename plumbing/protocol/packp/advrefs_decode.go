@@ -27,8 +27,13 @@ type advRefsDecoder struct {
 	data  *AdvRefs         // parsed data is stored here
 }
 
-// ErrEmptyAdvRefs is returned by Decode when there was no advertised-message at all
-var ErrEmptyAdvRefs = errors.New("empty advertised-ref message")
+var (
+	// ErrEmptyAdvRefs is returned by Decode if it gets an empty advertised
+	// references message.
+	ErrEmptyAdvRefs = errors.New("empty advertised-ref message")
+	// ErrEmptyInput is returned by Decode if the input is empty.
+	ErrEmptyInput = errors.New("empty input")
+)
 
 func newAdvRefsDecoder(r io.Reader) *advRefsDecoder {
 	return &advRefsDecoder{
@@ -67,7 +72,7 @@ func (d *advRefsDecoder) nextLine() bool {
 		}
 
 		if d.nLine == 1 {
-			d.err = ErrEmptyAdvRefs
+			d.err = ErrEmptyInput
 			return false
 		}
 
