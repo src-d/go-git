@@ -16,16 +16,23 @@ var (
 	sp  = []byte(" ")
 	eol = []byte("\n")
 
-	// advrefs
+	// advertised-refs
 	null       = []byte("\x00")
 	peeled     = []byte("^{}")
 	noHeadMark = []byte(" capabilities^{}\x00")
 
-	// ulreq
+	// upload-request
 	want            = []byte("want ")
 	shallow         = []byte("shallow ")
 	deepen          = []byte("deepen")
 	deepenCommits   = []byte("deepen ")
 	deepenSince     = []byte("deepen-since ")
 	deepenReference = []byte("deepen-not ")
+
+	// shallow-update
+	unshallow = []byte("unshallow ")
+
+	// server-response
+	ack = []byte("ACK")
+	nak = []byte("NAK")
 )
