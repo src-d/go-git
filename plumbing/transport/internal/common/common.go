@@ -98,7 +98,6 @@ func (c *client) NewSendPackSession(ep transport.Endpoint) (
 type session struct {
 	Stdin   io.WriteCloser
 	Stdout  io.Reader
-	Stderr  io.Reader
 	Command Command
 
 	advRefsRun bool
@@ -143,7 +142,6 @@ func (c *client) newSession(s string, ep transport.Endpoint) (*session, error) {
 	return &session{
 		Stdin:    stdin,
 		Stdout:   stdout,
-		Stderr:   stderr,
 		Command:  cmd,
 		errLines: errLines,
 	}, nil
