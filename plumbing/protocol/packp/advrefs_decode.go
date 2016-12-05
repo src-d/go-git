@@ -87,33 +87,31 @@ func decodePrefix(d *advRefsDecoder) decoderStateFn {
 		return nil
 	}
 
-	// If the repository is empty, we receive a flush here (SSH).
-	if isFlush(d.line) {
-		d.err = ErrEmptyAdvRefs
+	if !isPrefix(d.line) {
+		return decodeFirstHash
+	}
+
+	tmp := make([]byte, len(d.line))
+	copy(tmp, d.line)
+	d.data.Prefix = append(d.data.Prefix, tmp)
+	if ok := d.nextLine(); !ok {
 		return nil
 	}
 
-	if isPrefix(d.line) {
-		tmp := make([]byte, len(d.line))
-		copy(tmp, d.line)
-		d.data.Prefix = append(d.data.Prefix, tmp)
-		if ok := d.nextLine(); !ok {
-			return nil
-		}
+	if !isFlush(d.line) {
+		return decodeFirstHash
 	}
 
-	if isFlush(d.line) {
-		d.data.Prefix = append(d.data.Prefix, pktline.Flush)
-		if ok := d.nextLine(); !ok {
-			return nil
-		}
+	d.data.Prefix = append(d.data.Prefix, pktline.Flush)
+	if ok := d.nextLine(); !ok {
+		return nil
 	}
 
 	return decodeFirstHash
 }
 
 func isPrefix(payload []byte) bool {
-	return payload[0] == '#'
+	return len(payload) > 0 && payload[0] == '#'
 }
 
 func isFlush(payload []byte) bool {
