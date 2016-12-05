@@ -48,6 +48,11 @@ type atSuffixReflog struct {
 	deep int
 }
 
+// atSuffixCheckout represents @{-n}
+type atSuffixCheckout struct {
+	deep int
+}
+
 // parser represents a parser.
 type parser struct {
 	s   *scanner
@@ -83,7 +88,7 @@ func (p *parser) unscan() { p.buf.n = 1 }
 // parseAtSuffix extract part following @
 func (p *parser) parseAtSuffix() (atSuffixer, error) {
 	var tok, nextTok token
-	var lit string
+	var lit, nextLit string
 
 	for {
 		tok, lit = p.scan()
@@ -93,7 +98,7 @@ func (p *parser) parseAtSuffix() (atSuffixer, error) {
 		}
 
 		tok, lit = p.scan()
-		nextTok, _ = p.scan()
+		nextTok, nextLit = p.scan()
 
 		switch {
 		case tok == number && nextTok == cbrace:
@@ -104,6 +109,20 @@ func (p *parser) parseAtSuffix() (atSuffixer, error) {
 			}
 
 			return atSuffixReflog{n}, nil
+		case tok == minus && nextTok == number:
+			n, err := strconv.Atoi(nextLit)
+
+			if err != nil {
+				return []atSuffixer{}, err
+			}
+
+			t, _ := p.scan()
+
+			if t != cbrace {
+				return nil, &ErrInvalidRevision{fmt.Sprintf(`missing "}" in @{-n} structure`)}
+			}
+
+			return atSuffixCheckout{n}, nil
 		}
 
 		return (atSuffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`invalid expression "%s" in @{} structure`, lit)}

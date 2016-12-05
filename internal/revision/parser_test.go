@@ -71,7 +71,8 @@ func (s *ParserSuite) TestUnscan(c *C) {
 
 func (s *ParserSuite) TestParseAtSuffixWithValidExpression(c *C) {
 	datas := map[string]atSuffixer{
-		"{1}": atSuffixReflog{1},
+		"{1}":  atSuffixReflog{1},
+		"{-1}": atSuffixCheckout{1},
 	}
 
 	for d, expected := range datas {
@@ -88,6 +89,7 @@ func (s *ParserSuite) TestParseAtSuffixWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"test}":  &ErrInvalidRevision{`"test" found must be "{" after @`},
 		"{test}": &ErrInvalidRevision{`invalid expression "test" in @{} structure`},
+		"{-1":    &ErrInvalidRevision{`missing "}" in @{-n} structure`},
 	}
 
 	for s, e := range datas {
