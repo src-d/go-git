@@ -15,6 +15,7 @@ var (
 	// common
 	sp  = []byte(" ")
 	eol = []byte("\n")
+	eq  = []byte{'='}
 
 	// advertised-refs
 	null       = []byte("\x00")
@@ -35,4 +36,7 @@ var (
 	// server-response
 	ack = []byte("ACK")
 	nak = []byte("NAK")
+
+	// updreq
+	shallowNoSp = []byte("shallow")
 )
