@@ -22,6 +22,7 @@ import (
 
 const (
 	readErrorSecondsTimeout = 10
+	errLinesBuffer          = 1000
 )
 
 var (
@@ -130,7 +131,7 @@ func (c *client) newSession(s string, ep transport.Endpoint) (*session, error) {
 		return nil, err
 	}
 
-	errLines := make(chan string)
+	errLines := make(chan string, errLinesBuffer)
 	go func() {
 		s := bufio.NewScanner(stderr)
 		for s.Scan() {
