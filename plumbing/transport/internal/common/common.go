@@ -102,6 +102,7 @@ type session struct {
 
 	advRefsRun bool
 	packRun    bool
+	finished   bool
 	errLines   chan string
 }
 
@@ -176,7 +177,7 @@ func (s *session) AdvertisedReferences() (*packp.AdvRefs, error) {
 		// advertised-references message. But valid. That is, it
 		// includes at least a flush.
 		if err == packp.ErrEmptyAdvRefs {
-			if _, err := s.Stdin.Write(pktline.FlushPkt); err != nil {
+			if err := s.finish(); err != nil {
 				return nil, err
 			}
 
@@ -232,15 +233,28 @@ func (s *session) FetchPack(req *packp.UploadPackRequest) (io.ReadCloser, error)
 	return rc, nil
 }
 
-func (s *session) Close() error {
+func (s *session) finish() error {
+	if s.finished {
+		return nil
+	}
+
+	s.finished = true
+
 	// If we did not run fetch-pack or send-pack, we close the connection
 	// gracefully by sending a flush packet to the server. If the server
 	// operates correctly, it will exit with status 0.
 	if !s.packRun {
-		if _, err := s.Stdin.Write(pktline.FlushPkt); err != nil {
-			_ = s.Command.Close()
-			return err
-		}
+		_, err := s.Stdin.Write(pktline.FlushPkt)
+		return err
+	}
+
+	return nil
+}
+
+func (s *session) Close() error {
+	if err := s.finish(); err != nil {
+		_ = s.Command.Close()
+		return nil
 	}
 
 	return s.Command.Close()
