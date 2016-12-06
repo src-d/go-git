@@ -2,6 +2,7 @@ package packp
 
 import (
 	"errors"
+	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
@@ -20,6 +21,8 @@ type ReferenceUpdateRequest struct {
 	Capabilities *capability.List
 	Commands     []*Command
 	Shallow      *plumbing.Hash
+	// Packfile contains an optional packfile reader.
+	Packfile io.ReadCloser
 }
 
 // New returns a pointer to a new ReferenceUpdateRequest value.
