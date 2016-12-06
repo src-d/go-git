@@ -70,12 +70,12 @@ func (s *ParserSuite) TestUnscan(c *C) {
 }
 
 func (s *ParserSuite) TestParseAtSuffixWithValidExpression(c *C) {
-	datas := map[string]atSuffixer{
-		"{1}":        atSuffixReflog{1},
-		"{-1}":       atSuffixCheckout{1},
-		"{push}":     atPush{},
-		"{upstream}": atUpstream{},
-		"{u}":        atUpstream{},
+	datas := map[string]suffixer{
+		"@{1}":        atSuffixReflog{1},
+		"@{-1}":       atSuffixCheckout{1},
+		"@{push}":     atPush{},
+		"@{upstream}": atUpstream{},
+		"@{u}":        atUpstream{},
 	}
 
 	for d, expected := range datas {
@@ -90,9 +90,10 @@ func (s *ParserSuite) TestParseAtSuffixWithValidExpression(c *C) {
 
 func (s *ParserSuite) TestParseAtSuffixWithUnValidExpression(c *C) {
 	datas := map[string]error{
-		"test}":  &ErrInvalidRevision{`"test" found must be "{" after @`},
-		"{test}": &ErrInvalidRevision{`invalid expression "test" in @{} structure`},
-		"{-1":    &ErrInvalidRevision{`missing "}" in @{-n} structure`},
+		"a":       &ErrInvalidRevision{`"a" found must be "@"`},
+		"@test}":  &ErrInvalidRevision{`"test" found must be "{" after @`},
+		"@{test}": &ErrInvalidRevision{`invalid expression "test" in @{} structure`},
+		"@{-1":    &ErrInvalidRevision{`missing "}" in @{-n} structure`},
 	}
 
 	for s, e := range datas {
@@ -104,73 +105,35 @@ func (s *ParserSuite) TestParseAtSuffixWithUnValidExpression(c *C) {
 	}
 }
 
-func (s *ParserSuite) TestParseRevSuffixWithValidExpression(c *C) {
-	datas := map[string][]revSuffixer{
-		"^": []revSuffixer{revSuffixPath{"^", 1}},
-		"~": []revSuffixer{revSuffixPath{"~", 1}},
-		"~^^1~2~10~^100^~1000": []revSuffixer{
-			revSuffixPath{"~", 1},
-			revSuffixPath{"^", 1},
-			revSuffixPath{"^", 1},
-			revSuffixPath{"~", 2},
-			revSuffixPath{"~", 10},
-			revSuffixPath{"~", 1},
-			revSuffixPath{"^", 100},
-			revSuffixPath{"^", 1},
-			revSuffixPath{"~", 1000},
-		},
-		"^{}": []revSuffixer{
-			revSuffixType{"tag"},
-		},
-		"^{commit}": []revSuffixer{
-			revSuffixType{"commit"},
-		},
-		"^{tree}": []revSuffixer{
-			revSuffixType{"tree"},
-		},
-		"^{blob}": []revSuffixer{
-			revSuffixType{"blob"},
-		},
-		"^{tag}": []revSuffixer{
-			revSuffixType{"tag"},
-		},
-		"^{object}": []revSuffixer{
-			revSuffixType{"object"},
-		},
-		"^{/hello world !}": []revSuffixer{
-			revSuffixReg{"hello world !", false},
-		},
-		"^{/!-hello world !}": []revSuffixer{
-			revSuffixReg{"hello world !", true},
-		},
-		"^{/!! hello world !}": []revSuffixer{
-			revSuffixReg{"! hello world !", false},
-		},
-		"^5^~3^{/!! hello world !}~2^{/test}^": []revSuffixer{
-			revSuffixPath{"^", 5},
-			revSuffixPath{"^", 1},
-			revSuffixPath{"~", 3},
-			revSuffixReg{"! hello world !", false},
-			revSuffixPath{"~", 2},
-			revSuffixReg{"test", false},
-			revSuffixPath{"^", 1},
-		},
+func (s *ParserSuite) TestParseCaretSuffixWithValidExpression(c *C) {
+	datas := map[string]suffixer{
+		"^":                    caretSuffixPath{1},
+		"^3":                   caretSuffixPath{3},
+		"^{}":                  caretSuffixType{"tag"},
+		"^{commit}":            caretSuffixType{"commit"},
+		"^{tree}":              caretSuffixType{"tree"},
+		"^{blob}":              caretSuffixType{"blob"},
+		"^{tag}":               caretSuffixType{"tag"},
+		"^{object}":            caretSuffixType{"object"},
+		"^{/hello world !}":    caretSuffixReg{"hello world !", false},
+		"^{/!-hello world !}":  caretSuffixReg{"hello world !", true},
+		"^{/!! hello world !}": caretSuffixReg{"! hello world !", false},
 	}
 
 	for d, expected := range datas {
 		parser := newParser(bytes.NewBufferString(d))
 
-		result, err := parser.parseRevSuffix()
+		result, err := parser.parseCaretSuffix()
 
 		c.Assert(err, Equals, nil)
 		c.Assert(result, DeepEquals, expected)
 	}
 }
 
-func (s *ParserSuite) TestParseRevSuffixWithUnValidExpression(c *C) {
+func (s *ParserSuite) TestParseCaretSuffixWithUnValidExpression(c *C) {
 	datas := map[string]error{
-		"a":         &ErrInvalidRevision{`"a" is not a valid revision suffix component`},
-		"~^~10a^10": &ErrInvalidRevision{`"a" is not a valid revision suffix component`},
+		"a":         &ErrInvalidRevision{`"a" found must be "^"`},
+		"^a":        &ErrInvalidRevision{`"a" is not a valid revision suffix component`},
 		"^{test}":   &ErrInvalidRevision{`"test" is not a valid revision suffix brace component`},
 		"^{/!test}": &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
 	}
@@ -178,7 +141,39 @@ func (s *ParserSuite) TestParseRevSuffixWithUnValidExpression(c *C) {
 	for s, e := range datas {
 		parser := newParser(bytes.NewBufferString(s))
 
-		_, err := parser.parseRevSuffix()
+		_, err := parser.parseCaretSuffix()
+
+		c.Assert(err, DeepEquals, e)
+	}
+}
+
+func (s *ParserSuite) TestParseTildeSuffixWithValidExpression(c *C) {
+	datas := map[string]suffixer{
+		"~3": tildeSuffixPath{3},
+		"~1": tildeSuffixPath{1},
+		"~":  tildeSuffixPath{1},
+	}
+
+	for d, expected := range datas {
+		parser := newParser(bytes.NewBufferString(d))
+
+		result, err := parser.parseTildeSuffix()
+
+		c.Assert(err, Equals, nil)
+		c.Assert(result, DeepEquals, expected)
+	}
+}
+
+func (s *ParserSuite) TestParseTildeSuffixWithUnValidExpression(c *C) {
+	datas := map[string]error{
+		"a":  &ErrInvalidRevision{`"a" found must be "~"`},
+		"~a": &ErrInvalidRevision{`"a" is not a valid revision suffix component`},
+	}
+
+	for s, e := range datas {
+		parser := newParser(bytes.NewBufferString(s))
+
+		_, err := parser.parseTildeSuffix()
 
 		c.Assert(err, DeepEquals, e)
 	}

@@ -18,29 +18,29 @@ func (e *ErrInvalidRevision) Error() string {
 // ref represents a reference name
 type ref string
 
-// revSuffixer represents a generic revision suffix
-type revSuffixer interface {
+// suffixer represents a generic suffix
+type suffixer interface {
 }
 
-// revSuffixPath represents ^ or ~ revision suffix
-type revSuffixPath struct {
-	suffix string
-	deep   int
+// tildeSuffix represents ~, ~{n}
+type tildeSuffixPath struct {
+	deep int
 }
 
-// revSuffixReg represents ^{/foo bar} revision suffix
-type revSuffixReg struct {
+// caretSuffixPath represents ^, ^{n}
+type caretSuffixPath struct {
+	deep int
+}
+
+// caretSuffixReg represents ^{/foo bar} suffix
+type caretSuffixReg struct {
 	re     string
 	negate bool
 }
 
-// revSuffixType represents ^{commit} revision suffix
-type revSuffixType struct {
+// caretSuffixType represents ^{commit} suffix
+type caretSuffixType struct {
 	object string
-}
-
-// atSuffixer represents generic suffix added to @
-type atSuffixer interface {
 }
 
 // atSuffixReflog represents @{n}
@@ -96,100 +96,140 @@ func (p *parser) scan() (tok token, lit string) {
 func (p *parser) unscan() { p.buf.n = 1 }
 
 // parseAtSuffix extract part following @
-func (p *parser) parseAtSuffix() (atSuffixer, error) {
+func (p *parser) parseAtSuffix() (suffixer, error) {
 	var tok, nextTok token
 	var lit, nextLit string
 
-	for {
-		tok, lit = p.scan()
+	tok, lit = p.scan()
 
-		if tok != obrace {
-			return (atSuffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "{" after @`, lit)}
+	if tok != at {
+		return (suffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "@"`, lit)}
+	}
+
+	tok, lit = p.scan()
+
+	if tok != obrace {
+		return (suffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "{" after @`, lit)}
+	}
+
+	tok, lit = p.scan()
+	nextTok, nextLit = p.scan()
+
+	switch {
+	case tok == word && (lit == "u" || lit == "upstream") && nextTok == cbrace:
+		return atUpstream{}, nil
+	case tok == word && lit == "push" && nextTok == cbrace:
+		return atPush{}, nil
+	case tok == number && nextTok == cbrace:
+		n, err := strconv.Atoi(lit)
+
+		if err != nil {
+			return []suffixer{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, lit)}
 		}
 
-		tok, lit = p.scan()
-		nextTok, nextLit = p.scan()
+		return atSuffixReflog{n}, nil
+	case tok == minus && nextTok == number:
+		n, err := strconv.Atoi(nextLit)
 
-		switch {
-		case tok == word && (lit == "u" || lit == "upstream") && nextTok == cbrace:
-			return atUpstream{}, nil
-		case tok == word && lit == "push" && nextTok == cbrace:
-			return atPush{}, nil
-		case tok == number && nextTok == cbrace:
-			n, err := strconv.Atoi(lit)
-
-			if err != nil {
-				return []atSuffixer{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, lit)}
-			}
-
-			return atSuffixReflog{n}, nil
-		case tok == minus && nextTok == number:
-			n, err := strconv.Atoi(nextLit)
-
-			if err != nil {
-				return []atSuffixer{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, nextLit)}
-			}
-
-			t, _ := p.scan()
-
-			if t != cbrace {
-				return nil, &ErrInvalidRevision{fmt.Sprintf(`missing "}" in @{-n} structure`)}
-			}
-
-			return atSuffixCheckout{n}, nil
+		if err != nil {
+			return []suffixer{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, nextLit)}
 		}
 
-		return (atSuffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`invalid expression "%s" in @{} structure`, lit)}
+		t, _ := p.scan()
+
+		if t != cbrace {
+			return nil, &ErrInvalidRevision{fmt.Sprintf(`missing "}" in @{-n} structure`)}
+		}
+
+		return atSuffixCheckout{n}, nil
+	}
+
+	return (suffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`invalid expression "%s" in @{} structure`, lit)}
+}
+
+// parseTildeSuffix extract part following tilde
+func (p *parser) parseTildeSuffix() (suffixer, error) {
+	var tok token
+	var lit string
+
+	tok, lit = p.scan()
+
+	if tok != tilde {
+		return (suffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "~"`, lit)}
+	}
+
+	tok, lit = p.scan()
+
+	switch {
+	case tok == number:
+		n, err := strconv.Atoi(lit)
+
+		if err != nil {
+			return (suffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, lit)}
+		}
+
+		return tildeSuffixPath{n}, nil
+	case tok == tilde || tok == caret || tok == eof:
+		p.unscan()
+		return tildeSuffixPath{1}, nil
+	default:
+		return (suffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix component`, lit)}
 	}
 }
 
-// parseRevSuffix extract part following revision
-func (p *parser) parseRevSuffix() ([]revSuffixer, error) {
-	var tok, nextTok token
-	var lit, nextLit string
-	var components []revSuffixer
+// parseCaretSuffix extract part following caret
+func (p *parser) parseCaretSuffix() (suffixer, error) {
+	var tok token
+	var lit string
 
-	for {
-		tok, lit = p.scan()
-		nextTok, nextLit = p.scan()
+	tok, lit = p.scan()
 
-		switch {
-		case tok == caret && nextTok == obrace:
-			r, err := p.parseRevSuffixInBraces()
+	if tok != caret {
+		return (suffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "^"`, lit)}
+	}
 
-			if err != nil {
-				return []revSuffixer{}, err
-			}
+	tok, lit = p.scan()
 
-			components = append(components, r)
-		case (tok == caret || tok == tilde) && nextTok == number:
-			n, err := strconv.Atoi(nextLit)
+	switch {
+	case tok == obrace:
+		p.unscan()
 
-			if err != nil {
-				return []revSuffixer{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, nextLit)}
-			}
+		r, err := p.parseCaretSuffixWithBraces()
 
-			r := revSuffixPath{lit, n}
-
-			components = append(components, r)
-		case (tok == caret || tok == tilde):
-			components = append(components, revSuffixPath{lit, 1})
-			p.unscan()
-		case tok == eof:
-			return components, nil
-		default:
-			return []revSuffixer{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix component`, lit)}
+		if err != nil {
+			return (suffixer)(struct{}{}), err
 		}
+
+		return r, nil
+	case tok == number:
+		n, err := strconv.Atoi(lit)
+
+		if err != nil {
+			return []suffixer{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, lit)}
+		}
+
+		return caretSuffixPath{n}, nil
+	case tok == caret || tok == tilde || tok == eof:
+		p.unscan()
+		return caretSuffixPath{1}, nil
+	default:
+		return (suffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix component`, lit)}
 	}
 }
 
-// parseRevSuffixInBraces extract revision suffix between braces
+// parseCaretSuffixWithBraces extract suffix between braces following caret
 // todo : add regexp checker
-func (p *parser) parseRevSuffixInBraces() (revSuffixer, error) {
+func (p *parser) parseCaretSuffixWithBraces() (suffixer, error) {
 	var tok, nextTok token
 	var lit, _ string
 	start := true
-	reg := revSuffixReg{}
+	reg := caretSuffixReg{}
+
+	tok, lit = p.scan()
+
+	if tok != obrace {
+		return []suffixer{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "{" after ^`, lit)}
+	}
 
 	for {
 		tok, lit = p.scan()
@@ -197,19 +237,19 @@ func (p *parser) parseRevSuffixInBraces() (revSuffixer, error) {
 
 		switch {
 		case tok == word && nextTok == cbrace && (lit == "commit" || lit == "tree" || lit == "blob" || lit == "tag" || lit == "object"):
-			return revSuffixType{lit}, nil
+			return caretSuffixType{lit}, nil
 		case reg.re == "" && tok == cbrace:
-			return revSuffixType{"tag"}, nil
+			return caretSuffixType{"tag"}, nil
 		case reg.re == "" && tok == emark && nextTok == emark:
 			reg.re += lit
 		case reg.re == "" && tok == emark && nextTok == minus:
 			reg.negate = true
 		case reg.re == "" && tok == emark:
-			return (revSuffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
+			return (suffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
 		case reg.re == "" && tok == slash:
 			p.unscan()
 		case tok != slash && start:
-			return (revSuffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix brace component`, lit)}
+			return (suffixer)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix brace component`, lit)}
 		case tok != cbrace:
 			p.unscan()
 			reg.re += lit
