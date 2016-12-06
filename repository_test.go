@@ -13,6 +13,8 @@ import (
 
 	"os"
 
+	"bytes"
+
 	. "gopkg.in/check.v1"
 )
 
@@ -455,6 +457,12 @@ func executeOnPath(path, cmd string) error {
 	c := exec.Command(args[0], args[1:]...)
 	c.Dir = path
 	c.Env = os.Environ()
+
+	buf := bytes.NewBuffer(nil)
+	c.Stderr = buf
+	c.Stdout = buf
+
+	defer func() { fmt.Println(buf.String()) }()
 
 	return c.Run()
 }
