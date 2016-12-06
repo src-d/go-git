@@ -1,6 +1,7 @@
 package packp
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 
@@ -12,15 +13,16 @@ import (
 // UploadPackRequest represents a upload-pack request.
 // Zero-value is not safe, use NewUploadPackRequest instead.
 type UploadPackRequest struct {
-	*UploadRequest
-	*UploadHaves
+	UploadRequest
+	UploadHaves
 }
 
 // NewUploadPackRequest creates a new UploadPackRequest and returns a pointer.
 func NewUploadPackRequest() *UploadPackRequest {
+	ur := NewUploadRequest()
 	return &UploadPackRequest{
-		UploadHaves:   &UploadHaves{},
-		UploadRequest: NewUploadRequest(),
+		UploadHaves:   UploadHaves{},
+		UploadRequest: *ur,
 	}
 }
 
@@ -29,9 +31,10 @@ func NewUploadPackRequest() *UploadPackRequest {
 // ones, based on the adv value (advertaised capabilities), the UploadPackRequest
 // it has no wants, haves or shallows and an infinite depth
 func NewUploadPackRequestFromCapabilities(adv *capability.List) *UploadPackRequest {
+	ur := NewUploadRequestFromCapabilities(adv)
 	return &UploadPackRequest{
-		UploadHaves:   &UploadHaves{},
-		UploadRequest: NewUploadRequestFromCapabilities(adv),
+		UploadHaves:   UploadHaves{},
+		UploadRequest: *ur,
 	}
 }
 
@@ -68,10 +71,20 @@ type UploadHaves struct {
 // Encode encodes the UploadHaves into the Writer.
 func (u *UploadHaves) Encode(w io.Writer) error {
 	e := pktline.NewEncoder(w)
+
+	plumbing.HashesSort(u.Haves)
+
+	var last plumbing.Hash
 	for _, have := range u.Haves {
+		if bytes.Compare(last[:], have[:]) == 0 {
+			continue
+		}
+
 		if err := e.Encodef("have %s\n", have); err != nil {
 			return fmt.Errorf("sending haves for %q: %s", have, err)
 		}
+
+		last = have
 	}
 
 	if len(u.Haves) != 0 {
