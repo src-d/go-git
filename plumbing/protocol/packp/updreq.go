@@ -33,6 +33,37 @@ func NewReferenceUpdateRequest() *ReferenceUpdateRequest {
 	}
 }
 
+// NewReferenceUpdateRequestFromCapabilities returns a pointer to a new
+// ReferenceUpdateRequest value, the request capabilities are filled with the
+// most optimal ones, based on the adv value (advertised capabilities), the
+// ReferenceUpdateRequest contains no commands
+//
+// It does set the following capabilities:
+//   - agent
+//   - report-status
+//   - ofs-delta
+//   - ref-delta
+// It leaves up to the user to add the following capabilities later:
+//   - atomic
+//   - ofs-delta
+//   - side-band
+//   - side-band-64k
+//   - quiet
+//   - push-cert
+func NewReferenceUpdateRequestFromCapabilities(adv *capability.List) *ReferenceUpdateRequest {
+	r := NewReferenceUpdateRequest()
+
+	if adv.Supports(capability.Agent) {
+		r.Capabilities.Set(capability.Agent, capability.DefaultAgent)
+	}
+
+	if adv.Supports(capability.ReportStatus) {
+		r.Capabilities.Set(capability.ReportStatus)
+	}
+
+	return r
+}
+
 func (r *ReferenceUpdateRequest) validate() error {
 	if len(r.Commands) == 0 {
 		return ErrEmptyCommands
