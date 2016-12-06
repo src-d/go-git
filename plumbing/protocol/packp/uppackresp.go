@@ -67,7 +67,7 @@ func (r *UploadPackResponse) Read(p []byte) (int, error) {
 	return r.r.Read(p)
 }
 
-// Close the underlying reading, if any
+// Close the underlying reader, if any
 func (r *UploadPackResponse) Close() error {
 	if r.r == nil {
 		return nil

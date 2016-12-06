@@ -3,15 +3,13 @@ package git
 import (
 	"fmt"
 	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/fixtures"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
-
-	"strings"
-
-	"path/filepath"
 
 	. "gopkg.in/check.v1"
 )

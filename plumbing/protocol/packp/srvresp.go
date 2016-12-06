@@ -1,12 +1,10 @@
 package packp
 
 import (
-	"errors"
-	"io"
-
-	"fmt"
-
 	"bytes"
+	"errors"
+	"fmt"
+	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"

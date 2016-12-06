@@ -274,7 +274,7 @@ func DecodeUploadPackResponse(r io.ReadCloser, req *packp.UploadPackRequest) (
 ) {
 	res := packp.NewUploadPackResponse(req)
 	if err := res.Decode(r); err != nil {
-		return nil, fmt.Errorf("error decondig upload-pack response: %s", err)
+		return nil, fmt.Errorf("error decoding upload-pack response: %s", err)
 	}
 
 	return res, nil

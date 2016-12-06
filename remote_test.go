@@ -98,7 +98,7 @@ func (s *RemoteSuite) TestFetch(c *C) {
 	}
 }
 
-func (s *RemoteSuite) TestFetchDeept(c *C) {
+func (s *RemoteSuite) TestFetchDepth(c *C) {
 	url := s.GetBasicLocalRepositoryURL()
 	sto := memory.NewStorage()
 	r := newRemote(sto, &config.RemoteConfig{Name: "foo", URL: url})
