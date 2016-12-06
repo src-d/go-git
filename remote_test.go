@@ -1,6 +1,7 @@
 package git
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -18,8 +19,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 	osfs "gopkg.in/src-d/go-git.v4/utils/fs/os"
-
-	"bytes"
 
 	. "gopkg.in/check.v1"
 )

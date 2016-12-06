@@ -20,17 +20,17 @@ type Progress interface {
 // Demuxer demultiplex the progress reports and error info interleaved with the
 // packfile itself.
 //
-// A sideband has three diferent channels the main one, call PackData, contains
+// A sideband has three different channels the main one, call PackData, contains
 // the packfile data, the ErrorMessage channel, that contains server errors and
 // the last one ProgressMessage channel containing information about the ongoing
-// tast happening in the server (optinal, can be suppressed sending NoProgress
+// task happening in the server (optional, can be suppressed sending NoProgress
 // or Quiet capabilities to the server)
 //
 // In order to demultiplex the data stream, method `Read` should be called to
 // retrieve the PackData channel, the incoming data from the ProgressMessage is
 // written at `Progress` (if any), if any message is retrieved from the
 // ErrorMessage channel an error is returned and we can assume that the
-// conection has been closed.
+// connection has been closed.
 type Demuxer struct {
 	t Type
 	r io.Reader
@@ -59,12 +59,11 @@ func NewDemuxer(t Type, r io.Reader) *Demuxer {
 }
 
 // Read reads up to len(p) bytes from the PackData channel into p, an error can
-// be return if an error happends when reading or if a message is sent in the
+// be return if an error happens when reading or if a message is sent in the
 // ErrorMessage channel.
 //
-// If a ProgressMessage is read, it won't be copied to b. Instead of this,
-// Progress was set will be stored there. If the n value returned is zero, err
-// will be nil unless an error reading happens.
+// When a ProgressMessage is read, is not copy to b, instead of this is written
+// to the Progress
 func (d *Demuxer) Read(b []byte) (n int, err error) {
 	var read, req int
 
