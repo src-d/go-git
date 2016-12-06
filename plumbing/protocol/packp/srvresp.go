@@ -10,6 +10,8 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 )
 
+const ackLineLen = 44
+
 // ServerResponse object acknowledgement from upload-pack service
 // TODO: implement support for multi_ack or multi_ack_detailed responses
 type ServerResponse struct {
@@ -57,13 +59,12 @@ func (r *ServerResponse) decodeLine(line []byte) error {
 }
 
 func (r *ServerResponse) decodeACKLine(line []byte) error {
-	sp := bytes.Index(line, []byte(" "))
-
-	h := plumbing.NewHash(string(line[sp+1 : sp+41]))
-	if h.IsZero() {
+	if len(line) < ackLineLen {
 		return fmt.Errorf("malformed ACK %q", line)
 	}
 
+	sp := bytes.Index(line, []byte(" "))
+	h := plumbing.NewHash(string(line[sp+1 : sp+41]))
 	r.ACKs = append(r.ACKs, h)
 	return nil
 }

@@ -34,7 +34,7 @@ func (s *ServerResponseSuite) TestDecodeACK(c *C) {
 }
 
 func (s *ServerResponseSuite) TestDecodeMalformed(c *C) {
-	raw := "0030ACK 6ecf0ef2c2dffb796033e5a02219af86ec6584e\n"
+	raw := "0029ACK 6ecf0ef2c2dffb796033e5a02219af86ec6584e\n"
 
 	sr := &ServerResponse{}
 	err := sr.Decode(bytes.NewBufferString(raw), false)

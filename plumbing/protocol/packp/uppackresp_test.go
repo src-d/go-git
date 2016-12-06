@@ -45,6 +45,19 @@ func (s *UploadPackResponseSuite) TestDecodeDepth(c *C) {
 	c.Assert(pack, DeepEquals, []byte("[PACK]"))
 }
 
+func (s *UploadPackResponseSuite) TestDecodeMalformed(c *C) {
+	raw := "00000008ACK\n[PACK]"
+
+	req := NewUploadPackRequest()
+	req.Depth = DepthCommits(1)
+
+	res := NewUploadPackResponse(req)
+	defer res.Close()
+
+	err := res.Decode(ioutil.NopCloser(bytes.NewBufferString(raw)))
+	c.Assert(err, NotNil)
+}
+
 func (s *UploadPackResponseSuite) TestDecodeMultiACK(c *C) {
 	req := NewUploadPackRequest()
 	req.Capabilities.Set(capability.MultiACK)
