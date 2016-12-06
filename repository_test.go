@@ -254,6 +254,8 @@ func (s *RepositorySuite) TestPullA(c *C) {
 	ExecuteOnPath(c, path,
 		"touch foo",
 		"git add foo",
+		"git config --global user.email you@foo.com",
+		"git config --global user.name foo",
 		"git commit -m foo foo",
 	)
 
@@ -462,7 +464,7 @@ func executeOnPath(path, cmd string) error {
 	c.Stderr = buf
 	c.Stdout = buf
 
-	defer func() { fmt.Println(buf.String()) }()
+	//defer func() { fmt.Println(buf.String()) }()
 
 	return c.Run()
 }
