@@ -71,8 +71,11 @@ func (s *ParserSuite) TestUnscan(c *C) {
 
 func (s *ParserSuite) TestParseAtSuffixWithValidExpression(c *C) {
 	datas := map[string]atSuffixer{
-		"{1}":  atSuffixReflog{1},
-		"{-1}": atSuffixCheckout{1},
+		"{1}":        atSuffixReflog{1},
+		"{-1}":       atSuffixCheckout{1},
+		"{push}":     atPush{},
+		"{upstream}": atUpstream{},
+		"{u}":        atUpstream{},
 	}
 
 	for d, expected := range datas {

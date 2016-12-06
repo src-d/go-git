@@ -53,6 +53,16 @@ type atSuffixCheckout struct {
 	deep int
 }
 
+// atUpstream represents @{upstream}, @{u
+type atUpstream struct {
+	branchName string
+}
+
+// atPush represents @{push}
+type atPush struct {
+	branchName string
+}
+
 // parser represents a parser.
 type parser struct {
 	s   *scanner
@@ -101,6 +111,10 @@ func (p *parser) parseAtSuffix() (atSuffixer, error) {
 		nextTok, nextLit = p.scan()
 
 		switch {
+		case tok == word && (lit == "u" || lit == "upstream") && nextTok == cbrace:
+			return atUpstream{}, nil
+		case tok == word && lit == "push" && nextTok == cbrace:
+			return atPush{}, nil
 		case tok == number && nextTok == cbrace:
 			n, err := strconv.Atoi(lit)
 
