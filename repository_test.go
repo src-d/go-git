@@ -11,6 +11,8 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 
+	"os"
+
 	. "gopkg.in/check.v1"
 )
 
@@ -452,6 +454,7 @@ func executeOnPath(path, cmd string) error {
 
 	c := exec.Command(args[0], args[1:]...)
 	c.Dir = path
+	c.Env = os.Environ()
 
 	return c.Run()
 }
