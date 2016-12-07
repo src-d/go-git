@@ -108,13 +108,13 @@ func (p *parser) parse() ([]revisioner, error) {
 		switch tok {
 		case at:
 			p.unscan()
-			rev, err = p.parseAtSuffix()
+			rev, err = p.parseAt()
 		case tilde:
 			p.unscan()
-			rev, err = p.parseTildeSuffix()
+			rev, err = p.parseTilde()
 		case caret:
 			p.unscan()
-			rev, err = p.parseCaretSuffix()
+			rev, err = p.parseCaret()
 		case eof:
 			return revs, nil
 		default:
@@ -130,8 +130,8 @@ func (p *parser) parse() ([]revisioner, error) {
 	}
 }
 
-// parseAtSuffix extract part following @
-func (p *parser) parseAtSuffix() (revisioner, error) {
+// parseAt extract @ statements
+func (p *parser) parseAt() (revisioner, error) {
 	var tok, nextTok token
 	var lit, nextLit string
 
@@ -182,8 +182,8 @@ func (p *parser) parseAtSuffix() (revisioner, error) {
 	return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`invalid expression "%s" in @{} structure`, lit)}
 }
 
-// parseTildeSuffix extract part following tilde
-func (p *parser) parseTildeSuffix() (revisioner, error) {
+// parseTilde extract ~ statements
+func (p *parser) parseTilde() (revisioner, error) {
 	var tok token
 	var lit string
 
@@ -212,8 +212,8 @@ func (p *parser) parseTildeSuffix() (revisioner, error) {
 	}
 }
 
-// parseCaretSuffix extract part following caret
-func (p *parser) parseCaretSuffix() (revisioner, error) {
+// parseCaret extract ^ statements
+func (p *parser) parseCaret() (revisioner, error) {
 	var tok token
 	var lit string
 

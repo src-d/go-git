@@ -122,7 +122,7 @@ func (s *ParserSuite) TestParse(c *C) {
 	}
 }
 
-func (s *ParserSuite) TestParseAtSuffixWithValidExpression(c *C) {
+func (s *ParserSuite) TestParseAtWithValidExpression(c *C) {
 	datas := map[string]revisioner{
 		"@{1}":        atSuffixReflog{1},
 		"@{-1}":       atSuffixCheckout{1},
@@ -134,14 +134,14 @@ func (s *ParserSuite) TestParseAtSuffixWithValidExpression(c *C) {
 	for d, expected := range datas {
 		parser := newParser(bytes.NewBufferString(d))
 
-		result, err := parser.parseAtSuffix()
+		result, err := parser.parseAt()
 
 		c.Assert(err, Equals, nil)
 		c.Assert(result, DeepEquals, expected)
 	}
 }
 
-func (s *ParserSuite) TestParseAtSuffixWithUnValidExpression(c *C) {
+func (s *ParserSuite) TestParseAtWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"a":       &ErrInvalidRevision{`"a" found must be "@"`},
 		"@test}":  &ErrInvalidRevision{`"test" found must be "{" after @`},
@@ -152,13 +152,13 @@ func (s *ParserSuite) TestParseAtSuffixWithUnValidExpression(c *C) {
 	for s, e := range datas {
 		parser := newParser(bytes.NewBufferString(s))
 
-		_, err := parser.parseAtSuffix()
+		_, err := parser.parseAt()
 
 		c.Assert(err, DeepEquals, e)
 	}
 }
 
-func (s *ParserSuite) TestParseCaretSuffixWithValidExpression(c *C) {
+func (s *ParserSuite) TestParseCaretWithValidExpression(c *C) {
 	datas := map[string]revisioner{
 		"^":                    caretSuffixPath{1},
 		"^3":                   caretSuffixPath{3},
@@ -176,14 +176,14 @@ func (s *ParserSuite) TestParseCaretSuffixWithValidExpression(c *C) {
 	for d, expected := range datas {
 		parser := newParser(bytes.NewBufferString(d))
 
-		result, err := parser.parseCaretSuffix()
+		result, err := parser.parseCaret()
 
 		c.Assert(err, Equals, nil)
 		c.Assert(result, DeepEquals, expected)
 	}
 }
 
-func (s *ParserSuite) TestParseCaretSuffixWithUnValidExpression(c *C) {
+func (s *ParserSuite) TestParseCaretWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"a":         &ErrInvalidRevision{`"a" found must be "^"`},
 		"^a":        &ErrInvalidRevision{`"a" is not a valid revision suffix component`},
@@ -194,13 +194,13 @@ func (s *ParserSuite) TestParseCaretSuffixWithUnValidExpression(c *C) {
 	for s, e := range datas {
 		parser := newParser(bytes.NewBufferString(s))
 
-		_, err := parser.parseCaretSuffix()
+		_, err := parser.parseCaret()
 
 		c.Assert(err, DeepEquals, e)
 	}
 }
 
-func (s *ParserSuite) TestParseTildeSuffixWithValidExpression(c *C) {
+func (s *ParserSuite) TestParseTildeWithValidExpression(c *C) {
 	datas := map[string]revisioner{
 		"~3": tildeSuffixPath{3},
 		"~1": tildeSuffixPath{1},
@@ -210,14 +210,14 @@ func (s *ParserSuite) TestParseTildeSuffixWithValidExpression(c *C) {
 	for d, expected := range datas {
 		parser := newParser(bytes.NewBufferString(d))
 
-		result, err := parser.parseTildeSuffix()
+		result, err := parser.parseTilde()
 
 		c.Assert(err, Equals, nil)
 		c.Assert(result, DeepEquals, expected)
 	}
 }
 
-func (s *ParserSuite) TestParseTildeSuffixWithUnValidExpression(c *C) {
+func (s *ParserSuite) TestParseTildeWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"a":  &ErrInvalidRevision{`"a" found must be "~"`},
 		"~a": &ErrInvalidRevision{`"a" is not a valid revision suffix component`},
@@ -226,7 +226,7 @@ func (s *ParserSuite) TestParseTildeSuffixWithUnValidExpression(c *C) {
 	for s, e := range datas {
 		parser := newParser(bytes.NewBufferString(s))
 
-		_, err := parser.parseTildeSuffix()
+		_, err := parser.parseTilde()
 
 		c.Assert(err, DeepEquals, e)
 	}
