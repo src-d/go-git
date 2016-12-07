@@ -45,7 +45,7 @@ func DiffDelta(baseBuf []byte, targetBuf []byte) []byte {
 	outBuff = append(outBuff, deltaEncodeSize(len(baseBuf))...)
 	outBuff = append(outBuff, deltaEncodeSize(len(targetBuf))...)
 
-	sm := NewMatcher(baseBuf, targetBuf)
+	sm := newMatcher(baseBuf, targetBuf)
 	for _, op := range sm.GetOpCodes() {
 		switch {
 		case op.Tag == tagEqual:

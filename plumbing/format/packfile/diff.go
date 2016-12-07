@@ -32,15 +32,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-// Code obtained from https://github.com/pmezard/go-difflib
+// Code based on https://github.com/pmezard/go-difflib
+// Removed unnecessary code for this use case and changed string inputs to byte
 
-type Match struct {
+type match struct {
 	A    int
 	B    int
 	Size int
 }
 
-type OpCode struct {
+type opCode struct {
 	Tag byte
 	I1  int
 	I2  int
@@ -81,13 +82,13 @@ type sequenceMatcher struct {
 	IsJunk         func(byte) bool
 	autoJunk       bool
 	bJunk          map[byte]struct{}
-	matchingBlocks []Match
+	matchingBlocks []match
 	fullBCount     map[byte]int
 	bPopular       map[byte]struct{}
-	opCodes        []OpCode
+	opCodes        []opCode
 }
 
-func NewMatcher(a, b []byte) *sequenceMatcher {
+func newMatcher(a, b []byte) *sequenceMatcher {
 	m := sequenceMatcher{autoJunk: true}
 	m.SetSeqs(a, b)
 	return &m
@@ -200,7 +201,7 @@ func (m *sequenceMatcher) isBJunk(s byte) bool {
 // happens to be adjacent to an "interesting" match.
 //
 // If no blocks match, return (alo, blo, 0).
-func (m *sequenceMatcher) findLongestMatch(alo, ahi, blo, bhi int) Match {
+func (m *sequenceMatcher) findLongestMatch(alo, ahi, blo, bhi int) match {
 	// CAUTION:  stripping common prefix or suffix would be incorrect.
 	// E.g.,
 	//    ab
@@ -270,7 +271,7 @@ func (m *sequenceMatcher) findLongestMatch(alo, ahi, blo, bhi int) Match {
 		bestsize += 1
 	}
 
-	return Match{A: besti, B: bestj, Size: bestsize}
+	return match{A: besti, B: bestj, Size: bestsize}
 }
 
 // Return list of triples describing matching subsequences.
@@ -284,13 +285,13 @@ func (m *sequenceMatcher) findLongestMatch(alo, ahi, blo, bhi int) Match {
 //
 // The last triple is a dummy, (len(a), len(b), 0), and is the only
 // triple with n==0.
-func (m *sequenceMatcher) GetMatchingBlocks() []Match {
+func (m *sequenceMatcher) GetMatchingBlocks() []match {
 	if m.matchingBlocks != nil {
 		return m.matchingBlocks
 	}
 
-	var matchBlocks func(alo, ahi, blo, bhi int, matched []Match) []Match
-	matchBlocks = func(alo, ahi, blo, bhi int, matched []Match) []Match {
+	var matchBlocks func(alo, ahi, blo, bhi int, matched []match) []match
+	matchBlocks = func(alo, ahi, blo, bhi int, matched []match) []match {
 		match := m.findLongestMatch(alo, ahi, blo, bhi)
 		i, j, k := match.A, match.B, match.Size
 		if match.Size > 0 {
@@ -308,7 +309,7 @@ func (m *sequenceMatcher) GetMatchingBlocks() []Match {
 
 	// It's possible that we have adjacent equal blocks in the
 	// matching_blocks list now.
-	nonAdjacent := []Match{}
+	nonAdjacent := []match{}
 	i1, j1, k1 := 0, 0, 0
 	for _, b := range matched {
 		// Is this block adjacent to i1, j1, k1?
@@ -323,16 +324,16 @@ func (m *sequenceMatcher) GetMatchingBlocks() []Match {
 			// the dummy we started with), and make the second block the
 			// new block to compare against.
 			if k1 > 0 {
-				nonAdjacent = append(nonAdjacent, Match{i1, j1, k1})
+				nonAdjacent = append(nonAdjacent, match{i1, j1, k1})
 			}
 			i1, j1, k1 = i2, j2, k2
 		}
 	}
 	if k1 > 0 {
-		nonAdjacent = append(nonAdjacent, Match{i1, j1, k1})
+		nonAdjacent = append(nonAdjacent, match{i1, j1, k1})
 	}
 
-	nonAdjacent = append(nonAdjacent, Match{len(m.a), len(m.b), 0})
+	nonAdjacent = append(nonAdjacent, match{len(m.a), len(m.b), 0})
 	m.matchingBlocks = nonAdjacent
 	return m.matchingBlocks
 }
@@ -359,13 +360,13 @@ const (
 // 'i' (insert):   b[j1:j2] should be inserted at a[i1:i1], i1==i2 in this case.
 //
 // 'e' (equal):    a[i1:i2] == b[j1:j2]
-func (m *sequenceMatcher) GetOpCodes() []OpCode {
+func (m *sequenceMatcher) GetOpCodes() []opCode {
 	if m.opCodes != nil {
 		return m.opCodes
 	}
 	i, j := 0, 0
 	matching := m.GetMatchingBlocks()
-	opCodes := make([]OpCode, 0, len(matching))
+	opCodes := make([]opCode, 0, len(matching))
 	for _, m := range matching {
 		//  invariant:  we've pumped out correct diffs to change
 		//  a[:i] into b[:j], and the next matching block is
@@ -382,13 +383,13 @@ func (m *sequenceMatcher) GetOpCodes() []OpCode {
 			tag = tagInsert
 		}
 		if tag > 0 {
-			opCodes = append(opCodes, OpCode{tag, i, ai, j, bj})
+			opCodes = append(opCodes, opCode{tag, i, ai, j, bj})
 		}
 		i, j = ai+size, bj+size
 		// the list of matching blocks is terminated by a
 		// sentinel with size 0
 		if size > 0 {
-			opCodes = append(opCodes, OpCode{tagEqual, ai, i, bj, j})
+			opCodes = append(opCodes, opCode{tagEqual, ai, i, bj, j})
 		}
 	}
 	m.opCodes = opCodes
