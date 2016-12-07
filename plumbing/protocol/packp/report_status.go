@@ -1,12 +1,12 @@
 package packp
 
 import (
-	"io"
-
 	"fmt"
+	"io"
+	"strings"
+
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
-	"strings"
 )
 
 const (
@@ -33,7 +33,7 @@ func (s *ReportStatus) Ok() bool {
 // Encode writes the report status to a writer.
 func (s *ReportStatus) Encode(w io.Writer) error {
 	e := pktline.NewEncoder(w)
-	if err := e.Encodef("unpack %s", s.UnpackStatus); err != nil {
+	if err := e.Encodef("unpack %s\n", s.UnpackStatus); err != nil {
 		return err
 	}
 
@@ -95,6 +95,10 @@ func (s *ReportStatus) decodeReportStatus(b []byte) error {
 		return fmt.Errorf("premature flush")
 	}
 
+	if b[len(b)-1] == '\n' {
+		b = b[:len(b)-1]
+	}
+
 	line := string(b)
 	fields := strings.SplitN(line, " ", 2)
 	if len(fields) != 2 || fields[0] != "unpack" {
@@ -106,6 +110,10 @@ func (s *ReportStatus) decodeReportStatus(b []byte) error {
 }
 
 func (s *ReportStatus) decodeCommandStatus(b []byte) error {
+	if b[len(b)-1] == '\n' {
+		b = b[:len(b)-1]
+	}
+
 	line := string(b)
 	fields := strings.SplitN(line, " ", 3)
 	status := ok
@@ -138,8 +146,8 @@ func (s *CommandStatus) Ok() bool {
 func (s *CommandStatus) encode(w io.Writer) error {
 	e := pktline.NewEncoder(w)
 	if s.Ok() {
-		return e.Encodef("ok %s", s.ReferenceName.String())
+		return e.Encodef("ok %s\n", s.ReferenceName.String())
 	}
 
-	return e.Encodef("ng %s %s", s.ReferenceName.String(), s.Status)
+	return e.Encodef("ng %s %s\n", s.ReferenceName.String(), s.Status)
 }
