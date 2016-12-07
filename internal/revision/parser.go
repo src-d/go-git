@@ -144,7 +144,9 @@ func (p *parser) parseAt() (revisioner, error) {
 	tok, lit = p.scan()
 
 	if tok != obrace {
-		return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "{" after @`, lit)}
+		p.unscan()
+
+		return ref("HEAD"), nil
 	}
 
 	tok, lit = p.scan()

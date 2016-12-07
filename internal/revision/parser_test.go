@@ -71,6 +71,11 @@ func (s *ParserSuite) TestUnscan(c *C) {
 
 func (s *ParserSuite) TestParse(c *C) {
 	datas := map[string]revisioner{
+		"@": []revisioner{ref("HEAD")},
+		"@~3": []revisioner{
+			ref("HEAD"),
+			tildeSuffixPath{3},
+		},
 		"@{1}":  []revisioner{atSuffixReflog{1}},
 		"@{-1}": []revisioner{atSuffixCheckout{1}},
 		"master@{upstream}": []revisioner{
@@ -124,6 +129,7 @@ func (s *ParserSuite) TestParse(c *C) {
 
 func (s *ParserSuite) TestParseAtWithValidExpression(c *C) {
 	datas := map[string]revisioner{
+		"@":           ref("HEAD"),
 		"@{1}":        atSuffixReflog{1},
 		"@{-1}":       atSuffixCheckout{1},
 		"@{push}":     atPush{},
@@ -144,7 +150,6 @@ func (s *ParserSuite) TestParseAtWithValidExpression(c *C) {
 func (s *ParserSuite) TestParseAtWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"a":       &ErrInvalidRevision{`"a" found must be "@"`},
-		"@test}":  &ErrInvalidRevision{`"test" found must be "{" after @`},
 		"@{test}": &ErrInvalidRevision{`invalid expression "test" in @{} structure`},
 		"@{-1":    &ErrInvalidRevision{`missing "}" in @{-n} structure`},
 	}
