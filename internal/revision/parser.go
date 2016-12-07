@@ -283,6 +283,7 @@ func (p *parser) parseRef() (ref, error) {
 		}
 
 		if endOfRef {
+			p.unscan()
 			return ref(buf), nil
 		}
 
