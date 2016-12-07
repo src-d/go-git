@@ -70,7 +70,7 @@ func (s *ParserSuite) TestUnscan(c *C) {
 }
 
 func (s *ParserSuite) TestParseAtSuffixWithValidExpression(c *C) {
-	datas := map[string]suffixer{
+	datas := map[string]revisioner{
 		"@{1}":        atSuffixReflog{1},
 		"@{-1}":       atSuffixCheckout{1},
 		"@{push}":     atPush{},
@@ -106,7 +106,7 @@ func (s *ParserSuite) TestParseAtSuffixWithUnValidExpression(c *C) {
 }
 
 func (s *ParserSuite) TestParseCaretSuffixWithValidExpression(c *C) {
-	datas := map[string]suffixer{
+	datas := map[string]revisioner{
 		"^":                    caretSuffixPath{1},
 		"^3":                   caretSuffixPath{3},
 		"^{}":                  caretSuffixType{"tag"},
@@ -148,7 +148,7 @@ func (s *ParserSuite) TestParseCaretSuffixWithUnValidExpression(c *C) {
 }
 
 func (s *ParserSuite) TestParseTildeSuffixWithValidExpression(c *C) {
-	datas := map[string]suffixer{
+	datas := map[string]revisioner{
 		"~3": tildeSuffixPath{3},
 		"~1": tildeSuffixPath{1},
 		"~":  tildeSuffixPath{1},
