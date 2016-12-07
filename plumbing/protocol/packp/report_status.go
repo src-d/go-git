@@ -1,6 +1,7 @@
 package packp
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -95,9 +96,7 @@ func (s *ReportStatus) decodeReportStatus(b []byte) error {
 		return fmt.Errorf("premature flush")
 	}
 
-	if b[len(b)-1] == '\n' {
-		b = b[:len(b)-1]
-	}
+	b = bytes.TrimSuffix(b, eol)
 
 	line := string(b)
 	fields := strings.SplitN(line, " ", 2)
@@ -110,9 +109,7 @@ func (s *ReportStatus) decodeReportStatus(b []byte) error {
 }
 
 func (s *ReportStatus) decodeCommandStatus(b []byte) error {
-	if b[len(b)-1] == '\n' {
-		b = b[:len(b)-1]
-	}
+	b = bytes.TrimSuffix(b, eol)
 
 	line := string(b)
 	fields := strings.SplitN(line, " ", 3)
