@@ -69,6 +69,59 @@ func (s *ParserSuite) TestUnscan(c *C) {
 	c.Assert(tok, Equals, word)
 }
 
+func (s *ParserSuite) TestParse(c *C) {
+	datas := map[string]revisioner{
+		"@{1}":  []revisioner{atSuffixReflog{1}},
+		"@{-1}": []revisioner{atSuffixCheckout{1}},
+		"master@{upstream}": []revisioner{
+			ref("master"),
+			atUpstream{},
+		},
+		"master@{push}": []revisioner{
+			ref("master"),
+			atPush{},
+		},
+		"HEAD^": []revisioner{
+			ref("HEAD"),
+			caretSuffixPath{1},
+		},
+		"master~3": []revisioner{
+			ref("master"),
+			tildeSuffixPath{3},
+		},
+		"v0.99.8^{commit}": []revisioner{
+			ref("v0.99.8"),
+			caretSuffixType{"commit"},
+		},
+		"v0.99.8^{}": []revisioner{
+			ref("v0.99.8"),
+			caretSuffixType{"tag"},
+		},
+		"HEAD^{/fix nasty bug}": []revisioner{
+			ref("HEAD"),
+			caretSuffixReg{"fix nasty bug", false},
+		},
+		"master~1^{/update}~5~^^1": []revisioner{
+			ref("master"),
+			tildeSuffixPath{1},
+			caretSuffixReg{"update", false},
+			tildeSuffixPath{5},
+			tildeSuffixPath{1},
+			caretSuffixPath{1},
+			caretSuffixPath{1},
+		},
+	}
+
+	for d, expected := range datas {
+		parser := newParser(bytes.NewBufferString(d))
+
+		result, err := parser.parse()
+
+		c.Assert(err, Equals, nil)
+		c.Assert(result, DeepEquals, expected)
+	}
+}
+
 func (s *ParserSuite) TestParseAtSuffixWithValidExpression(c *C) {
 	datas := map[string]revisioner{
 		"@{1}":        atSuffixReflog{1},

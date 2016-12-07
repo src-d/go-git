@@ -95,6 +95,41 @@ func (p *parser) scan() (tok token, lit string) {
 // unscan pushes the previously read token back onto the buffer.
 func (p *parser) unscan() { p.buf.n = 1 }
 
+// parse explode a revision string into components
+func (p *parser) parse() ([]revisioner, error) {
+	// var tok token
+	var rev revisioner
+	var revs []revisioner
+	var err error
+
+	for {
+		tok, _ := p.scan()
+
+		switch tok {
+		case at:
+			p.unscan()
+			rev, err = p.parseAtSuffix()
+		case tilde:
+			p.unscan()
+			rev, err = p.parseTildeSuffix()
+		case caret:
+			p.unscan()
+			rev, err = p.parseCaretSuffix()
+		case eof:
+			return revs, nil
+		default:
+			p.unscan()
+			rev, err = p.parseRef()
+		}
+
+		if err != nil {
+			return []revisioner{}, nil
+		}
+
+		revs = append(revs, rev)
+	}
+}
+
 // parseAtSuffix extract part following @
 func (p *parser) parseAtSuffix() (revisioner, error) {
 	var tok, nextTok token
