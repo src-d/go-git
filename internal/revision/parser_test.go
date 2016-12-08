@@ -69,7 +69,7 @@ func (s *ParserSuite) TestUnscan(c *C) {
 	c.Assert(tok, Equals, word)
 }
 
-func (s *ParserSuite) TestParse(c *C) {
+func (s *ParserSuite) TestParseWithValidExpression(c *C) {
 	datas := map[string]revisioner{
 		"@": []revisioner{ref("HEAD")},
 		"@~3": []revisioner{
@@ -254,7 +254,7 @@ func (s *ParserSuite) TestParseTildeWithUnValidExpression(c *C) {
 	}
 }
 
-func (s *ParserSuite) TestParseColon(c *C) {
+func (s *ParserSuite) TestParseColonWithValidExpression(c *C) {
 	datas := map[string]revisioner{
 		":/hello world !":    colonReg{"hello world !", false},
 		":/!-hello world !":  colonReg{"hello world !", true},
