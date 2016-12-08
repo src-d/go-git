@@ -231,7 +231,7 @@ func (p *parser) parseCaret() (revisioner, error) {
 	case tok == obrace:
 		p.unscan()
 
-		r, err := p.parseCaretSuffixWithBraces()
+		r, err := p.parseCaretBraces()
 
 		if err != nil {
 			return (revisioner)(struct{}{}), err
@@ -254,9 +254,9 @@ func (p *parser) parseCaret() (revisioner, error) {
 	}
 }
 
-// parseCaretSuffixWithBraces extract suffix between braces following caret
+// parseCaretBraces extract ^{<data>} statements
 // todo : add regexp checker
-func (p *parser) parseCaretSuffixWithBraces() (revisioner, error) {
+func (p *parser) parseCaretBraces() (revisioner, error) {
 	var tok, nextTok token
 	var lit, _ string
 	start := true
