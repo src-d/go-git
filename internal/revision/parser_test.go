@@ -10,6 +10,12 @@ type ParserSuite struct{}
 
 var _ = Suite(&ParserSuite{})
 
+func (s *ParserSuite) TestErrInvalidRevision(c *C) {
+	e := ErrInvalidRevision{"test"}
+
+	c.Assert(e.Error(), Equals, "Revision invalid : test")
+}
+
 func (s *ParserSuite) TestScan(c *C) {
 	parser := newParser(bytes.NewBufferString("Hello world !"))
 
