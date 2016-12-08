@@ -53,7 +53,7 @@ type atCheckout struct {
 	deep int
 }
 
-// atUpstream represents @{upstream}, @{u
+// atUpstream represents @{upstream}, @{u}
 type atUpstream struct {
 	branchName string
 }
