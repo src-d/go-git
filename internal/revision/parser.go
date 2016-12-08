@@ -132,7 +132,7 @@ func (p *parser) parse() ([]revisioner, error) {
 		}
 
 		if err != nil {
-			return []revisioner{}, nil
+			return []revisioner{}, err
 		}
 
 		revs = append(revs, rev)

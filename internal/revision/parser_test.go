@@ -130,6 +130,20 @@ func (s *ParserSuite) TestParse(c *C) {
 	}
 }
 
+func (s *ParserSuite) TestParseWithUnValidExpression(c *C) {
+	datas := map[string]error{
+		"..": &ErrInvalidRevision{`must not start with "."`},
+	}
+
+	for s, e := range datas {
+		parser := newParser(bytes.NewBufferString(s))
+
+		t, err := parser.parse()
+		c.Log(t)
+		c.Assert(err, DeepEquals, e)
+	}
+}
+
 func (s *ParserSuite) TestParseAtWithValidExpression(c *C) {
 	datas := map[string]revisioner{
 		"@":           ref("HEAD"),
