@@ -106,6 +106,9 @@ func (s *ParserSuite) TestParse(c *C) {
 			ref("HEAD"),
 			caretReg{"fix nasty bug", false},
 		},
+		":/fix nasty bug": []revisioner{
+			colonReg{"fix nasty bug", false},
+		},
 		"master~1^{/update}~5~^^1": []revisioner{
 			ref("master"),
 			tildePath{1},
@@ -232,6 +235,38 @@ func (s *ParserSuite) TestParseTildeWithUnValidExpression(c *C) {
 		parser := newParser(bytes.NewBufferString(s))
 
 		_, err := parser.parseTilde()
+
+		c.Assert(err, DeepEquals, e)
+	}
+}
+
+func (s *ParserSuite) TestParseColon(c *C) {
+	datas := map[string]revisioner{
+		":/hello world !":    colonReg{"hello world !", false},
+		":/!-hello world !":  colonReg{"hello world !", true},
+		":/!! hello world !": colonReg{"! hello world !", false},
+	}
+
+	for d, expected := range datas {
+		parser := newParser(bytes.NewBufferString(d))
+
+		result, err := parser.parseColon()
+
+		c.Assert(err, Equals, nil)
+		c.Assert(result, DeepEquals, expected)
+	}
+}
+
+func (s *ParserSuite) TestParseColonWithUnValidExpression(c *C) {
+	datas := map[string]error{
+		"a":       &ErrInvalidRevision{`"a" found must be ":"`},
+		":/!test": &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
+	}
+
+	for s, e := range datas {
+		parser := newParser(bytes.NewBufferString(s))
+
+		_, err := parser.parseColon()
 
 		c.Assert(err, DeepEquals, e)
 	}
