@@ -74,10 +74,10 @@ func (s *ParserSuite) TestParse(c *C) {
 		"@": []revisioner{ref("HEAD")},
 		"@~3": []revisioner{
 			ref("HEAD"),
-			tildeSuffixPath{3},
+			tildePath{3},
 		},
-		"@{1}":  []revisioner{atSuffixReflog{1}},
-		"@{-1}": []revisioner{atSuffixCheckout{1}},
+		"@{1}":  []revisioner{atReflog{1}},
+		"@{-1}": []revisioner{atCheckout{1}},
 		"master@{upstream}": []revisioner{
 			ref("master"),
 			atUpstream{},
@@ -88,32 +88,32 @@ func (s *ParserSuite) TestParse(c *C) {
 		},
 		"HEAD^": []revisioner{
 			ref("HEAD"),
-			caretSuffixPath{1},
+			caretPath{1},
 		},
 		"master~3": []revisioner{
 			ref("master"),
-			tildeSuffixPath{3},
+			tildePath{3},
 		},
 		"v0.99.8^{commit}": []revisioner{
 			ref("v0.99.8"),
-			caretSuffixType{"commit"},
+			caretType{"commit"},
 		},
 		"v0.99.8^{}": []revisioner{
 			ref("v0.99.8"),
-			caretSuffixType{"tag"},
+			caretType{"tag"},
 		},
 		"HEAD^{/fix nasty bug}": []revisioner{
 			ref("HEAD"),
-			caretSuffixReg{"fix nasty bug", false},
+			caretReg{"fix nasty bug", false},
 		},
 		"master~1^{/update}~5~^^1": []revisioner{
 			ref("master"),
-			tildeSuffixPath{1},
-			caretSuffixReg{"update", false},
-			tildeSuffixPath{5},
-			tildeSuffixPath{1},
-			caretSuffixPath{1},
-			caretSuffixPath{1},
+			tildePath{1},
+			caretReg{"update", false},
+			tildePath{5},
+			tildePath{1},
+			caretPath{1},
+			caretPath{1},
 		},
 	}
 
@@ -130,8 +130,8 @@ func (s *ParserSuite) TestParse(c *C) {
 func (s *ParserSuite) TestParseAtWithValidExpression(c *C) {
 	datas := map[string]revisioner{
 		"@":           ref("HEAD"),
-		"@{1}":        atSuffixReflog{1},
-		"@{-1}":       atSuffixCheckout{1},
+		"@{1}":        atReflog{1},
+		"@{-1}":       atCheckout{1},
 		"@{push}":     atPush{},
 		"@{upstream}": atUpstream{},
 		"@{u}":        atUpstream{},
@@ -165,17 +165,17 @@ func (s *ParserSuite) TestParseAtWithUnValidExpression(c *C) {
 
 func (s *ParserSuite) TestParseCaretWithValidExpression(c *C) {
 	datas := map[string]revisioner{
-		"^":                    caretSuffixPath{1},
-		"^3":                   caretSuffixPath{3},
-		"^{}":                  caretSuffixType{"tag"},
-		"^{commit}":            caretSuffixType{"commit"},
-		"^{tree}":              caretSuffixType{"tree"},
-		"^{blob}":              caretSuffixType{"blob"},
-		"^{tag}":               caretSuffixType{"tag"},
-		"^{object}":            caretSuffixType{"object"},
-		"^{/hello world !}":    caretSuffixReg{"hello world !", false},
-		"^{/!-hello world !}":  caretSuffixReg{"hello world !", true},
-		"^{/!! hello world !}": caretSuffixReg{"! hello world !", false},
+		"^":                    caretPath{1},
+		"^3":                   caretPath{3},
+		"^{}":                  caretType{"tag"},
+		"^{commit}":            caretType{"commit"},
+		"^{tree}":              caretType{"tree"},
+		"^{blob}":              caretType{"blob"},
+		"^{tag}":               caretType{"tag"},
+		"^{object}":            caretType{"object"},
+		"^{/hello world !}":    caretReg{"hello world !", false},
+		"^{/!-hello world !}":  caretReg{"hello world !", true},
+		"^{/!! hello world !}": caretReg{"! hello world !", false},
 	}
 
 	for d, expected := range datas {
@@ -207,9 +207,9 @@ func (s *ParserSuite) TestParseCaretWithUnValidExpression(c *C) {
 
 func (s *ParserSuite) TestParseTildeWithValidExpression(c *C) {
 	datas := map[string]revisioner{
-		"~3": tildeSuffixPath{3},
-		"~1": tildeSuffixPath{1},
-		"~":  tildeSuffixPath{1},
+		"~3": tildePath{3},
+		"~1": tildePath{1},
+		"~":  tildePath{1},
 	}
 
 	for d, expected := range datas {
