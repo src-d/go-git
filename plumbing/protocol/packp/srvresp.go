@@ -68,3 +68,17 @@ func (r *ServerResponse) decodeACKLine(line []byte) error {
 	r.ACKs = append(r.ACKs, h)
 	return nil
 }
+
+// Encode encodes the ServerResponse into a writer.
+func (r *ServerResponse) Encode(w io.Writer) error {
+	if len(r.ACKs) > 1 {
+		return errors.New("multi_ack and multi_ack_detailed are not supported")
+	}
+
+	e := pktline.NewEncoder(w)
+	if len(r.ACKs) == 0 {
+		return e.Encode(nak)
+	}
+
+	return e.Encodef("%s %s", ack, r.ACKs[0].String())
+}

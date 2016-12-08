@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
 // ErrUploadPackResponseNotDecoded is returned if Read is called without
@@ -17,8 +18,8 @@ var ErrUploadPackResponseNotDecoded = errors.New("upload-pack-response should be
 type UploadPackResponse struct {
 	ShallowUpdate
 	ServerResponse
-	r io.ReadCloser
 
+	Packfile   io.ReadCloser
 	isShallow  bool
 	isMultiACK bool
 	isOk       bool
@@ -51,27 +52,44 @@ func (r *UploadPackResponse) Decode(reader io.ReadCloser) error {
 	}
 
 	// now the reader is ready to read the packfile content
-	r.r = reader
+	r.Packfile = reader
 
 	return nil
+}
+
+// Encode encodes an UploadPackResponse.
+func (r *UploadPackResponse) Encode(w io.Writer) (err error) {
+	if r.isShallow {
+		if err := r.ShallowUpdate.Encode(w); err != nil {
+			return err
+		}
+	}
+
+	if err := r.ServerResponse.Encode(w); err != nil {
+		return err
+	}
+
+	defer ioutil.CheckClose(r.Packfile, &err)
+	_, err = io.Copy(w, r.Packfile)
+	return err
 }
 
 // Read reads the packfile data, if the request was done with any Sideband
 // capability the content read should be demultiplexed. If the methods wasn't
 // called before the ErrUploadPackResponseNotDecoded will be return
 func (r *UploadPackResponse) Read(p []byte) (int, error) {
-	if r.r == nil {
+	if r.Packfile == nil {
 		return 0, ErrUploadPackResponseNotDecoded
 	}
 
-	return r.r.Read(p)
+	return r.Packfile.Read(p)
 }
 
 // Close the underlying reader, if any
 func (r *UploadPackResponse) Close() error {
-	if r.r == nil {
+	if r.Packfile == nil {
 		return nil
 	}
 
-	return r.r.Close()
+	return r.Packfile.Close()
 }

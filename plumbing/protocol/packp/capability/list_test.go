@@ -171,3 +171,31 @@ func (s *SuiteCapabilities) TestAddErrMultipleArgumentsAtTheSameTime(c *check.C)
 	err := cap.Add(Agent, "foo", "bar")
 	c.Assert(err, check.Equals, ErrMultipleArguments)
 }
+
+func (s *SuiteCapabilities) TestCheckEmpty(c *check.C) {
+	cap1 := NewList()
+	cap2 := NewList()
+	c.Assert(cap1.Check(cap2), check.IsNil)
+}
+
+func (s *SuiteCapabilities) TestCheckAgent(c *check.C) {
+	cap1 := NewList()
+	cap1.Add(Agent, "foo")
+	cap2 := NewList()
+	cap2.Add(Agent, "bar")
+	c.Assert(cap1.Check(cap2), check.IsNil)
+}
+
+func (s *SuiteCapabilities) TestCheck(c *check.C) {
+	cap1 := NewList()
+	cap1.Add(OFSDelta)
+	cap2 := NewList()
+	c.Assert(cap1.Check(cap2), check.IsNil)
+}
+
+func (s *SuiteCapabilities) TestCheckError(c *check.C) {
+	cap1 := NewList()
+	cap2 := NewList()
+	cap2.Add(OFSDelta)
+	c.Assert(cap1.Check(cap2), check.ErrorMatches, "unsupported capability: ofs-delta")
+}

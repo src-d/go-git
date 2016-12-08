@@ -219,7 +219,7 @@ func (r *Remote) fetchPack(o *FetchOptions, s transport.FetchPackSession,
 		return err
 	}
 
-	if err = r.updateObjectStorage(
+	if err = packfile.UpdateObjectStorage(r.s,
 		buildSidebandIfSupported(req.Capabilities, reader, r.p),
 	); err != nil {
 		return err
@@ -404,28 +404,6 @@ func (r *Remote) newUploadPackRequest(o *FetchOptions,
 	}
 
 	return req, nil
-}
-
-func (r *Remote) updateObjectStorage(reader io.Reader) error {
-	if sw, ok := r.s.(storer.PackfileWriter); ok {
-		w, err := sw.PackfileWriter()
-		if err != nil {
-			return err
-		}
-
-		defer w.Close()
-		_, err = io.Copy(w, reader)
-		return err
-	}
-
-	stream := packfile.NewScanner(reader)
-	d, err := packfile.NewDecoder(stream, r.s)
-	if err != nil {
-		return err
-	}
-
-	_, err = d.Decode()
-	return err
 }
 
 func buildSidebandIfSupported(l *capability.List, reader io.Reader, p sideband.Progress) io.Reader {

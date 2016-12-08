@@ -167,6 +167,18 @@ func (l *List) Delete(capability Capability) {
 	}
 }
 
+// Check checks that all capabilities set in the given list are supported
+// in this list.
+func (l *List) Check(ol *List) error {
+	for c, _ := range ol.m {
+		if !l.Supports(c) {
+			return fmt.Errorf("unsupported capability: %s", c)
+		}
+	}
+
+	return nil
+}
+
 // String generates the capabilities strings, the capabilities are sorted in
 // insertion order
 func (l *List) String() string {
