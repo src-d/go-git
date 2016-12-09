@@ -11,8 +11,8 @@ import (
 
 	"gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/utils/fs"
-	osfs "gopkg.in/src-d/go-git.v4/utils/fs/os"
+	"srcd.works/go-billy.v0"
+	osfs "srcd.works/go-billy.v0/os"
 )
 
 var RootFolder = ""
@@ -182,7 +182,7 @@ func (f *Fixture) Idx() *os.File {
 
 // DotGit creates a new temporary directory and unpacks the repository .git
 // directory into it. Multiple calls to DotGit returns different directories.
-func (f *Fixture) DotGit() fs.Filesystem {
+func (f *Fixture) DotGit() billy.Filesystem {
 	fn := filepath.Join(RootFolder, DataFolder, fmt.Sprintf("git-%s.tgz", f.DotGitHash))
 	path, err := tgz.Extract(fn)
 	if err != nil {
@@ -193,7 +193,7 @@ func (f *Fixture) DotGit() fs.Filesystem {
 	return osfs.New(path)
 }
 
-func (f *Fixture) Worktree() fs.Filesystem {
+func (f *Fixture) Worktree() billy.Filesystem {
 	fn := filepath.Join(RootFolder, DataFolder, fmt.Sprintf("git-%s.tgz", f.DotGitHash))
 	git, err := tgz.Extract(fn)
 	if err != nil {

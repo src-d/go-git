@@ -9,7 +9,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/fixtures"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	osfs "gopkg.in/src-d/go-git.v4/utils/fs/os"
+	osfs "srcd.works/go-billy.v0/os"
 
 	. "gopkg.in/check.v1"
 )

@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"gopkg.in/src-d/go-git.v4/fixtures"
-	osfs "gopkg.in/src-d/go-git.v4/utils/fs/os"
+	osfs "srcd.works/go-billy.v0/os"
 
 	. "gopkg.in/check.v1"
 )
