@@ -12,6 +12,37 @@ var (
 	ErrInvalidType = errors.New("invalid object type")
 )
 
+// ObjectToPack is a representation of an object that is going to be into a
+// pack file. If it is a delta, Source is the delta source and Original is the
+// delta target
+type ObjectToPack struct {
+	Object
+	Source   Object
+	Original Object
+}
+
+func NewObjectToPack(o Object) *ObjectToPack {
+	return &ObjectToPack{
+		Object: o,
+	}
+}
+
+func NewDeltaObjectToPack(base, original, delta Object) *ObjectToPack {
+	return &ObjectToPack{
+		Object:   delta,
+		Source:   base,
+		Original: original,
+	}
+}
+
+func (o *ObjectToPack) IsDelta() bool {
+	if o.Source != nil && o.Original != nil {
+		return true
+	}
+
+	return false
+}
+
 // Object is a generic representation of any git object
 type Object interface {
 	Hash() Hash

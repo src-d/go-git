@@ -1,6 +1,7 @@
 package packfile
 
 import (
+	"fmt"
 	"io/ioutil"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -14,8 +15,23 @@ const (
 	maxCopyLen = 0xffff
 )
 
-// GetDelta returns the way of how to transform base object to target object
-func GetDelta(base, target plumbing.Object) ([]byte, error) {
+// GetOfsDelta returns an offset delta that knows the way of how to transform
+// base object to target object
+func GetOfsDelta(base, target plumbing.Object) (*plumbing.ObjectToPack, error) {
+	return getDelta(base, target, plumbing.OFSDeltaObject)
+}
+
+// GetRefDelta returns a reference delta that knows the way of how to transform
+// base object to target object
+func GetRefDelta(base, target plumbing.Object) (*plumbing.ObjectToPack, error) {
+	return getDelta(base, target, plumbing.REFDeltaObject)
+}
+
+func getDelta(base, target plumbing.Object, t plumbing.ObjectType) (*plumbing.ObjectToPack, error) {
+	if t != plumbing.OFSDeltaObject && t != plumbing.REFDeltaObject {
+		return nil, fmt.Errorf("Type not supported: %v", t)
+	}
+
 	baseReader, err := base.Reader()
 	if err != nil {
 		return nil, err
@@ -35,7 +51,17 @@ func GetDelta(base, target plumbing.Object) ([]byte, error) {
 		return nil, err
 	}
 
-	return DiffDelta(baseBuf, targetBuf), nil
+	deltaBuf := DiffDelta(baseBuf, targetBuf)
+	delta := &plumbing.MemoryObject{}
+	_, err = delta.Write(deltaBuf)
+	if err != nil {
+		return nil, err
+	}
+
+	delta.SetSize(int64(len(deltaBuf)))
+	delta.SetType(t)
+
+	return plumbing.NewDeltaObjectToPack(base, target, delta), nil
 }
 
 // DiffDelta returns the way of how to transform baseBuf to targetBuf
