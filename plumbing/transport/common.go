@@ -30,8 +30,6 @@ var (
 	ErrAuthorizationRequired  = errors.New("authorization required")
 	ErrEmptyUploadPackRequest = errors.New("empty git-upload-pack given")
 	ErrInvalidAuthMethod      = errors.New("invalid auth method")
-
-	ErrAdvertistedReferencesAlreadyCalled = errors.New("cannot call AdvertisedReference twice")
 )
 
 const (
@@ -49,6 +47,11 @@ type Client interface {
 
 type Session interface {
 	SetAuth(auth AuthMethod) error
+	// AdvertisedReferences retrieves the advertised references for a
+	// repository.
+	// If the repository does not exist, returns ErrRepositoryNotFound.
+	// If the repository exists, but is empty, returns ErrEmptyRemoteRepository.
+	AdvertisedReferences() (*packp.AdvRefs, error)
 	io.Closer
 }
 
@@ -63,10 +66,6 @@ type AuthMethod interface {
 // In that order.
 type FetchPackSession interface {
 	Session
-	// AdvertisedReferences retrieves the advertised references for a
-	// repository. It should be called before FetchPack, and it cannot be
-	// called after FetchPack.
-	AdvertisedReferences() (*packp.AdvRefs, error)
 	// FetchPack takes a request and returns a reader for the packfile
 	// received from the server.
 	FetchPack(*packp.UploadPackRequest) (*packp.UploadPackResponse, error)
@@ -78,14 +77,9 @@ type FetchPackSession interface {
 // In that order.
 type SendPackSession interface {
 	Session
-	// AdvertisedReferences retrieves the advertised references for a
-	// repository. It should be called before FetchPack, and it cannot be
-	// called after FetchPack.
-	AdvertisedReferences() (*packp.AdvRefs, error)
-	// UpdateReferences sends an update references request and returns a
-	// writer to be used for packfile writing.
-	//TODO: Complete signature.
-	SendPack() (io.WriteCloser, error)
+	// UpdateReferences sends an update references request and a packfile
+	// reader and returns a ReportStatus and error.
+	SendPack(*packp.ReferenceUpdateRequest) (*packp.ReportStatus, error)
 }
 
 type Endpoint url.URL

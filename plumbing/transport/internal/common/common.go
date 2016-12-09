@@ -15,6 +15,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
@@ -91,7 +92,7 @@ func (c *client) NewFetchPackSession(ep transport.Endpoint) (
 func (c *client) NewSendPackSession(ep transport.Endpoint) (
 	transport.SendPackSession, error) {
 
-	return nil, errors.New("git send-pack not supported")
+	return c.newSession(transport.ReceivePackServiceName, ep)
 }
 
 type session struct {
@@ -99,10 +100,11 @@ type session struct {
 	Stdout  io.Reader
 	Command Command
 
-	advRefsRun bool
-	packRun    bool
-	finished   bool
-	errLines   chan string
+	isReceivePack bool
+	advRefs       *packp.AdvRefs
+	packRun       bool
+	finished      bool
+	errLines      chan string
 }
 
 func (c *client) newSession(s string, ep transport.Endpoint) (*session, error) {
@@ -131,10 +133,11 @@ func (c *client) newSession(s string, ep transport.Endpoint) (*session, error) {
 	}
 
 	return &session{
-		Stdin:    stdin,
-		Stdout:   stdout,
-		Command:  cmd,
-		errLines: c.listenErrors(stderr),
+		Stdin:         stdin,
+		Stdout:        stdout,
+		Command:       cmd,
+		errLines:      c.listenErrors(stderr),
+		isReceivePack: s == transport.ReceivePackServiceName,
 	}, nil
 }
 
@@ -162,18 +165,19 @@ func (s *session) SetAuth(auth transport.AuthMethod) error {
 
 // AdvertisedReferences retrieves the advertised references from the server.
 func (s *session) AdvertisedReferences() (*packp.AdvRefs, error) {
-	if s.advRefsRun {
-		return nil, transport.ErrAdvertistedReferencesAlreadyCalled
+	if s.advRefs != nil {
+		return s.advRefs, nil
 	}
-
-	s.advRefsRun = true
 
 	ar := packp.NewAdvRefs()
 	if err := ar.Decode(s.Stdout); err != nil {
-		return nil, s.handleAdvRefDecodeError(err)
+		if err := s.handleAdvRefDecodeError(err); err != nil {
+			return nil, err
+		}
 	}
 
 	transport.FilterUnsupportedCapabilities(ar.Capabilities)
+	s.advRefs = ar
 	return ar, nil
 }
 
@@ -191,6 +195,11 @@ func (s *session) handleAdvRefDecodeError(err error) error {
 	// For empty (but existing) repositories, we get empty advertised-references
 	// message. But valid. That is, it includes at least a flush.
 	if err == packp.ErrEmptyAdvRefs {
+		// Empty repositories are valid for git-receive-pack.
+		if s.isReceivePack {
+			return nil
+		}
+
 		if err := s.finish(); err != nil {
 			return err
 		}
@@ -221,10 +230,8 @@ func (s *session) FetchPack(req *packp.UploadPackRequest) (*packp.UploadPackResp
 		return nil, err
 	}
 
-	if !s.advRefsRun {
-		if _, err := s.AdvertisedReferences(); err != nil {
-			return nil, err
-		}
+	if _, err := s.AdvertisedReferences(); err != nil {
+		return nil, err
 	}
 
 	s.packRun = true
@@ -250,6 +257,35 @@ func (s *session) FetchPack(req *packp.UploadPackRequest) (*packp.UploadPackResp
 	rc := ioutil.NewReadCloser(r, wc)
 
 	return DecodeUploadPackResponse(rc, req)
+}
+
+func (s *session) SendPack(req *packp.ReferenceUpdateRequest) (*packp.ReportStatus, error) {
+	if _, err := s.AdvertisedReferences(); err != nil {
+		return nil, err
+	}
+
+	s.packRun = true
+
+	if err := req.Encode(s.Stdin); err != nil {
+		return nil, err
+	}
+
+	if !req.Capabilities.Supports(capability.ReportStatus) {
+		// If we have neither report-status or sideband, we can only
+		// check return value error.
+		return nil, s.Command.Wait()
+	}
+
+	report := packp.NewReportStatus()
+	if err := report.Decode(s.Stdout); err != nil {
+		return nil, err
+	}
+
+	if !report.Ok() {
+		return report, fmt.Errorf("report status: %s", report.UnpackStatus)
+	}
+
+	return report, s.Command.Wait()
 }
 
 func (s *session) finish() error {
@@ -371,6 +407,7 @@ func DecodeUploadPackResponse(r io.ReadCloser, req *packp.UploadPackRequest) (
 	if err := res.Decode(r); err != nil {
 		return nil, fmt.Errorf("error decoding upload-pack response: %s", err)
 	}
+
 	return res, nil
 }
 
