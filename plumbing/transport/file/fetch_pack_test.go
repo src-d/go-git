@@ -76,3 +76,11 @@ func (s *FetchPackSuite) TestMalformedInputNoErrors(c *C) {
 	c.Assert(err, NotNil)
 	c.Assert(ar, IsNil)
 }
+
+func (s *FetchPackSuite) TestNonExistentCommand(c *C) {
+	cmd := "/non-existent-git"
+	client := NewClient(cmd, cmd)
+	session, err := client.NewFetchPackSession(s.Endpoint)
+	c.Assert(err, ErrorMatches, ".*no such file or directory.*")
+	c.Assert(session, IsNil)
+}
