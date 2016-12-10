@@ -359,13 +359,30 @@ func (p *parser) parseColonDefault() (revisioner, error) {
 	var tok token
 	var lit string
 	var path string
+	var stage int
+	var n = -1
+
+	tok, lit = p.scan()
+	nextTok, _ := p.scan()
+
+	if tok == number && nextTok == colon {
+		n, _ = strconv.Atoi(lit)
+	}
+
+	switch n {
+	case 0, 1, 2, 3:
+		stage = n
+	default:
+		path += lit
+		p.unscan()
+	}
 
 	for {
 		tok, lit = p.scan()
 
 		switch {
 		case tok == eof:
-			return colonPath{path, 0}, nil
+			return colonPath{path, stage}, nil
 		default:
 			path += lit
 		}

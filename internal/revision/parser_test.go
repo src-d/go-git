@@ -126,6 +126,12 @@ func (s *ParserSuite) TestParseWithValidExpression(c *C) {
 			ref("master"),
 			colonPath{"./README", 0},
 		},
+		":0:README": []revisioner{
+			colonPath{"README", 0},
+		},
+		":3:README": []revisioner{
+			colonPath{"README", 3},
+		},
 		"master~1^{/update}~5~^^1": []revisioner{
 			ref("master"),
 			tildePath{1},
@@ -279,6 +285,10 @@ func (s *ParserSuite) TestParseColonWithValidExpression(c *C) {
 		":../parser.go":      colonPath{"../parser.go", 0},
 		":./parser.go":       colonPath{"./parser.go", 0},
 		":parser.go":         colonPath{"parser.go", 0},
+		":0:parser.go":       colonPath{"parser.go", 0},
+		":1:parser.go":       colonPath{"parser.go", 1},
+		":2:parser.go":       colonPath{"parser.go", 2},
+		":3:parser.go":       colonPath{"parser.go", 3},
 	}
 
 	for d, expected := range datas {
