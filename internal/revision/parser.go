@@ -173,19 +173,11 @@ func (p *parser) parseAt() (revisioner, error) {
 	case tok == word && lit == "push" && nextTok == cbrace:
 		return atPush{}, nil
 	case tok == number && nextTok == cbrace:
-		n, err := strconv.Atoi(lit)
-
-		if err != nil {
-			return []revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, lit)}
-		}
+		n, _ := strconv.Atoi(lit)
 
 		return atReflog{n}, nil
 	case tok == minus && nextTok == number:
-		n, err := strconv.Atoi(nextLit)
-
-		if err != nil {
-			return []revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, nextLit)}
-		}
+		n, _ := strconv.Atoi(nextLit)
 
 		t, _ := p.scan()
 
@@ -214,11 +206,7 @@ func (p *parser) parseTilde() (revisioner, error) {
 
 	switch {
 	case tok == number:
-		n, err := strconv.Atoi(lit)
-
-		if err != nil {
-			return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, lit)}
-		}
+		n, _ := strconv.Atoi(lit)
 
 		return tildePath{n}, nil
 	case tok == tilde || tok == caret || tok == eof:
@@ -254,11 +242,7 @@ func (p *parser) parseCaret() (revisioner, error) {
 
 		return r, nil
 	case tok == number:
-		n, err := strconv.Atoi(lit)
-
-		if err != nil {
-			return []revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a number`, lit)}
-		}
+		n, _ := strconv.Atoi(lit)
 
 		return caretPath{n}, nil
 	case tok == caret || tok == tilde || tok == eof:
