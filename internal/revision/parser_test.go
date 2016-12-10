@@ -281,6 +281,7 @@ func (s *ParserSuite) TestParseColonWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"a":       &ErrInvalidRevision{`"a" found must be ":"`},
 		":/!test": &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
+		":^":      &ErrInvalidRevision{`"^" is not a valid revision suffix colon component`},
 	}
 
 	for s, e := range datas {

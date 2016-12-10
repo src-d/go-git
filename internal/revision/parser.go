@@ -319,7 +319,15 @@ func (p *parser) parseColon() (revisioner, error) {
 		return []revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be ":"`, lit)}
 	}
 
-	return p.parseColonSlash()
+	tok, lit = p.scan()
+
+	switch tok {
+	case slash:
+		p.unscan()
+		return p.parseColonSlash()
+	default:
+		return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix colon component`, lit)}
+	}
 }
 
 // parseColonSlash extract :/<data> statements
