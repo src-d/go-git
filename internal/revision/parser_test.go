@@ -115,6 +115,17 @@ func (s *ParserSuite) TestParseWithValidExpression(c *C) {
 		":/fix nasty bug": []revisioner{
 			colonReg{"fix nasty bug", false},
 		},
+		"HEAD:README": []revisioner{
+			ref("HEAD"),
+			colonPath{"README", 0},
+		},
+		":README": []revisioner{
+			colonPath{"README", 0},
+		},
+		"master:./README": []revisioner{
+			ref("master"),
+			colonPath{"./README", 0},
+		},
 		"master~1^{/update}~5~^^1": []revisioner{
 			ref("master"),
 			tildePath{1},
@@ -265,6 +276,9 @@ func (s *ParserSuite) TestParseColonWithValidExpression(c *C) {
 		":/hello world !":    colonReg{"hello world !", false},
 		":/!-hello world !":  colonReg{"hello world !", true},
 		":/!! hello world !": colonReg{"! hello world !", false},
+		":../parser.go":      colonPath{"../parser.go", 0},
+		":./parser.go":       colonPath{"./parser.go", 0},
+		":parser.go":         colonPath{"parser.go", 0},
 	}
 
 	for d, expected := range datas {
@@ -281,7 +295,6 @@ func (s *ParserSuite) TestParseColonWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"a":       &ErrInvalidRevision{`"a" found must be ":"`},
 		":/!test": &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
-		":^":      &ErrInvalidRevision{`"^" is not a valid revision suffix colon component`},
 	}
 
 	for s, e := range datas {

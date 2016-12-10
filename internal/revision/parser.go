@@ -69,6 +69,12 @@ type colonReg struct {
 	negate bool
 }
 
+// colonPath represents :../<path> :./<path> :<path>
+type colonPath struct {
+	path  string
+	stage int
+}
+
 // parser represents a parser.
 type parser struct {
 	s   *scanner
@@ -326,7 +332,8 @@ func (p *parser) parseColon() (revisioner, error) {
 		p.unscan()
 		return p.parseColonSlash()
 	default:
-		return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix colon component`, lit)}
+		p.unscan()
+		return p.parseColonDefault()
 	}
 }
 
@@ -359,6 +366,24 @@ func (p *parser) parseColonSlash() (revisioner, error) {
 		default:
 			p.unscan()
 			reg.re += lit
+		}
+	}
+}
+
+// parseColonDefault extract :<data> statements
+func (p *parser) parseColonDefault() (revisioner, error) {
+	var tok token
+	var lit string
+	var path string
+
+	for {
+		tok, lit = p.scan()
+
+		switch {
+		case tok == eof:
+			return colonPath{path, 0}, nil
+		default:
+			path += lit
 		}
 	}
 }
