@@ -164,3 +164,11 @@ func (s *ScannerSuite) TestReadWord(c *C) {
 	c.Assert(data, Equals, "abcde")
 	c.Assert(tok, Equals, word)
 }
+
+func (s *ScannerSuite) TestReadChar(c *C) {
+	scanner := newScanner(bytes.NewBufferString("`"))
+	tok, data := scanner.scan()
+
+	c.Assert(data, Equals, "`")
+	c.Assert(tok, Equals, char)
+}
