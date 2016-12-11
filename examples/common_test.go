@@ -18,7 +18,7 @@ var args = map[string][]string{
 	"showcase":    []string{defaultURL},
 	"custom_http": []string{defaultURL},
 	"clone":       []string{defaultURL, tempFolder()},
-	"open":        []string{filepath.Join(packageFolder(), ".git")},
+	"open":        []string{filepath.Join(cloneRepository(defaultURL, tempFolder()), ".git")},
 }
 
 var ignored = map[string]bool{
@@ -29,7 +29,7 @@ var tempFolders = []string{}
 
 func TestExamples(t *testing.T) {
 	flag.Parse()
-	if !*examplesTest {
+	if !*examplesTest && os.Getenv("CI") == "" {
 		t.Skip("skipping examples tests, pass --examples to execute it")
 		return
 	}
@@ -76,11 +76,20 @@ func examplesFolder() string {
 	)
 }
 
+func cloneRepository(url, folder string) string {
+	cmd := exec.Command("git", "clone", url, folder)
+	err := cmd.Run()
+	CheckIfError(err)
+
+	return folder
+}
+
 func testExample(t *testing.T, name, example string) {
 	cmd := exec.Command("go", append([]string{
 		"run", filepath.Join(example),
 	}, args[name]...)...)
 
+	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
