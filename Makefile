@@ -6,7 +6,7 @@ WORKDIR = $(PWD)
 
 # Go parameters
 GOCMD = go
-GOTEST = $(GOCMD) test -v
+GOTEST = $(GOCMD) test -v --examples
 
 # Coverage
 COVERAGE_REPORT = coverage.txt
