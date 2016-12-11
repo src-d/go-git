@@ -10,4 +10,4 @@ Here you can find a list of annotated _go-git_ examples:
 
 ### Advanced
 - [custom_http](custom_http/main.go) - Replacing the HTTP client using a custom one
-- [storages](storages/main.go) - Implementing a custom storage system
+- [storage](storage/main.go) - Implementing a custom storage system
