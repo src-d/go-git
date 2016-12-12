@@ -1,9 +1,8 @@
 package filesystem
 
 import (
-	"os"
-
 	"fmt"
+	"os"
 
 	"gopkg.in/src-d/go-git.v4/config"
 	gitconfig "gopkg.in/src-d/go-git.v4/plumbing/format/config"
