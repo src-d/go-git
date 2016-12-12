@@ -11,6 +11,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem/internal/dotgit"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
+
 	"srcd.works/go-billy.v0"
 )
 
