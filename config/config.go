@@ -60,21 +60,7 @@ type RemoteConfig struct {
 	URL   string
 	Fetch []RefSpec
 }
-re(cfg, ini)
-	c.marshalRemotes(cfg, ini)
-	return c.marshal(ini)
-}
 
-func (c *ConfigStorage) marshalCore(cfg *config.Config, ini *gitconfig.Config) {
-	s := ini.Section(coreSection)
-	s.AddOption(bareKey, fmt.Sprintf("%t", cfg.Core.IsBare))
-}
-
-func (c *ConfigStorage) marshalRemotes(cfg *config.Config, ini *gitconfig.Config) {
-	s := ini.Section(remoteSection)
-	s.Subsections = make(gitconfig.Subsections, len(cfg.Remotes))
-
-	var i in
 // Validate validate the fields and set the default values
 func (c *RemoteConfig) Validate() error {
 	if c.Name == "" {
