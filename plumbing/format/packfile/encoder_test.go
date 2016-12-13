@@ -249,12 +249,3 @@ func delta(base, target plumbing.EncodedObject, t plumbing.ObjectType) (plumbing
 		panic("delta type not found")
 	}
 }
-
-func newObject(t plumbing.ObjectType, cont []byte) plumbing.EncodedObject {
-	o := plumbing.MemoryObject{}
-	o.SetType(t)
-	o.SetSize(int64(len(cont)))
-	o.Write(cont)
-
-	return &o
-}
