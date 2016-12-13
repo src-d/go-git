@@ -1,10 +1,11 @@
-package git
+package object
 
 import (
 	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
 // Blob is used to store file data - it is generally a file.
@@ -58,12 +59,12 @@ func (b *Blob) Encode(o plumbing.EncodedObject) error {
 	if err != nil {
 		return err
 	}
-	defer checkClose(w, &err)
+	defer ioutil.CheckClose(w, &err)
 	r, err := b.Reader()
 	if err != nil {
 		return err
 	}
-	defer checkClose(r, &err)
+	defer ioutil.CheckClose(r, &err)
 	_, err = io.Copy(w, r)
 	o.SetType(plumbing.BlobObject)
 	return err

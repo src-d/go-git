@@ -7,6 +7,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
 type DiffTreeSuite struct {
@@ -314,7 +315,7 @@ func (s *DiffTreeSuite) TestDiffTree(c *C) {
 		c.Assert(err, IsNil,
 			Commentf("subtest %d: unable to retrieve tree from commit %s and repo %s: %s", i, t.commit1, t.repository, err))
 
-		var tree2 *Tree
+		var tree2 *object.Tree
 		if t.commit1 == t.commit2 {
 			tree2 = tree1
 		} else {
@@ -375,7 +376,7 @@ func equalChanges(a Changes, b []expectChange) bool {
 	return true
 }
 
-func tree(repo *Repository, commitHashStr string) (*Tree, error) {
+func tree(repo *Repository, commitHashStr string) (*object.Tree, error) {
 	if commitHashStr == "" {
 		return nil, nil
 	}

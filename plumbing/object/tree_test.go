@@ -1,4 +1,4 @@
-package git
+package object
 
 import (
 	"io"
@@ -188,7 +188,7 @@ func (s *TreeSuite) TestTreeWalkerNext(c *C) {
 	tree, err := commit.Tree()
 	c.Assert(err, IsNil)
 
-	walker := NewTreeWalker(s.Storer, tree, true)
+	walker := NewTreeWalker(tree, true)
 	for _, e := range treeWalkerExpects {
 		name, entry, err := walker.Next()
 		if err == io.EOF {
@@ -214,7 +214,7 @@ func (s *TreeSuite) TestTreeWalkerNextNonRecursive(c *C) {
 	c.Assert(err, IsNil)
 
 	var count int
-	walker := NewTreeWalker(s.Storer, tree, false)
+	walker := NewTreeWalker(tree, false)
 	for {
 		name, entry, err := walker.Next()
 		if err == io.EOF {

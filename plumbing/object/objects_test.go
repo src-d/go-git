@@ -1,17 +1,20 @@
-package git
+package object
 
 import (
+	"io"
 	"io/ioutil"
+	"testing"
 	"time"
 
-	"gopkg.in/src-d/go-git.v4/plumbing"
-
-	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
-	"io"
+
+	. "gopkg.in/check.v1"
 )
+
+func Test(t *testing.T) { TestingT(t) }
 
 type BaseObjectsSuite struct {
 	fixtures.Suite

@@ -1,14 +1,15 @@
-package git
+package object
 
 import (
 	"bufio"
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
+	stdioutil "io/ioutil"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
 // Tag represents an annotated tag object. It points to a single git object of
@@ -67,7 +68,7 @@ func (t *Tag) Decode(o plumbing.EncodedObject) (err error) {
 	if err != nil {
 		return err
 	}
-	defer checkClose(reader, &err)
+	defer ioutil.CheckClose(reader, &err)
 
 	r := bufio.NewReader(reader)
 	for {
@@ -101,7 +102,7 @@ func (t *Tag) Decode(o plumbing.EncodedObject) (err error) {
 		}
 	}
 
-	data, err := ioutil.ReadAll(r)
+	data, err := stdioutil.ReadAll(r)
 	if err != nil {
 		return err
 	}
@@ -117,7 +118,7 @@ func (t *Tag) Encode(o plumbing.EncodedObject) error {
 	if err != nil {
 		return err
 	}
-	defer checkClose(w, &err)
+	defer ioutil.CheckClose(w, &err)
 
 	if _, err = fmt.Fprintf(w,
 		"object %s\ntype %s\ntag %s\ntagger ",

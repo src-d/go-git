@@ -15,6 +15,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
 var NoErrAlreadyUpToDate = errors.New("already up-to-date")
@@ -126,7 +127,7 @@ func (r *Remote) Fetch(o *FetchOptions) (err error) {
 		return err
 	}
 
-	defer checkClose(reader, &err)
+	defer ioutil.CheckClose(reader, &err)
 
 	if err = r.updateObjectStorage(
 		r.buildSidebandIfSupported(req.Capabilities, reader),

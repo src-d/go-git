@@ -5,8 +5,8 @@ import (
 	"io"
 	"io/ioutil"
 
-	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
@@ -16,7 +16,7 @@ func c_File_get_Name(f uint64) *C.char {
 	if !ok {
 		return nil
 	}
-	file := obj.(*git.File)
+	file := obj.(*object.File)
 	return C.CString(file.Name)
 }
 
@@ -26,7 +26,7 @@ func c_File_get_Mode(f uint64) uint32 {
 	if !ok {
 		return 0
 	}
-	file := obj.(*git.File)
+	file := obj.(*object.File)
 	return uint32(file.Mode)
 }
 
@@ -36,7 +36,7 @@ func c_File_get_Hash(b uint64) *C.char {
 	if !ok {
 		return nil
 	}
-	file := obj.(*git.File)
+	file := obj.(*object.File)
 	return CBytes(file.Hash[:])
 }
 
@@ -46,7 +46,7 @@ func c_File_Size(b uint64) int64 {
 	if !ok {
 		return -1
 	}
-	file := obj.(*git.File)
+	file := obj.(*object.File)
 	return file.Size
 }
 
@@ -57,7 +57,7 @@ func c_File_Decode(o uint64) uint64 {
 		return IH
 	}
 	cobj := obj.(*plumbing.EncodedObject)
-	file := git.File{}
+	file := object.File{}
 	file.Decode(*cobj)
 	return uint64(RegisterObject(&file))
 }
@@ -68,7 +68,7 @@ func c_File_Read(b uint64) (int, *C.char) {
 	if !ok {
 		return ErrorCodeNotFound, C.CString(MessageNotFound)
 	}
-	file := obj.(*git.File)
+	file := obj.(*object.File)
 	reader, err := file.Reader()
 	if err != nil {
 		return ErrorCodeInternal, C.CString(err.Error())
@@ -87,7 +87,7 @@ func c_File_Type(c uint64) int8 {
 	if !ok {
 		return -1
 	}
-	file := obj.(*git.File)
+	file := obj.(*object.File)
 	return int8(file.Type())
 }
 
@@ -102,8 +102,8 @@ func c_NewFileIter(r uint64, t uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	tree := obj.(*git.Tree)
-	iter := git.NewFileIter(storer, tree)
+	tree := obj.(*object.Tree)
+	iter := object.NewFileIter(storer, tree)
 	return uint64(RegisterObject(iter))
 }
 
@@ -113,7 +113,7 @@ func c_FileIter_Next(i uint64) (uint64, int, *C.char) {
 	if !ok {
 		return IH, ErrorCodeNotFound, C.CString(MessageNotFound)
 	}
-	iter := obj.(*git.FileIter)
+	iter := obj.(*object.FileIter)
 	file, err := iter.Next()
 	if err != nil {
 		if err == io.EOF {
@@ -130,6 +130,6 @@ func c_FileIter_Close(i uint64) {
 	if !ok {
 		return
 	}
-	iter := obj.(*git.FileIter)
+	iter := obj.(*object.FileIter)
 	iter.Close()
 }

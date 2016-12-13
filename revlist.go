@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
@@ -15,7 +16,7 @@ import (
 // storer.
 func RevListObjects(
 	s storer.EncodedObjectStorer,
-	commits []*Commit,
+	commits []*object.Commit,
 	ignore []plumbing.Hash) ([]plumbing.Hash, error) {
 
 	seen := hashListToSet(ignore)
@@ -44,11 +45,11 @@ func RevListObjects(
 // and blobs objects.
 func reachableObjects(
 	s storer.EncodedObjectStorer,
-	commit *Commit,
+	commit *object.Commit,
 	seen map[plumbing.Hash]bool,
 	cb func(h plumbing.Hash) error) error {
 
-	return iterateCommits(commit, func(commit *Commit) error {
+	return iterateCommits(commit, func(commit *object.Commit) error {
 		if seen[commit.Hash] {
 			return nil
 		}
@@ -64,12 +65,12 @@ func reachableObjects(
 }
 
 // iterateCommits iterate all reachable commits from the given one
-func iterateCommits(commit *Commit, cb func(c *Commit) error) error {
+func iterateCommits(commit *object.Commit, cb func(c *object.Commit) error) error {
 	if err := cb(commit); err != nil {
 		return err
 	}
 
-	return WalkCommitHistory(commit, func(c *Commit) error {
+	return object.WalkCommitHistory(commit, func(c *object.Commit) error {
 		return cb(c)
 	})
 }
@@ -77,7 +78,7 @@ func iterateCommits(commit *Commit, cb func(c *Commit) error) error {
 // iterateCommitTrees iterate all reachable trees from the given commit
 func iterateCommitTrees(
 	s storer.EncodedObjectStorer,
-	commit *Commit,
+	commit *object.Commit,
 	cb func(h plumbing.Hash) error) error {
 
 	tree, err := commit.Tree()
@@ -88,7 +89,7 @@ func iterateCommitTrees(
 		return err
 	}
 
-	treeWalker := NewTreeWalker(s, tree, true)
+	treeWalker := object.NewTreeWalker(tree, true)
 
 	for {
 		_, e, err := treeWalker.Next()

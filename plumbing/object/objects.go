@@ -1,4 +1,4 @@
-package git
+package object
 
 import (
 	"bytes"
@@ -60,6 +60,9 @@ func DecodeObject(s storer.EncodedObjectStorer, o plumbing.EncodedObject) (Objec
 		return nil, plumbing.ErrInvalidType
 	}
 }
+
+// DateFormat is the format being use in the orignal git implementation
+const DateFormat = "Mon Jan 02 15:04:05 2006 -0700"
 
 // Signature represents an action signed by a person
 type Signature struct {

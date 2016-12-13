@@ -1,4 +1,4 @@
-package git
+package object
 
 import (
 	"bufio"
@@ -10,6 +10,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
 // Hash hash of an object
@@ -113,7 +114,7 @@ func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 	if err != nil {
 		return err
 	}
-	defer checkClose(reader, &err)
+	defer ioutil.CheckClose(reader, &err)
 
 	r := bufio.NewReader(reader)
 
@@ -171,7 +172,7 @@ func (b *Commit) Encode(o plumbing.EncodedObject) error {
 	if err != nil {
 		return err
 	}
-	defer checkClose(w, &err)
+	defer ioutil.CheckClose(w, &err)
 	if _, err = fmt.Fprintf(w, "tree %s\n", b.tree.String()); err != nil {
 		return err
 	}

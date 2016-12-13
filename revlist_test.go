@@ -3,10 +3,11 @@ package git
 import (
 	"gopkg.in/src-d/go-git.v4/fixtures"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-
-	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
+
+	. "gopkg.in/check.v1"
 )
 
 type RevListSuite struct {
@@ -50,10 +51,10 @@ func (s *RevListSuite) SetUpTest(c *C) {
 	s.Storer = storer
 }
 
-func (s *RevListSuite) commit(c *C, h plumbing.Hash) *Commit {
+func (s *RevListSuite) commit(c *C, h plumbing.Hash) *object.Commit {
 	o, err := s.Storer.EncodedObject(plumbing.CommitObject, h)
 	c.Assert(err, IsNil)
-	commit, err := DecodeCommit(s.Storer, o)
+	commit, err := object.DecodeCommit(s.Storer, o)
 	c.Assert(err, IsNil)
 	return commit
 }
@@ -75,10 +76,10 @@ func (s *RevListSuite) TestRevListObjects(c *C) {
 	initCommit := s.commit(c, plumbing.NewHash(initialCommit))
 	secondCommit := s.commit(c, plumbing.NewHash(secondCommit))
 
-	localHist, err := RevListObjects(s.Storer, []*Commit{initCommit}, nil)
+	localHist, err := RevListObjects(s.Storer, []*object.Commit{initCommit}, nil)
 	c.Assert(err, IsNil)
 
-	remoteHist, err := RevListObjects(s.Storer, []*Commit{secondCommit}, localHist)
+	remoteHist, err := RevListObjects(s.Storer, []*object.Commit{secondCommit}, localHist)
 	c.Assert(err, IsNil)
 
 	for _, h := range remoteHist {
@@ -91,10 +92,10 @@ func (s *RevListSuite) TestRevListObjectsReverse(c *C) {
 	initCommit := s.commit(c, plumbing.NewHash(initialCommit))
 	secondCommit := s.commit(c, plumbing.NewHash(secondCommit))
 
-	localHist, err := RevListObjects(s.Storer, []*Commit{secondCommit}, nil)
+	localHist, err := RevListObjects(s.Storer, []*object.Commit{secondCommit}, nil)
 	c.Assert(err, IsNil)
 
-	remoteHist, err := RevListObjects(s.Storer, []*Commit{initCommit}, localHist)
+	remoteHist, err := RevListObjects(s.Storer, []*object.Commit{initCommit}, localHist)
 	c.Assert(err, IsNil)
 
 	c.Assert(len(remoteHist), Equals, 0)
@@ -103,10 +104,10 @@ func (s *RevListSuite) TestRevListObjectsReverse(c *C) {
 func (s *RevListSuite) TestRevListObjectsSameCommit(c *C) {
 	commit := s.commit(c, plumbing.NewHash(secondCommit))
 
-	localHist, err := RevListObjects(s.Storer, []*Commit{commit}, nil)
+	localHist, err := RevListObjects(s.Storer, []*object.Commit{commit}, nil)
 	c.Assert(err, IsNil)
 
-	remoteHist, err := RevListObjects(s.Storer, []*Commit{commit}, localHist)
+	remoteHist, err := RevListObjects(s.Storer, []*object.Commit{commit}, localHist)
 	c.Assert(err, IsNil)
 
 	c.Assert(len(remoteHist), Equals, 0)
@@ -122,11 +123,11 @@ func (s *RevListSuite) TestRevListObjectsNewBranch(c *C) {
 	someCommitBranch := s.commit(c, plumbing.NewHash(someCommitBranch))
 	someCommitOtherBranch := s.commit(c, plumbing.NewHash(someCommitOtherBranch))
 
-	localHist, err := RevListObjects(s.Storer, []*Commit{someCommit}, nil)
+	localHist, err := RevListObjects(s.Storer, []*object.Commit{someCommit}, nil)
 	c.Assert(err, IsNil)
 
 	remoteHist, err := RevListObjects(
-		s.Storer, []*Commit{someCommitBranch, someCommitOtherBranch}, localHist)
+		s.Storer, []*object.Commit{someCommitBranch, someCommitOtherBranch}, localHist)
 	c.Assert(err, IsNil)
 
 	revList := map[string]bool{

@@ -1,4 +1,4 @@
-package git
+package object
 
 import (
 	"bufio"
@@ -12,6 +12,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
 const (
@@ -68,10 +69,27 @@ func (t *Tree) File(path string) (*File, error) {
 		return nil, err
 	}
 
-	blob := &Blob{}
-	blob.Decode(obj)
+	blob, err := DecodeBlob(obj)
+	if err != nil {
+		return nil, err
+	}
 
 	return NewFile(path, e.Mode, blob), nil
+}
+
+// TreeEntryFile returns the *File for a given *TreeEntry.
+func (t *Tree) TreeEntryFile(e *TreeEntry) (*File, error) {
+	obj, err := t.s.EncodedObject(plumbing.BlobObject, e.Hash)
+	if err != nil {
+		return nil, err
+	}
+
+	blob, err := DecodeBlob(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewFile(e.Name, e.Mode, blob), nil
 }
 
 func (t *Tree) findEntry(path string) (*TreeEntry, error) {
@@ -157,7 +175,7 @@ func (t *Tree) Decode(o plumbing.EncodedObject) (err error) {
 	if err != nil {
 		return err
 	}
-	defer checkClose(reader, &err)
+	defer ioutil.CheckClose(reader, &err)
 
 	r := bufio.NewReader(reader)
 	for {
@@ -222,7 +240,7 @@ func (t *Tree) Encode(o plumbing.EncodedObject) error {
 	}
 
 	var size int
-	defer checkClose(w, &err)
+	defer ioutil.CheckClose(w, &err)
 	for _, entry := range t.Entries {
 		n, err := fmt.Fprintf(w, "%o %s", entry.Mode, entry.Name)
 		if err != nil {
@@ -278,11 +296,11 @@ type TreeWalker struct {
 	t *Tree
 }
 
-// NewTreeWalker returns a new TreeWalker for the given object storer and tree.
+// NewTreeWalker returns a new TreeWalker for the given tree.
 //
 // It is the caller's responsibility to call Close() when finished with the
 // tree walker.
-func NewTreeWalker(s storer.EncodedObjectStorer, t *Tree, recursive bool) *TreeWalker {
+func NewTreeWalker(t *Tree, recursive bool) *TreeWalker {
 	stack := make([]treeEntryIter, 0, startingStackSize)
 	stack = append(stack, treeEntryIter{t, 0})
 
@@ -290,7 +308,7 @@ func NewTreeWalker(s storer.EncodedObjectStorer, t *Tree, recursive bool) *TreeW
 		stack:     stack,
 		recursive: recursive,
 
-		s: s,
+		s: t.s,
 		t: t,
 	}
 }

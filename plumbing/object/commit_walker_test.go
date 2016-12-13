@@ -1,4 +1,4 @@
-package git
+package object
 
 import . "gopkg.in/check.v1"
 

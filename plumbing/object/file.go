@@ -1,4 +1,4 @@
-package git
+package object
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
 // File represents git file objects.
@@ -28,7 +29,7 @@ func (f *File) Contents() (content string, err error) {
 	if err != nil {
 		return "", err
 	}
-	defer checkClose(reader, &err)
+	defer ioutil.CheckClose(reader, &err)
 
 	buf := new(bytes.Buffer)
 	if _, err := buf.ReadFrom(reader); err != nil {
@@ -62,7 +63,7 @@ type FileIter struct {
 }
 
 func NewFileIter(s storer.EncodedObjectStorer, t *Tree) *FileIter {
-	return &FileIter{s: s, w: *NewTreeWalker(s, t, true)}
+	return &FileIter{s: s, w: *NewTreeWalker(t, true)}
 }
 
 func (iter *FileIter) Next() (*File, error) {
