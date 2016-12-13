@@ -13,30 +13,39 @@ var (
 )
 
 // ObjectToPack is a representation of an object that is going to be into a
-// pack file. If it is a delta, Source is the delta source and Original is the
-// delta target
+// pack file. If it is a delta, Base is the object that this delta is based on
+// (it could be also a delta). Original is the object that we can generate
+// applying the delta to Base, or the same object as Object in the case of a
+// non-delta object.
 type ObjectToPack struct {
-	Object
-	Source   Object
+	Object   Object
+	Base     *ObjectToPack
 	Original Object
+	Depth    int
 }
 
+// NewObjectToPack creates a correct ObjectToPack based on a non-delta object
 func NewObjectToPack(o Object) *ObjectToPack {
 	return &ObjectToPack{
-		Object: o,
+		Object:   o,
+		Original: o,
 	}
 }
 
-func NewDeltaObjectToPack(base, original, delta Object) *ObjectToPack {
+// NewDeltaObjectToPack creates a correct ObjectToPack for a delta object, based on
+// his base (could be another delta), the delta target (in this case called original),
+// and the delta Object itself
+func NewDeltaObjectToPack(base *ObjectToPack, original, delta Object) *ObjectToPack {
 	return &ObjectToPack{
 		Object:   delta,
-		Source:   base,
+		Base:     base,
 		Original: original,
+		Depth:    base.Depth + 1,
 	}
 }
 
 func (o *ObjectToPack) IsDelta() bool {
-	if o.Source != nil && o.Original != nil {
+	if o.Base != nil {
 		return true
 	}
 

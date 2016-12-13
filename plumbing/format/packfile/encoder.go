@@ -79,31 +79,19 @@ func (e *Encoder) head(numEntries int) error {
 func (e *Encoder) entry(o *plumbing.ObjectToPack) error {
 	offset := e.w.Offset()
 
-	if err := e.entryHead(o.Type(), o.Size()); err != nil {
+	if err := e.entryHead(o.Object.Type(), o.Object.Size()); err != nil {
 		return err
 	}
 
-	if o.IsDelta() {
-		// Save the position using the original hash, maybe a delta will need it
-		e.offsets[o.Original.Hash()] = offset
+	// Save the position using the original hash, maybe a delta will need it
+	e.offsets[o.Original.Hash()] = offset
 
-		switch o.Type() {
-		case plumbing.OFSDeltaObject:
-			if err := e.writeOfsDeltaHeader(offset, o.Source.Hash()); err != nil {
-				return err
-			}
-		case plumbing.REFDeltaObject:
-			if err := e.writeRefDeltaHeader(o.Source.Hash()); err != nil {
-				return err
-			}
-		}
-	} else {
-		// Save the position, maybe a delta will need it
-		e.offsets[o.Hash()] = offset
+	if err := e.writeDeltaHeaderIfAny(o, offset); err != nil {
+		return err
 	}
 
 	e.zw.Reset(e.w)
-	or, err := o.Reader()
+	or, err := o.Object.Reader()
 	if err != nil {
 		return err
 	}
@@ -115,9 +103,27 @@ func (e *Encoder) entry(o *plumbing.ObjectToPack) error {
 	return e.zw.Close()
 }
 
+func (e *Encoder) writeDeltaHeaderIfAny(o *plumbing.ObjectToPack, offset int64) error {
+	if o.IsDelta() {
+		switch o.Object.Type() {
+		case plumbing.OFSDeltaObject:
+			if err := e.writeOfsDeltaHeader(offset, o.Base.Original.Hash()); err != nil {
+				return err
+			}
+		case plumbing.REFDeltaObject:
+			if err := e.writeRefDeltaHeader(o.Base.Original.Hash()); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func (e *Encoder) writeRefDeltaHeader(source plumbing.Hash) error {
 	return binary.Write(e.w, source)
 }
+
 func (e *Encoder) writeOfsDeltaHeader(deltaOffset int64, source plumbing.Hash) error {
 	// because it is an offset delta, we need the source
 	// object position
@@ -165,7 +171,7 @@ func newOffsetWriter(w io.Writer) *offsetWriter {
 
 func (ow *offsetWriter) Write(p []byte) (n int, err error) {
 	n, err = ow.w.Write(p)
-	ow.offset = ow.offset + int64(n)
+	ow.offset += int64(n)
 	return n, err
 }
 

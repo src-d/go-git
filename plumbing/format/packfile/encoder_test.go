@@ -81,8 +81,6 @@ func (s *EncoderSuite) TestMaxObjectSize(c *C) {
 
 func (s *EncoderSuite) TestDecodeEncodeDecode(c *C) {
 	fixtures.Basic().ByTag("packfile").Test(c, func(f *fixtures.Fixture) {
-		c.Logf("Executing test case with repository %s "+
-			"and tags %+v", f.URL, f.Tags)
 		scanner := NewScanner(f.Packfile())
 		storage := memory.NewStorage()
 
@@ -166,9 +164,10 @@ func (s *EncoderSuite) simpleDeltaTest(c *C, t plumbing.ObjectType) {
 	deltaObject, err := getDelta(srcObject, targetObject, t)
 	c.Assert(err, IsNil)
 
+	srcToPack := plumbing.NewObjectToPack(srcObject)
 	_, err = s.enc.encode([]*plumbing.ObjectToPack{
-		plumbing.NewObjectToPack(srcObject),
-		deltaObject,
+		srcToPack,
+		plumbing.NewDeltaObjectToPack(srcToPack, targetObject, deltaObject),
 	})
 	c.Assert(err, IsNil)
 
@@ -203,10 +202,12 @@ func (s *EncoderSuite) deltaOverDeltaTest(c *C, t plumbing.ObjectType) {
 	c.Assert(err, IsNil)
 	c.Assert(otherDeltaObject.Hash(), Not(Equals), plumbing.ZeroHash)
 
+	srcToPack := plumbing.NewObjectToPack(srcObject)
+	targetToPack := plumbing.NewObjectToPack(targetObject)
 	_, err = s.enc.encode([]*plumbing.ObjectToPack{
-		plumbing.NewObjectToPack(srcObject),
-		deltaObject,
-		otherDeltaObject,
+		srcToPack,
+		plumbing.NewDeltaObjectToPack(srcToPack, targetObject, deltaObject),
+		plumbing.NewDeltaObjectToPack(targetToPack, otherTargetObject, otherDeltaObject),
 	})
 	c.Assert(err, IsNil)
 
