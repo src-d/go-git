@@ -14,16 +14,17 @@ import (
 // Encoder gets the data from the storage and write it into the writer in PACK
 // format
 type Encoder struct {
-	selector *deltaSelector
-	w        *offsetWriter
-	zw       *zlib.Writer
-	hasher   plumbing.Hasher
-	offsets  map[plumbing.Hash]int64
+	selector     *deltaSelector
+	w            *offsetWriter
+	zw           *zlib.Writer
+	hasher       plumbing.Hasher
+	offsets      map[plumbing.Hash]int64
+	useRefDeltas bool
 }
 
 // NewEncoder creates a new packfile encoder using a specific Writer and
 // ObjectStorer
-func NewEncoder(w io.Writer, s storer.EncodedObjectStorer) *Encoder {
+func NewEncoder(w io.Writer, s storer.EncodedObjectStorer, useRefDeltas bool) *Encoder {
 	h := plumbing.Hasher{
 		Hash: sha1.New(),
 	}
@@ -31,18 +32,19 @@ func NewEncoder(w io.Writer, s storer.EncodedObjectStorer) *Encoder {
 	ow := newOffsetWriter(mw)
 	zw := zlib.NewWriter(mw)
 	return &Encoder{
-		selector: newDeltaSelector(s),
-		w:        ow,
-		zw:       zw,
-		hasher:   h,
-		offsets:  make(map[plumbing.Hash]int64),
+		selector:     newDeltaSelector(s),
+		w:            ow,
+		zw:           zw,
+		hasher:       h,
+		offsets:      make(map[plumbing.Hash]int64),
+		useRefDeltas: useRefDeltas,
 	}
 }
 
 // Encode creates a packfile containing all the objects referenced in hashes
 // and writes it to the writer in the Encoder.
 func (e *Encoder) Encode(hashes []plumbing.Hash) (plumbing.Hash, error) {
-	objects, err := e.selector.GetObjectsToPack(hashes)
+	objects, err := e.selector.ObjectsToPack(hashes)
 	if err != nil {
 		return plumbing.ZeroHash, err
 	}
@@ -76,16 +78,18 @@ func (e *Encoder) head(numEntries int) error {
 func (e *Encoder) entry(o *ObjectToPack) error {
 	offset := e.w.Offset()
 
-	if err := e.entryHead(o.Object.Type(), o.Object.Size()); err != nil {
-		return err
+	if o.IsDelta() {
+		if err := e.writeDeltaHeader(o, offset); err != nil {
+			return err
+		}
+	} else {
+		if err := e.entryHead(o.Object.Type(), o.Object.Size()); err != nil {
+			return err
+		}
 	}
 
 	// Save the position using the original hash, maybe a delta will need it
 	e.offsets[o.Original.Hash()] = offset
-
-	if err := e.writeDeltaHeaderIfAny(o, offset); err != nil {
-		return err
-	}
 
 	e.zw.Reset(e.w)
 	or, err := o.Object.Reader()
@@ -100,21 +104,22 @@ func (e *Encoder) entry(o *ObjectToPack) error {
 	return e.zw.Close()
 }
 
-func (e *Encoder) writeDeltaHeaderIfAny(o *ObjectToPack, offset int64) error {
-	if o.IsDelta() {
-		switch o.Object.Type() {
-		case plumbing.OFSDeltaObject:
-			if err := e.writeOfsDeltaHeader(offset, o.Base.Original.Hash()); err != nil {
-				return err
-			}
-		case plumbing.REFDeltaObject:
-			if err := e.writeRefDeltaHeader(o.Base.Original.Hash()); err != nil {
-				return err
-			}
-		}
+func (e *Encoder) writeDeltaHeader(o *ObjectToPack, offset int64) error {
+	// Write offset deltas by default
+	t := plumbing.OFSDeltaObject
+	if e.useRefDeltas {
+		t = plumbing.REFDeltaObject
 	}
 
-	return nil
+	if err := e.entryHead(t, o.Object.Size()); err != nil {
+		return err
+	}
+
+	if e.useRefDeltas {
+		return e.writeRefDeltaHeader(o.Base.Original.Hash())
+	} else {
+		return e.writeOfsDeltaHeader(offset, o.Base.Original.Hash())
+	}
 }
 
 func (e *Encoder) writeRefDeltaHeader(base plumbing.Hash) error {

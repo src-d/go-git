@@ -1,6 +1,14 @@
 package packfile
 
-import "gopkg.in/src-d/go-git.v4/plumbing"
+import (
+	"testing"
+
+	"gopkg.in/src-d/go-git.v4/plumbing"
+
+	. "gopkg.in/check.v1"
+)
+
+func Test(t *testing.T) { TestingT(t) }
 
 func newObject(t plumbing.ObjectType, cont []byte) plumbing.EncodedObject {
 	o := plumbing.MemoryObject{}
