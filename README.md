@@ -4,16 +4,16 @@ A low level and highly extensible git implementation in **pure Go**.
 
 *go-git* aims to reach the completeness of [libgit2](https://libgit2.github.com/) or [jgit](http://www.eclipse.org/jgit/), nowadays covers the **majority** of the plumbing **read operations** and **some** of the main **write operations**, but lacks of the main porcelain operations such as merges. 
 
-**highly extensible**, we have been following the open/close principle in its design to facilitate extensions, mainly focusing the efforts on the persistence of the objects.
+It is **highly extensible**, we have been following the open/close principle in its design to facilitate extensions, mainly focusing the efforts on the persistence of the objects.
 
-### ... but this is production ready?
+### ... is this production ready?
 
-The master branch, represents the `v4` of the library, currently actively development, which is planned to be released in early 2017.
+The master branch represents the `v4` of the library, it is currently under active development and is planned to be released in early 2017.
 
-If you are looking for a production ready version, please take a look to the [`v3`](https://github.com/src-d/go-git/tree/v3) which is being use in production at [source{d}](http://sourced.tech) since August 2015 to analyze all GitHub public repositories (i.e. 16M of repositories).
 
- We recommend use the `v4` to develop new projects, since it include a lot of new functionality and with a more git idiomatic API.
+If you are looking for a production ready version, please take a look to the [`v3`](https://github.com/src-d/go-git/tree/v3) which is being used in production at [source{d}](http://sourced.tech) since August 2015 to analyze all GitHub public repositories (i.e. 16M repositories).
 
+We recommend the use of `v4` to develop new projects since it includes much new functionality and provides a more *idiomatic git* API 
 
 Installation
 ------------
@@ -30,35 +30,36 @@ Examples
 
 Cloning a repository and printing the history of HEAD, just like `git log` does
 
-> You can find this [example](examples/log/main.go) and many other at the [examples](examples) folder
+> Please note that the functions `CheckIfError` and `Inf`o used in the examples are from the [examples package](https://github.com/src-d/go-git/blob/master/examples/common.go#L17) just to be used in the examples.
+
 
 ```go
-// We instance an in-memory git repository
+// Instances an in-memory git repository
 r := git.NewMemoryRepository()
 
-// Clone the given repository, creating the remote, the local branches
+// Clones the given repository, creating the remote, the local branches
 // and fetching the objects, exactly as:
 Info("git clone https://github.com/src-d/go-siva")
 
 err := r.Clone(&git.CloneOptions{URL: "https://github.com/src-d/go-siva"})
 CheckIfError(err)
 
-// Getting the HEAD history from HEAD, just like does:
+// Gets the HEAD history from HEAD, just like does:
 Info("git log")
 
-// ... retrieving the branch being pointed by HEAD
+// ... retrieves the branch pointed by HEAD
 ref, err := r.Head()
 CheckIfError(err)
 
-// ... retrieving the commit object
+// ... retrieves the commit object
 commit, err := r.Commit(ref.Hash())
 CheckIfError(err)
 
-// ... we retrieve the commit history
+// ... retrieves the commit history
 history, err := commit.History()
 CheckIfError(err)
 
-// ... now just iterate over the commits, printing it
+// ... just iterates over the commits, printing it
 for _, c := range history {
     fmt.Println(c)
 }
@@ -84,13 +85,12 @@ Date:   2015-12-11 17:57:10 +0100 +0100
 ...
 ```
 
-Take note that the functions `CheckIfError` and `Info` are from the [examples package](https://github.com/src-d/go-git/blob/master/examples/common.go#L17) just to be used in the examples.
-
+You can find this [example](examples/log/main.go) and many other at the [examples](examples) folder
 
 Contribute
 ----------
 
-If you're interested in being a contributor and want to get involved in developing go-git, the easiest way is open a [issue](https://github.com/src-d/go-git/issues) telling us what missing functionality you want to work in, and we will guide you about how implement it. 
+If you are interested on contributing to go-git, open an [issue](https://github.com/src-d/go-git/issues) explaining which missing functionality you want to work in, and we will guide you through the implementation.
 
 License
 -------
