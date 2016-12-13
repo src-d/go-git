@@ -242,7 +242,7 @@ func assertObjects(c *C, s storer.ObjectStorer, expects []string) {
 	c.Assert(err, IsNil)
 
 	var count int
-	err = i.ForEach(func(plumbing.Object) error { count++; return nil })
+	err = i.ForEach(func(plumbing.EncodedObject) error { count++; return nil })
 	c.Assert(err, IsNil)
 	c.Assert(count, Equals, len(expects))
 

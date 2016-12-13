@@ -85,8 +85,8 @@ func (c *Commit) Type() plumbing.ObjectType {
 	return plumbing.CommitObject
 }
 
-// Decode transforms a plumbing.Object into a Commit struct.
-func (c *Commit) Decode(o plumbing.Object) (err error) {
+// Decode transforms a plumbing.EncodedObject into a Commit struct.
+func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 	if o.Type() != plumbing.CommitObject {
 		return ErrUnsupportedObject
 	}
@@ -148,8 +148,8 @@ func (c *Commit) History() ([]*Commit, error) {
 	return commits, err
 }
 
-// Encode transforms a Commit into a plumbing.Object.
-func (b *Commit) Encode(o plumbing.Object) error {
+// Encode transforms a Commit into a plumbing.EncodedObject.
+func (b *Commit) Encode(o plumbing.EncodedObject) error {
 	o.SetType(plumbing.CommitObject)
 	w, err := o.Writer()
 	if err != nil {
@@ -233,7 +233,7 @@ func (iter *CommitIter) Next() (*Commit, error) {
 // an error happends or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
 func (iter *CommitIter) ForEach(cb func(*Commit) error) error {
-	return iter.ObjectIter.ForEach(func(obj plumbing.Object) error {
+	return iter.ObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
 		commit := &Commit{r: iter.r}
 		if err := commit.Decode(obj); err != nil {
 			return err

@@ -53,7 +53,7 @@ func (s *ObjectStorage) loadIdxFile(h plumbing.Hash) error {
 	return s.index[h].Decode(idx)
 }
 
-func (s *ObjectStorage) NewObject() plumbing.Object {
+func (s *ObjectStorage) NewObject() plumbing.EncodedObject {
 	return &plumbing.MemoryObject{}
 }
 
@@ -74,7 +74,7 @@ func (s *ObjectStorage) PackfileWriter() (io.WriteCloser, error) {
 }
 
 // Set adds a new object to the storage.
-func (s *ObjectStorage) SetObject(o plumbing.Object) (plumbing.Hash, error) {
+func (s *ObjectStorage) SetObject(o plumbing.EncodedObject) (plumbing.Hash, error) {
 	if o.Type() == plumbing.OFSDeltaObject || o.Type() == plumbing.REFDeltaObject {
 		return plumbing.ZeroHash, plumbing.ErrInvalidType
 	}
@@ -106,7 +106,7 @@ func (s *ObjectStorage) SetObject(o plumbing.Object) (plumbing.Hash, error) {
 
 // Get returns the object with the given hash, by searching for it in
 // the packfile and the git object directories.
-func (s *ObjectStorage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing.Object, error) {
+func (s *ObjectStorage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing.EncodedObject, error) {
 	obj, err := s.getFromUnpacked(h)
 	if err == plumbing.ErrObjectNotFound {
 		obj, err = s.getFromPackfile(h)
@@ -123,7 +123,7 @@ func (s *ObjectStorage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing
 	return obj, nil
 }
 
-func (s *ObjectStorage) getFromUnpacked(h plumbing.Hash) (obj plumbing.Object, err error) {
+func (s *ObjectStorage) getFromUnpacked(h plumbing.Hash) (obj plumbing.EncodedObject, err error) {
 	f, err := s.dir.Object(h)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -161,7 +161,7 @@ func (s *ObjectStorage) getFromUnpacked(h plumbing.Hash) (obj plumbing.Object, e
 
 // Get returns the object with the given hash, by searching for it in
 // the packfile.
-func (s *ObjectStorage) getFromPackfile(h plumbing.Hash) (plumbing.Object, error) {
+func (s *ObjectStorage) getFromPackfile(h plumbing.Hash) (plumbing.EncodedObject, error) {
 	pack, offset := s.findObjectInPackfile(h)
 	if offset == -1 {
 		return nil, plumbing.ErrObjectNotFound
@@ -292,7 +292,7 @@ func newPackfileIter(f fs.File, t plumbing.ObjectType, seen map[plumbing.Hash]bo
 	}, nil
 }
 
-func (iter *packfileIter) Next() (plumbing.Object, error) {
+func (iter *packfileIter) Next() (plumbing.EncodedObject, error) {
 	if iter.position >= iter.total {
 		return nil, io.EOF
 	}
@@ -315,7 +315,7 @@ func (iter *packfileIter) Next() (plumbing.Object, error) {
 }
 
 // ForEach is never called since is used inside of a MultiObjectIterator
-func (iter *packfileIter) ForEach(cb func(plumbing.Object) error) error {
+func (iter *packfileIter) ForEach(cb func(plumbing.EncodedObject) error) error {
 	return nil
 }
 
@@ -330,7 +330,7 @@ type objectsIter struct {
 	h []plumbing.Hash
 }
 
-func (iter *objectsIter) Next() (plumbing.Object, error) {
+func (iter *objectsIter) Next() (plumbing.EncodedObject, error) {
 	if len(iter.h) == 0 {
 		return nil, io.EOF
 	}
@@ -350,7 +350,7 @@ func (iter *objectsIter) Next() (plumbing.Object, error) {
 }
 
 // ForEach is never called since is used inside of a MultiObjectIterator
-func (iter *objectsIter) ForEach(cb func(plumbing.Object) error) error {
+func (iter *objectsIter) ForEach(cb func(plumbing.EncodedObject) error) error {
 	return nil
 }
 

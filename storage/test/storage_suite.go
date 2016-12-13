@@ -21,7 +21,7 @@ type Storer interface {
 }
 
 type TestObject struct {
-	Object plumbing.Object
+	Object plumbing.EncodedObject
 	Hash   string
 	Type   plumbing.ObjectType
 }
@@ -119,8 +119,8 @@ func (s *BaseStorageSuite) TestStorerIter(c *C) {
 	i, err := s.Storer.IterObjects(plumbing.AnyObject)
 	c.Assert(err, IsNil)
 
-	foundObjects := []plumbing.Object{}
-	i.ForEach(func(o plumbing.Object) error {
+	foundObjects := []plumbing.EncodedObject{}
+	i.ForEach(func(o plumbing.EncodedObject) error {
 		foundObjects = append(foundObjects, o)
 		return nil
 	})
@@ -163,7 +163,7 @@ func (s *BaseStorageSuite) TestObjectStorerTxSetObjectAndCommit(c *C) {
 	c.Assert(err, IsNil)
 
 	var count int
-	iter.ForEach(func(o plumbing.Object) error {
+	iter.ForEach(func(o plumbing.EncodedObject) error {
 		count++
 		return nil
 	})
@@ -287,7 +287,7 @@ func (s *BaseStorageSuite) TestSetConfigInvalid(c *C) {
 	c.Assert(err, NotNil)
 }
 
-func objectEquals(a plumbing.Object, b plumbing.Object) error {
+func objectEquals(a plumbing.EncodedObject, b plumbing.EncodedObject) error {
 	ha := a.Hash()
 	hb := b.Hash()
 	if ha != hb {

@@ -101,9 +101,9 @@ func (s *EncoderSuite) TestDecodeEncodeDecode(c *C) {
 		objIter, err := d.o.IterObjects(plumbing.AnyObject)
 		c.Assert(err, IsNil)
 
-		objects := []plumbing.Object{}
+		objects := []plumbing.EncodedObject{}
 		hashes := []plumbing.Hash{}
-		err = objIter.ForEach(func(o plumbing.Object) error {
+		err = objIter.ForEach(func(o plumbing.EncodedObject) error {
 			objects = append(objects, o)
 			hash, err := s.store.SetObject(o)
 			c.Assert(err, IsNil)
@@ -126,8 +126,8 @@ func (s *EncoderSuite) TestDecodeEncodeDecode(c *C) {
 
 		objIter, err = d.o.IterObjects(plumbing.AnyObject)
 		c.Assert(err, IsNil)
-		obtainedObjects := []plumbing.Object{}
-		err = objIter.ForEach(func(o plumbing.Object) error {
+		obtainedObjects := []plumbing.EncodedObject{}
+		err = objIter.ForEach(func(o plumbing.EncodedObject) error {
 			obtainedObjects = append(obtainedObjects, o)
 
 			return nil
@@ -239,7 +239,7 @@ func (s *EncoderSuite) deltaOverDeltaTest(c *C, t plumbing.ObjectType) {
 	c.Assert(decOtherTarget, DeepEquals, otherTargetObject)
 }
 
-func delta(base, target plumbing.Object, t plumbing.ObjectType) (plumbing.Object, error) {
+func delta(base, target plumbing.EncodedObject, t plumbing.ObjectType) (plumbing.EncodedObject, error) {
 	switch t {
 	case plumbing.OFSDeltaObject:
 		return GetOFSDelta(base, target)
@@ -250,7 +250,7 @@ func delta(base, target plumbing.Object, t plumbing.ObjectType) (plumbing.Object
 	}
 }
 
-func newObject(t plumbing.ObjectType, cont []byte) plumbing.Object {
+func newObject(t plumbing.ObjectType, cont []byte) plumbing.EncodedObject {
 	o := plumbing.MemoryObject{}
 	o.SetType(t)
 	o.SetSize(int64(len(cont)))

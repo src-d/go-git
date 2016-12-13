@@ -44,8 +44,8 @@ func (t *Tag) Type() plumbing.ObjectType {
 	return plumbing.TagObject
 }
 
-// Decode transforms a plumbing.Object into a Tag struct.
-func (t *Tag) Decode(o plumbing.Object) (err error) {
+// Decode transforms a plumbing.EncodedObject into a Tag struct.
+func (t *Tag) Decode(o plumbing.EncodedObject) (err error) {
 	if o.Type() != plumbing.TagObject {
 		return ErrUnsupportedObject
 	}
@@ -99,8 +99,8 @@ func (t *Tag) Decode(o plumbing.Object) (err error) {
 	return nil
 }
 
-// Encode transforms a Tag into a plumbing.Object.
-func (t *Tag) Encode(o plumbing.Object) error {
+// Encode transforms a Tag into a plumbing.EncodedObject.
+func (t *Tag) Encode(o plumbing.EncodedObject) error {
 	o.SetType(plumbing.TagObject)
 	w, err := o.Writer()
 	if err != nil {
@@ -212,7 +212,7 @@ func (iter *TagIter) Next() (*Tag, error) {
 // an error happends or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
 func (iter *TagIter) ForEach(cb func(*Tag) error) error {
-	return iter.ObjectIter.ForEach(func(obj plumbing.Object) error {
+	return iter.ObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
 		tag := &Tag{r: iter.r}
 		if err := tag.Decode(obj); err != nil {
 			return err

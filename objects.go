@@ -35,13 +35,13 @@ var ErrUnsupportedObject = errors.New("unsupported object type")
 //   	}
 //   }
 //
-// This interface is intentionally different from plumbing.Object, which is a lower
+// This interface is intentionally different from plumbing.EncodedObject, which is a lower
 // level interface used by storage implementations to read and write objects.
 type Object interface {
 	ID() plumbing.Hash
 	Type() plumbing.ObjectType
-	Decode(plumbing.Object) error
-	Encode(plumbing.Object) error
+	Decode(plumbing.EncodedObject) error
+	Encode(plumbing.EncodedObject) error
 }
 
 // Signature represents an action signed by a person
@@ -153,7 +153,7 @@ func (iter *ObjectIter) Next() (Object, error) {
 // an error happens or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
 func (iter *ObjectIter) ForEach(cb func(Object) error) error {
-	return iter.ObjectIter.ForEach(func(obj plumbing.Object) error {
+	return iter.ObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
 		o, err := iter.toObject(obj)
 		if err == plumbing.ErrInvalidType {
 			return nil
@@ -167,7 +167,7 @@ func (iter *ObjectIter) ForEach(cb func(Object) error) error {
 	})
 }
 
-func (iter *ObjectIter) toObject(obj plumbing.Object) (Object, error) {
+func (iter *ObjectIter) toObject(obj plumbing.EncodedObject) (Object, error) {
 	switch obj.Type() {
 	case plumbing.BlobObject:
 		blob := &Blob{}

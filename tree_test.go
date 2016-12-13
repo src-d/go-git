@@ -72,7 +72,7 @@ func (s *TreeSuite) TestFiles(c *C) {
 	c.Assert(count, Equals, 9)
 }
 
-// This plumbing.Object implementation has a reader that only returns 6
+// This plumbing.EncodedObject implementation has a reader that only returns 6
 // bytes at a time, this should simulate the conditions when a read
 // returns less bytes than asked, for example when reading a hash which
 // is bigger than 6 bytes.

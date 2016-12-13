@@ -128,8 +128,8 @@ func (t *Tree) Type() plumbing.ObjectType {
 	return plumbing.TreeObject
 }
 
-// Decode transform an plumbing.Object into a Tree struct
-func (t *Tree) Decode(o plumbing.Object) (err error) {
+// Decode transform an plumbing.EncodedObject into a Tree struct
+func (t *Tree) Decode(o plumbing.EncodedObject) (err error) {
 	if o.Type() != plumbing.TreeObject {
 		return ErrUnsupportedObject
 	}
@@ -202,8 +202,8 @@ func (t *Tree) decodeFileMode(mode string) (os.FileMode, error) {
 	return m, nil
 }
 
-// Encode transforms a Tree into a plumbing.Object.
-func (t *Tree) Encode(o plumbing.Object) error {
+// Encode transforms a Tree into a plumbing.EncodedObject.
+func (t *Tree) Encode(o plumbing.EncodedObject) error {
 	o.SetType(plumbing.TreeObject)
 	w, err := o.Writer()
 	if err != nil {
@@ -406,7 +406,7 @@ func (iter *TreeIter) Next() (*Tree, error) {
 // an error happens or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
 func (iter *TreeIter) ForEach(cb func(*Tree) error) error {
-	return iter.ObjectIter.ForEach(func(obj plumbing.Object) error {
+	return iter.ObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
 		if obj.Type() != plumbing.TreeObject {
 			return nil
 		}

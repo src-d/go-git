@@ -14,12 +14,12 @@ var (
 
 // ObjectStorer generic storage of objects
 type ObjectStorer interface {
-	// NewObject returns a new plumbing.Object, the real type of the object can
+	// NewObject returns a new plumbing.EncodedObject, the real type of the object can
 	// be a custom implementation or the defaul one, plumbing.MemoryObject
-	NewObject() plumbing.Object
+	NewObject() plumbing.EncodedObject
 	// SetObject save an object into the storage, the object shuld be create
 	// with the NewObject, method, and file if the type is not supported.
-	SetObject(plumbing.Object) (plumbing.Hash, error)
+	SetObject(plumbing.EncodedObject) (plumbing.Hash, error)
 	// Object get an object by hash with the given plumbing.ObjectType.
 	// Implementors should return (nil, plumbing.ErrObjectNotFound) if an object
 	// doesn't exist with both the given hash and object type.
@@ -27,7 +27,7 @@ type ObjectStorer interface {
 	// Valid plumbing.ObjectType values are CommitObject, BlobObject, TagObject,
 	// TreeObject and AnyObject. If plumbing.AnyObject is given, the object must
 	// be looked up regardless of its type.
-	Object(plumbing.ObjectType, plumbing.Hash) (plumbing.Object, error)
+	Object(plumbing.ObjectType, plumbing.Hash) (plumbing.EncodedObject, error)
 	// IterObjects returns a custom ObjectIter over all the object on the
 	// storage.
 	//
@@ -54,16 +54,16 @@ type PackfileWriter interface {
 
 // ObjectIter is a generic closable interface for iterating over objects.
 type ObjectIter interface {
-	Next() (plumbing.Object, error)
-	ForEach(func(plumbing.Object) error) error
+	Next() (plumbing.EncodedObject, error)
+	ForEach(func(plumbing.EncodedObject) error) error
 	Close()
 }
 
 // Transaction is an in-progress storage transaction. A transaction must end
 // with a call to Commit or Rollback.
 type Transaction interface {
-	SetObject(plumbing.Object) (plumbing.Hash, error)
-	Object(plumbing.ObjectType, plumbing.Hash) (plumbing.Object, error)
+	SetObject(plumbing.EncodedObject) (plumbing.Hash, error)
+	Object(plumbing.ObjectType, plumbing.Hash) (plumbing.EncodedObject, error)
 	Commit() error
 	Rollback() error
 }
@@ -97,7 +97,7 @@ func NewObjectLookupIter(
 // the end it will return io.EOF as an error. If the object can't be found in
 // the object storage, it will return plumbing.ErrObjectNotFound as an error.
 // If the object is retreieved successfully error will be nil.
-func (iter *ObjectLookupIter) Next() (plumbing.Object, error) {
+func (iter *ObjectLookupIter) Next() (plumbing.EncodedObject, error) {
 	if iter.pos >= len(iter.series) {
 		return nil, io.EOF
 	}
@@ -114,7 +114,7 @@ func (iter *ObjectLookupIter) Next() (plumbing.Object, error) {
 // ForEach call the cb function for each object contained on this iter until
 // an error happends or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
-func (iter *ObjectLookupIter) ForEach(cb func(plumbing.Object) error) error {
+func (iter *ObjectLookupIter) ForEach(cb func(plumbing.EncodedObject) error) error {
 	return ForEachIterator(iter, cb)
 }
 
@@ -129,12 +129,12 @@ func (iter *ObjectLookupIter) Close() {
 // The ObjectSliceIter must be closed with a call to Close() when it is no
 // longer needed.
 type ObjectSliceIter struct {
-	series []plumbing.Object
+	series []plumbing.EncodedObject
 	pos    int
 }
 
 // NewObjectSliceIter returns an object iterator for the given slice of objects.
-func NewObjectSliceIter(series []plumbing.Object) *ObjectSliceIter {
+func NewObjectSliceIter(series []plumbing.EncodedObject) *ObjectSliceIter {
 	return &ObjectSliceIter{
 		series: series,
 	}
@@ -143,7 +143,7 @@ func NewObjectSliceIter(series []plumbing.Object) *ObjectSliceIter {
 // Next returns the next object from the iterator. If the iterator has reached
 // the end it will return io.EOF as an error. If the object is retreieved
 // successfully error will be nil.
-func (iter *ObjectSliceIter) Next() (plumbing.Object, error) {
+func (iter *ObjectSliceIter) Next() (plumbing.EncodedObject, error) {
 	if len(iter.series) == 0 {
 		return nil, io.EOF
 	}
@@ -157,13 +157,13 @@ func (iter *ObjectSliceIter) Next() (plumbing.Object, error) {
 // ForEach call the cb function for each object contained on this iter until
 // an error happends or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
-func (iter *ObjectSliceIter) ForEach(cb func(plumbing.Object) error) error {
+func (iter *ObjectSliceIter) ForEach(cb func(plumbing.EncodedObject) error) error {
 	return ForEachIterator(iter, cb)
 }
 
 // Close releases any resources used by the iterator.
 func (iter *ObjectSliceIter) Close() {
-	iter.series = []plumbing.Object{}
+	iter.series = []plumbing.EncodedObject{}
 }
 
 // MultiObjectIter implements ObjectIter. It iterates over several ObjectIter,
@@ -182,7 +182,7 @@ func NewMultiObjectIter(iters []ObjectIter) ObjectIter {
 
 // Next returns the next object from the iterator, if one iterator reach io.EOF
 // is removed and the next one is used.
-func (iter *MultiObjectIter) Next() (plumbing.Object, error) {
+func (iter *MultiObjectIter) Next() (plumbing.EncodedObject, error) {
 	if len(iter.iters) == 0 {
 		return nil, io.EOF
 	}
@@ -200,7 +200,7 @@ func (iter *MultiObjectIter) Next() (plumbing.Object, error) {
 // ForEach call the cb function for each object contained on this iter until
 // an error happends or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
-func (iter *MultiObjectIter) ForEach(cb func(plumbing.Object) error) error {
+func (iter *MultiObjectIter) ForEach(cb func(plumbing.EncodedObject) error) error {
 	return ForEachIterator(iter, cb)
 }
 
@@ -212,13 +212,13 @@ func (iter *MultiObjectIter) Close() {
 }
 
 type bareIterator interface {
-	Next() (plumbing.Object, error)
+	Next() (plumbing.EncodedObject, error)
 	Close()
 }
 
 // ForEachIterator is a helper function to build iterators without need to
 // rewrite the same ForEach function each time.
-func ForEachIterator(iter bareIterator, cb func(plumbing.Object) error) error {
+func ForEachIterator(iter bareIterator, cb func(plumbing.EncodedObject) error) error {
 	defer iter.Close()
 	for {
 		obj, err := iter.Next()

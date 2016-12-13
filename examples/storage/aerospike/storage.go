@@ -33,11 +33,11 @@ func NewStorage(client *driver.Client, ns, url string) (*Storage, error) {
 	return &Storage{client: client, ns: ns, url: url}, nil
 }
 
-func (s *Storage) NewObject() plumbing.Object {
+func (s *Storage) NewObject() plumbing.EncodedObject {
 	return &plumbing.MemoryObject{}
 }
 
-func (s *Storage) SetObject(obj plumbing.Object) (plumbing.Hash, error) {
+func (s *Storage) SetObject(obj plumbing.EncodedObject) (plumbing.Hash, error) {
 	key, err := s.buildKey(obj.Hash(), obj.Type())
 	if err != nil {
 		return obj.Hash(), err
@@ -64,7 +64,7 @@ func (s *Storage) SetObject(obj plumbing.Object) (plumbing.Hash, error) {
 	return obj.Hash(), err
 }
 
-func (s *Storage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing.Object, error) {
+func (s *Storage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing.EncodedObject, error) {
 	key, err := s.buildKey(h, t)
 	if err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ type ObjectIter struct {
 	ch chan *driver.Record
 }
 
-func (i *ObjectIter) Next() (plumbing.Object, error) {
+func (i *ObjectIter) Next() (plumbing.EncodedObject, error) {
 	r := <-i.ch
 	if r == nil {
 		return nil, io.EOF
@@ -112,7 +112,7 @@ func (i *ObjectIter) Next() (plumbing.Object, error) {
 	return objectFromRecord(r, i.t)
 }
 
-func (i *ObjectIter) ForEach(cb func(obj plumbing.Object) error) error {
+func (i *ObjectIter) ForEach(cb func(obj plumbing.EncodedObject) error) error {
 	for {
 		obj, err := i.Next()
 		if err != nil {
@@ -135,7 +135,7 @@ func (i *ObjectIter) ForEach(cb func(obj plumbing.Object) error) error {
 
 func (i *ObjectIter) Close() {}
 
-func objectFromRecord(r *driver.Record, t plumbing.ObjectType) (plumbing.Object, error) {
+func objectFromRecord(r *driver.Record, t plumbing.ObjectType) (plumbing.EncodedObject, error) {
 	content := r.Bins["blob"].([]byte)
 
 	o := &plumbing.MemoryObject{}

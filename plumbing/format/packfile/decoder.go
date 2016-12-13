@@ -175,7 +175,7 @@ func (d *Decoder) decodeObjectsWithObjectStorerTx(count int) error {
 // DecodeObject reads the next object from the scanner and returns it. This
 // method can be used in replacement of the Decode method, to work in a
 // interative way
-func (d *Decoder) DecodeObject() (plumbing.Object, error) {
+func (d *Decoder) DecodeObject() (plumbing.EncodedObject, error) {
 	h, err := d.s.NextObjectHeader()
 	if err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ func (d *Decoder) DecodeObject() (plumbing.Object, error) {
 	return obj, nil
 }
 
-func (d *Decoder) newObject() plumbing.Object {
+func (d *Decoder) newObject() plumbing.EncodedObject {
 	if d.o == nil {
 		return &plumbing.MemoryObject{}
 	}
@@ -217,7 +217,7 @@ func (d *Decoder) newObject() plumbing.Object {
 
 // DecodeObjectAt reads an object at the given location, if Decode wasn't called
 // previously objects offset should provided using the SetOffsets method
-func (d *Decoder) DecodeObjectAt(offset int64) (plumbing.Object, error) {
+func (d *Decoder) DecodeObjectAt(offset int64) (plumbing.EncodedObject, error) {
 	if !d.s.IsSeekable {
 		return nil, ErrNonSeekable
 	}
@@ -237,7 +237,7 @@ func (d *Decoder) DecodeObjectAt(offset int64) (plumbing.Object, error) {
 	return d.DecodeObject()
 }
 
-func (d *Decoder) fillRegularObjectContent(obj plumbing.Object) (uint32, error) {
+func (d *Decoder) fillRegularObjectContent(obj plumbing.EncodedObject) (uint32, error) {
 	w, err := obj.Writer()
 	if err != nil {
 		return 0, err
@@ -247,7 +247,7 @@ func (d *Decoder) fillRegularObjectContent(obj plumbing.Object) (uint32, error) 
 	return crc, err
 }
 
-func (d *Decoder) fillREFDeltaObjectContent(obj plumbing.Object, ref plumbing.Hash) (uint32, error) {
+func (d *Decoder) fillREFDeltaObjectContent(obj plumbing.EncodedObject, ref plumbing.Hash) (uint32, error) {
 	buf := bytes.NewBuffer(nil)
 	_, crc, err := d.s.NextObject(buf)
 	if err != nil {
@@ -263,7 +263,7 @@ func (d *Decoder) fillREFDeltaObjectContent(obj plumbing.Object, ref plumbing.Ha
 	return crc, ApplyDelta(obj, base, buf.Bytes())
 }
 
-func (d *Decoder) fillOFSDeltaObjectContent(obj plumbing.Object, offset int64) (uint32, error) {
+func (d *Decoder) fillOFSDeltaObjectContent(obj plumbing.EncodedObject, offset int64) (uint32, error) {
 	buf := bytes.NewBuffer(nil)
 	_, crc, err := d.s.NextObject(buf)
 	if err != nil {
@@ -288,7 +288,7 @@ func (d *Decoder) setCRC(h plumbing.Hash, crc uint32) {
 	d.crcs[h] = crc
 }
 
-func (d *Decoder) recallByOffset(o int64) (plumbing.Object, error) {
+func (d *Decoder) recallByOffset(o int64) (plumbing.EncodedObject, error) {
 	if d.s.IsSeekable {
 		return d.DecodeObjectAt(o)
 	}
@@ -300,7 +300,7 @@ func (d *Decoder) recallByOffset(o int64) (plumbing.Object, error) {
 	return nil, plumbing.ErrObjectNotFound
 }
 
-func (d *Decoder) recallByHash(h plumbing.Hash) (plumbing.Object, error) {
+func (d *Decoder) recallByHash(h plumbing.Hash) (plumbing.EncodedObject, error) {
 	if d.s.IsSeekable {
 		if o, ok := d.hashToOffset[h]; ok {
 			return d.DecodeObjectAt(o)
@@ -312,7 +312,7 @@ func (d *Decoder) recallByHash(h plumbing.Hash) (plumbing.Object, error) {
 
 // recallByHashNonSeekable if we are in a transaction the objects are read from
 // the transaction, if not are directly read from the ObjectStorer
-func (d *Decoder) recallByHashNonSeekable(h plumbing.Hash) (obj plumbing.Object, err error) {
+func (d *Decoder) recallByHashNonSeekable(h plumbing.Hash) (obj plumbing.EncodedObject, err error) {
 	if d.tx != nil {
 		obj, err = d.tx.Object(plumbing.AnyObject, h)
 	} else {

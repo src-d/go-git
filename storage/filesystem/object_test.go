@@ -64,7 +64,7 @@ func (s *FsSuite) TestIter(c *C) {
 		c.Assert(err, IsNil)
 
 		var count int32
-		err = iter.ForEach(func(o plumbing.Object) error {
+		err = iter.ForEach(func(o plumbing.EncodedObject) error {
 			count++
 			return nil
 		})
@@ -83,7 +83,7 @@ func (s *FsSuite) TestIterWithType(c *C) {
 		iter, err := o.IterObjects(plumbing.CommitObject)
 		c.Assert(err, IsNil)
 
-		err = iter.ForEach(func(o plumbing.Object) error {
+		err = iter.ForEach(func(o plumbing.EncodedObject) error {
 			c.Assert(o.Type(), Equals, plumbing.CommitObject)
 			return nil
 		})

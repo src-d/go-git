@@ -27,11 +27,11 @@ func NewStorage() *Storage {
 		ReferenceStorage: make(ReferenceStorage, 0),
 		ConfigStorage:    ConfigStorage{},
 		ObjectStorage: ObjectStorage{
-			Objects: make(map[plumbing.Hash]plumbing.Object, 0),
-			Commits: make(map[plumbing.Hash]plumbing.Object, 0),
-			Trees:   make(map[plumbing.Hash]plumbing.Object, 0),
-			Blobs:   make(map[plumbing.Hash]plumbing.Object, 0),
-			Tags:    make(map[plumbing.Hash]plumbing.Object, 0),
+			Objects: make(map[plumbing.Hash]plumbing.EncodedObject, 0),
+			Commits: make(map[plumbing.Hash]plumbing.EncodedObject, 0),
+			Trees:   make(map[plumbing.Hash]plumbing.EncodedObject, 0),
+			Blobs:   make(map[plumbing.Hash]plumbing.EncodedObject, 0),
+			Tags:    make(map[plumbing.Hash]plumbing.EncodedObject, 0),
 		},
 	}
 }
@@ -58,18 +58,18 @@ func (c *ConfigStorage) Config() (*config.Config, error) {
 }
 
 type ObjectStorage struct {
-	Objects map[plumbing.Hash]plumbing.Object
-	Commits map[plumbing.Hash]plumbing.Object
-	Trees   map[plumbing.Hash]plumbing.Object
-	Blobs   map[plumbing.Hash]plumbing.Object
-	Tags    map[plumbing.Hash]plumbing.Object
+	Objects map[plumbing.Hash]plumbing.EncodedObject
+	Commits map[plumbing.Hash]plumbing.EncodedObject
+	Trees   map[plumbing.Hash]plumbing.EncodedObject
+	Blobs   map[plumbing.Hash]plumbing.EncodedObject
+	Tags    map[plumbing.Hash]plumbing.EncodedObject
 }
 
-func (o *ObjectStorage) NewObject() plumbing.Object {
+func (o *ObjectStorage) NewObject() plumbing.EncodedObject {
 	return &plumbing.MemoryObject{}
 }
 
-func (o *ObjectStorage) SetObject(obj plumbing.Object) (plumbing.Hash, error) {
+func (o *ObjectStorage) SetObject(obj plumbing.EncodedObject) (plumbing.Hash, error) {
 	h := obj.Hash()
 	o.Objects[h] = obj
 
@@ -89,7 +89,7 @@ func (o *ObjectStorage) SetObject(obj plumbing.Object) (plumbing.Hash, error) {
 	return h, nil
 }
 
-func (o *ObjectStorage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing.Object, error) {
+func (o *ObjectStorage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing.EncodedObject, error) {
 	obj, ok := o.Objects[h]
 	if !ok || (plumbing.AnyObject != t && obj.Type() != t) {
 		return nil, plumbing.ErrObjectNotFound
@@ -99,7 +99,7 @@ func (o *ObjectStorage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing
 }
 
 func (o *ObjectStorage) IterObjects(t plumbing.ObjectType) (storer.ObjectIter, error) {
-	var series []plumbing.Object
+	var series []plumbing.EncodedObject
 	switch t {
 	case plumbing.AnyObject:
 		series = flattenObjectMap(o.Objects)
@@ -116,8 +116,8 @@ func (o *ObjectStorage) IterObjects(t plumbing.ObjectType) (storer.ObjectIter, e
 	return storer.NewObjectSliceIter(series), nil
 }
 
-func flattenObjectMap(m map[plumbing.Hash]plumbing.Object) []plumbing.Object {
-	objects := make([]plumbing.Object, 0, len(m))
+func flattenObjectMap(m map[plumbing.Hash]plumbing.EncodedObject) []plumbing.EncodedObject {
+	objects := make([]plumbing.EncodedObject, 0, len(m))
 	for _, obj := range m {
 		objects = append(objects, obj)
 	}
@@ -127,23 +127,23 @@ func flattenObjectMap(m map[plumbing.Hash]plumbing.Object) []plumbing.Object {
 func (o *ObjectStorage) Begin() storer.Transaction {
 	return &TxObjectStorage{
 		Storage: o,
-		Objects: make(map[plumbing.Hash]plumbing.Object, 0),
+		Objects: make(map[plumbing.Hash]plumbing.EncodedObject, 0),
 	}
 }
 
 type TxObjectStorage struct {
 	Storage *ObjectStorage
-	Objects map[plumbing.Hash]plumbing.Object
+	Objects map[plumbing.Hash]plumbing.EncodedObject
 }
 
-func (tx *TxObjectStorage) SetObject(obj plumbing.Object) (plumbing.Hash, error) {
+func (tx *TxObjectStorage) SetObject(obj plumbing.EncodedObject) (plumbing.Hash, error) {
 	h := obj.Hash()
 	tx.Objects[h] = obj
 
 	return h, nil
 }
 
-func (tx *TxObjectStorage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing.Object, error) {
+func (tx *TxObjectStorage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing.EncodedObject, error) {
 	obj, ok := tx.Objects[h]
 	if !ok || (plumbing.AnyObject != t && obj.Type() != t) {
 		return nil, plumbing.ErrObjectNotFound
@@ -164,7 +164,7 @@ func (tx *TxObjectStorage) Commit() error {
 }
 
 func (tx *TxObjectStorage) Rollback() error {
-	tx.Objects = make(map[plumbing.Hash]plumbing.Object, 0)
+	tx.Objects = make(map[plumbing.Hash]plumbing.EncodedObject, 0)
 	return nil
 }
 

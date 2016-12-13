@@ -12,7 +12,7 @@ type Blob struct {
 	Hash plumbing.Hash
 	Size int64
 
-	obj plumbing.Object
+	obj plumbing.EncodedObject
 }
 
 // ID returns the object ID of the blob. The returned value will always match
@@ -30,8 +30,8 @@ func (b *Blob) Type() plumbing.ObjectType {
 	return plumbing.BlobObject
 }
 
-// Decode transforms a plumbing.Object into a Blob struct.
-func (b *Blob) Decode(o plumbing.Object) error {
+// Decode transforms a plumbing.EncodedObject into a Blob struct.
+func (b *Blob) Decode(o plumbing.EncodedObject) error {
 	if o.Type() != plumbing.BlobObject {
 		return ErrUnsupportedObject
 	}
@@ -43,8 +43,8 @@ func (b *Blob) Decode(o plumbing.Object) error {
 	return nil
 }
 
-// Encode transforms a Blob into a plumbing.Object.
-func (b *Blob) Encode(o plumbing.Object) error {
+// Encode transforms a Blob into a plumbing.EncodedObject.
+func (b *Blob) Encode(o plumbing.EncodedObject) error {
 	w, err := o.Writer()
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func (iter *BlobIter) Next() (*Blob, error) {
 // an error happens or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
 func (iter *BlobIter) ForEach(cb func(*Blob) error) error {
-	return iter.ObjectIter.ForEach(func(obj plumbing.Object) error {
+	return iter.ObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
 		if obj.Type() != plumbing.BlobObject {
 			return nil
 		}
