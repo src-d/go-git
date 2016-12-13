@@ -67,7 +67,7 @@ func (b *Blob) Reader() (io.ReadCloser, error) {
 
 // BlobIter provides an iterator for a set of blobs.
 type BlobIter struct {
-	storer.ObjectIter
+	storer.EncodedObjectIter
 	r *Repository
 }
 
@@ -75,7 +75,7 @@ type BlobIter struct {
 // object iterator.
 //
 // The returned BlobIter will automatically skip over non-blob objects.
-func NewBlobIter(r *Repository, iter storer.ObjectIter) *BlobIter {
+func NewBlobIter(r *Repository, iter storer.EncodedObjectIter) *BlobIter {
 	return &BlobIter{iter, r}
 }
 
@@ -83,7 +83,7 @@ func NewBlobIter(r *Repository, iter storer.ObjectIter) *BlobIter {
 // has reached the end of the set it will return io.EOF.
 func (iter *BlobIter) Next() (*Blob, error) {
 	for {
-		obj, err := iter.ObjectIter.Next()
+		obj, err := iter.EncodedObjectIter.Next()
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +101,7 @@ func (iter *BlobIter) Next() (*Blob, error) {
 // an error happens or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
 func (iter *BlobIter) ForEach(cb func(*Blob) error) error {
-	return iter.ObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
+	return iter.EncodedObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
 		if obj.Type() != plumbing.BlobObject {
 			return nil
 		}

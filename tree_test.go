@@ -37,7 +37,7 @@ func (s *TreeSuite) TestDecode(c *C) {
 
 func (s *TreeSuite) TestDecodeNonTree(c *C) {
 	hash := plumbing.NewHash("9a48f23120e880dfbe41f7c9b7b708e9ee62a492")
-	blob, err := s.Repository.s.Object(plumbing.BlobObject, hash)
+	blob, err := s.Repository.s.EncodedObject(plumbing.BlobObject, hash)
 	c.Assert(err, IsNil)
 
 	tree := &Tree{}

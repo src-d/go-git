@@ -65,11 +65,11 @@ type ObjectStorage struct {
 	Tags    map[plumbing.Hash]plumbing.EncodedObject
 }
 
-func (o *ObjectStorage) NewObject() plumbing.EncodedObject {
+func (o *ObjectStorage) NewEncodedObject() plumbing.EncodedObject {
 	return &plumbing.MemoryObject{}
 }
 
-func (o *ObjectStorage) SetObject(obj plumbing.EncodedObject) (plumbing.Hash, error) {
+func (o *ObjectStorage) SetEncodedObject(obj plumbing.EncodedObject) (plumbing.Hash, error) {
 	h := obj.Hash()
 	o.Objects[h] = obj
 
@@ -89,7 +89,7 @@ func (o *ObjectStorage) SetObject(obj plumbing.EncodedObject) (plumbing.Hash, er
 	return h, nil
 }
 
-func (o *ObjectStorage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing.EncodedObject, error) {
+func (o *ObjectStorage) EncodedObject(t plumbing.ObjectType, h plumbing.Hash) (plumbing.EncodedObject, error) {
 	obj, ok := o.Objects[h]
 	if !ok || (plumbing.AnyObject != t && obj.Type() != t) {
 		return nil, plumbing.ErrObjectNotFound
@@ -98,7 +98,7 @@ func (o *ObjectStorage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing
 	return obj, nil
 }
 
-func (o *ObjectStorage) IterObjects(t plumbing.ObjectType) (storer.ObjectIter, error) {
+func (o *ObjectStorage) IterEncodedObjects(t plumbing.ObjectType) (storer.EncodedObjectIter, error) {
 	var series []plumbing.EncodedObject
 	switch t {
 	case plumbing.AnyObject:
@@ -113,7 +113,7 @@ func (o *ObjectStorage) IterObjects(t plumbing.ObjectType) (storer.ObjectIter, e
 		series = flattenObjectMap(o.Tags)
 	}
 
-	return storer.NewObjectSliceIter(series), nil
+	return storer.NewEncodedObjectSliceIter(series), nil
 }
 
 func flattenObjectMap(m map[plumbing.Hash]plumbing.EncodedObject) []plumbing.EncodedObject {
@@ -136,14 +136,14 @@ type TxObjectStorage struct {
 	Objects map[plumbing.Hash]plumbing.EncodedObject
 }
 
-func (tx *TxObjectStorage) SetObject(obj plumbing.EncodedObject) (plumbing.Hash, error) {
+func (tx *TxObjectStorage) SetEncodedObject(obj plumbing.EncodedObject) (plumbing.Hash, error) {
 	h := obj.Hash()
 	tx.Objects[h] = obj
 
 	return h, nil
 }
 
-func (tx *TxObjectStorage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumbing.EncodedObject, error) {
+func (tx *TxObjectStorage) EncodedObject(t plumbing.ObjectType, h plumbing.Hash) (plumbing.EncodedObject, error) {
 	obj, ok := tx.Objects[h]
 	if !ok || (plumbing.AnyObject != t && obj.Type() != t) {
 		return nil, plumbing.ErrObjectNotFound
@@ -155,7 +155,7 @@ func (tx *TxObjectStorage) Object(t plumbing.ObjectType, h plumbing.Hash) (plumb
 func (tx *TxObjectStorage) Commit() error {
 	for h, obj := range tx.Objects {
 		delete(tx.Objects, h)
-		if _, err := tx.Storage.SetObject(obj); err != nil {
+		if _, err := tx.Storage.SetEncodedObject(obj); err != nil {
 			return err
 		}
 	}

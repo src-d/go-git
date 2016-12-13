@@ -166,7 +166,7 @@ func c_NewTagIter(r uint64, i uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	iter := obj.(*storer.ObjectIter)
+	iter := obj.(*storer.EncodedObjectIter)
 	return uint64(RegisterObject(git.NewTagIter(repo, *iter)))
 }
 

@@ -52,7 +52,7 @@ var (
 // ObjectStorer was provided or not.
 type Decoder struct {
 	s  *Scanner
-	o  storer.ObjectStorer
+	o  storer.EncodedObjectStorer
 	tx storer.Transaction
 
 	isDecoded    bool
@@ -71,7 +71,7 @@ type Decoder struct {
 //
 // If the ObjectStorer implements storer.Transactioner, a transaction is created
 // during the Decode execution, if something fails the Rollback is called
-func NewDecoder(s *Scanner, o storer.ObjectStorer) (*Decoder, error) {
+func NewDecoder(s *Scanner, o storer.EncodedObjectStorer) (*Decoder, error) {
 	if !canResolveDeltas(s, o) {
 		return nil, ErrResolveDeltasNotSupported
 	}
@@ -86,7 +86,7 @@ func NewDecoder(s *Scanner, o storer.ObjectStorer) (*Decoder, error) {
 	}, nil
 }
 
-func canResolveDeltas(s *Scanner, o storer.ObjectStorer) bool {
+func canResolveDeltas(s *Scanner, o storer.EncodedObjectStorer) bool {
 	return s.IsSeekable || o != nil
 }
 
@@ -140,7 +140,7 @@ func (d *Decoder) decodeObjectsWithObjectStorer(count int) error {
 			return err
 		}
 
-		if _, err := d.o.SetObject(obj); err != nil {
+		if _, err := d.o.SetEncodedObject(obj); err != nil {
 			return err
 		}
 	}
@@ -157,7 +157,7 @@ func (d *Decoder) decodeObjectsWithObjectStorerTx(count int) error {
 			return err
 		}
 
-		if _, err := d.tx.SetObject(obj); err != nil {
+		if _, err := d.tx.SetEncodedObject(obj); err != nil {
 			if rerr := d.tx.Rollback(); rerr != nil {
 				return ErrRollback.AddDetails(
 					"error: %s, during tx.Set error: %s", rerr, err,
@@ -212,7 +212,7 @@ func (d *Decoder) newObject() plumbing.EncodedObject {
 		return &plumbing.MemoryObject{}
 	}
 
-	return d.o.NewObject()
+	return d.o.NewEncodedObject()
 }
 
 // DecodeObjectAt reads an object at the given location, if Decode wasn't called
@@ -314,9 +314,9 @@ func (d *Decoder) recallByHash(h plumbing.Hash) (plumbing.EncodedObject, error) 
 // the transaction, if not are directly read from the ObjectStorer
 func (d *Decoder) recallByHashNonSeekable(h plumbing.Hash) (obj plumbing.EncodedObject, err error) {
 	if d.tx != nil {
-		obj, err = d.tx.Object(plumbing.AnyObject, h)
+		obj, err = d.tx.EncodedObject(plumbing.AnyObject, h)
 	} else {
-		obj, err = d.o.Object(plumbing.AnyObject, h)
+		obj, err = d.o.EncodedObject(plumbing.AnyObject, h)
 	}
 
 	if err != plumbing.ErrObjectNotFound {

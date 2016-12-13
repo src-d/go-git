@@ -13,7 +13,7 @@ import (
 // information in an system directory (such as `.git`) and others
 // implementations are in memmory being ephemeral
 type Storer interface {
-	storer.ObjectStorer
+	storer.EncodedObjectStorer
 	storer.ReferenceStorer
 	config.ConfigStorer
 }

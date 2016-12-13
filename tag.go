@@ -184,7 +184,7 @@ func (t *Tag) String() string {
 
 // TagIter provides an iterator for a set of tags.
 type TagIter struct {
-	storer.ObjectIter
+	storer.EncodedObjectIter
 	r *Repository
 }
 
@@ -192,14 +192,14 @@ type TagIter struct {
 // object iterator.
 //
 // The returned TagIter will automatically skip over non-tag objects.
-func NewTagIter(r *Repository, iter storer.ObjectIter) *TagIter {
+func NewTagIter(r *Repository, iter storer.EncodedObjectIter) *TagIter {
 	return &TagIter{iter, r}
 }
 
 // Next moves the iterator to the next tag and returns a pointer to it. If it
 // has reached the end of the set it will return io.EOF.
 func (iter *TagIter) Next() (*Tag, error) {
-	obj, err := iter.ObjectIter.Next()
+	obj, err := iter.EncodedObjectIter.Next()
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (iter *TagIter) Next() (*Tag, error) {
 // an error happends or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
 func (iter *TagIter) ForEach(cb func(*Tag) error) error {
-	return iter.ObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
+	return iter.EncodedObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
 		tag := &Tag{r: iter.r}
 		if err := tag.Decode(obj); err != nil {
 			return err

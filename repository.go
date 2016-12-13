@@ -308,7 +308,7 @@ func (r *Repository) Commit(h plumbing.Hash) (*Commit, error) {
 
 // Commits decode the objects into commits
 func (r *Repository) Commits() (*CommitIter, error) {
-	iter, err := r.s.IterObjects(plumbing.CommitObject)
+	iter, err := r.s.IterEncodedObjects(plumbing.CommitObject)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +328,7 @@ func (r *Repository) Tree(h plumbing.Hash) (*Tree, error) {
 
 // Trees decodes the objects into trees
 func (r *Repository) Trees() (*TreeIter, error) {
-	iter, err := r.s.IterObjects(plumbing.TreeObject)
+	iter, err := r.s.IterEncodedObjects(plumbing.TreeObject)
 	if err != nil {
 		return nil, err
 	}
@@ -348,7 +348,7 @@ func (r *Repository) Blob(h plumbing.Hash) (*Blob, error) {
 
 // Blobs decodes the objects into blobs
 func (r *Repository) Blobs() (*BlobIter, error) {
-	iter, err := r.s.IterObjects(plumbing.BlobObject)
+	iter, err := r.s.IterEncodedObjects(plumbing.BlobObject)
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +369,7 @@ func (r *Repository) Tag(h plumbing.Hash) (*Tag, error) {
 // Tags returns a TagIter that can step through all of the annotated tags
 // in the repository.
 func (r *Repository) Tags() (*TagIter, error) {
-	iter, err := r.s.IterObjects(plumbing.TagObject)
+	iter, err := r.s.IterEncodedObjects(plumbing.TagObject)
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +379,7 @@ func (r *Repository) Tags() (*TagIter, error) {
 
 // Object returns an object with the given hash.
 func (r *Repository) Object(t plumbing.ObjectType, h plumbing.Hash) (Object, error) {
-	obj, err := r.s.Object(t, h)
+	obj, err := r.s.EncodedObject(t, h)
 	if err != nil {
 		if err == plumbing.ErrObjectNotFound {
 			return nil, ErrObjectNotFound
@@ -408,7 +408,7 @@ func (r *Repository) Object(t plumbing.ObjectType, h plumbing.Hash) (Object, err
 // Objects returns an ObjectIter that can step through all of the annotated tags
 // in the repository.
 func (r *Repository) Objects() (*ObjectIter, error) {
-	iter, err := r.s.IterObjects(plumbing.AnyObject)
+	iter, err := r.s.IterEncodedObjects(plumbing.AnyObject)
 	if err != nil {
 		return nil, err
 	}

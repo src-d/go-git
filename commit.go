@@ -39,7 +39,7 @@ func (c *Commit) Tree() (*Tree, error) {
 // Parents return a CommitIter to the parent Commits
 func (c *Commit) Parents() *CommitIter {
 	return NewCommitIter(c.r,
-		storer.NewObjectLookupIter(c.r.s, plumbing.CommitObject, c.parents),
+		storer.NewEncodedObjectLookupIter(c.r.s, plumbing.CommitObject, c.parents),
 	)
 }
 
@@ -205,7 +205,7 @@ func indent(t string) string {
 
 // CommitIter provides an iterator for a set of commits.
 type CommitIter struct {
-	storer.ObjectIter
+	storer.EncodedObjectIter
 	r *Repository
 }
 
@@ -213,14 +213,14 @@ type CommitIter struct {
 // object iterator.
 //
 // The returned CommitIter will automatically skip over non-commit objects.
-func NewCommitIter(r *Repository, iter storer.ObjectIter) *CommitIter {
+func NewCommitIter(r *Repository, iter storer.EncodedObjectIter) *CommitIter {
 	return &CommitIter{iter, r}
 }
 
 // Next moves the iterator to the next commit and returns a pointer to it. If it
 // has reached the end of the set it will return io.EOF.
 func (iter *CommitIter) Next() (*Commit, error) {
-	obj, err := iter.ObjectIter.Next()
+	obj, err := iter.EncodedObjectIter.Next()
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func (iter *CommitIter) Next() (*Commit, error) {
 // an error happends or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
 func (iter *CommitIter) ForEach(cb func(*Commit) error) error {
-	return iter.ObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
+	return iter.EncodedObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
 		commit := &Commit{r: iter.r}
 		if err := commit.Decode(obj); err != nil {
 			return err

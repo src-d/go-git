@@ -52,7 +52,7 @@ func (t *Tree) File(path string) (*File, error) {
 		return nil, ErrFileNotFound
 	}
 
-	obj, err := t.r.s.Object(plumbing.BlobObject, e.Hash)
+	obj, err := t.r.s.EncodedObject(plumbing.BlobObject, e.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (t *Tree) dir(baseName string) (*Tree, error) {
 		return nil, errDirNotFound
 	}
 
-	obj, err := t.r.s.Object(plumbing.TreeObject, entry.Hash)
+	obj, err := t.r.s.EncodedObject(plumbing.TreeObject, entry.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -372,7 +372,7 @@ func (w *TreeWalker) Close() {
 
 // TreeIter provides an iterator for a set of trees.
 type TreeIter struct {
-	storer.ObjectIter
+	storer.EncodedObjectIter
 	r *Repository
 }
 
@@ -380,7 +380,7 @@ type TreeIter struct {
 // object iterator.
 //
 // The returned TreeIter will automatically skip over non-tree objects.
-func NewTreeIter(r *Repository, iter storer.ObjectIter) *TreeIter {
+func NewTreeIter(r *Repository, iter storer.EncodedObjectIter) *TreeIter {
 	return &TreeIter{iter, r}
 }
 
@@ -388,7 +388,7 @@ func NewTreeIter(r *Repository, iter storer.ObjectIter) *TreeIter {
 // has reached the end of the set it will return io.EOF.
 func (iter *TreeIter) Next() (*Tree, error) {
 	for {
-		obj, err := iter.ObjectIter.Next()
+		obj, err := iter.EncodedObjectIter.Next()
 		if err != nil {
 			return nil, err
 		}
@@ -406,7 +406,7 @@ func (iter *TreeIter) Next() (*Tree, error) {
 // an error happens or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
 func (iter *TreeIter) ForEach(cb func(*Tree) error) error {
-	return iter.ObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
+	return iter.EncodedObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
 		if obj.Type() != plumbing.TreeObject {
 			return nil
 		}

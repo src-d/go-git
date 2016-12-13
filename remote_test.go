@@ -178,7 +178,7 @@ func (s *RemoteSuite) TestFetchWithPackfileWriter(c *C) {
 	c.Assert(err, IsNil)
 
 	var count int
-	iter, err := mock.IterObjects(plumbing.AnyObject)
+	iter, err := mock.IterEncodedObjects(plumbing.AnyObject)
 	c.Assert(err, IsNil)
 
 	iter.ForEach(func(plumbing.EncodedObject) error {

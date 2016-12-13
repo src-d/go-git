@@ -197,7 +197,7 @@ func c_NewCommitIter(r uint64, iter uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	obj_iter := obj.(*storer.ObjectIter)
+	obj_iter := obj.(*storer.EncodedObjectIter)
 	commit_iter := git.NewCommitIter(repo, *obj_iter)
 	handle := RegisterObject(commit_iter)
 	return uint64(handle)

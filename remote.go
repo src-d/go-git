@@ -163,7 +163,7 @@ func (r *Remote) getWantedReferences(spec []config.RefSpec) ([]*plumbing.Referen
 			}
 		}
 
-		_, err := r.s.Object(plumbing.CommitObject, ref.Hash())
+		_, err := r.s.EncodedObject(plumbing.CommitObject, ref.Hash())
 		if err == plumbing.ErrObjectNotFound {
 			refs = append(refs, ref)
 			return nil
@@ -281,7 +281,7 @@ func (r *Remote) buildFetchedTags() error {
 			return nil
 		}
 
-		_, err := r.s.Object(plumbing.AnyObject, ref.Hash())
+		_, err := r.s.EncodedObject(plumbing.AnyObject, ref.Hash())
 		if err == plumbing.ErrObjectNotFound {
 			return nil
 		}
