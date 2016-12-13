@@ -1,9 +1,8 @@
 package filesystem
 
 import (
-	"fmt"
-
 	"bufio"
+	"fmt"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem/internal/dotgit"
