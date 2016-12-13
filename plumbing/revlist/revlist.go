@@ -1,4 +1,6 @@
-package git
+// Package revlist implements functions to walk the objects referenced by a
+// commit history. Roughly equivalent to git-rev-list command.
+package revlist
 
 import (
 	"io"
@@ -8,13 +10,13 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
-// RevListObjects applies a complementary set. It gets all the hashes from all
+// Objects applies a complementary set. It gets all the hashes from all
 // the reachable objects from the given commits. Ignore param are object hashes
 // that we want to ignore on the result. It is a list because is
 // easier to interact with other porcelain elements, but internally it is
 // converted to a map. All that objects must be accessible from the object
 // storer.
-func RevListObjects(
+func Objects(
 	s storer.EncodedObjectStorer,
 	commits []*object.Commit,
 	ignore []plumbing.Hash) ([]plumbing.Hash, error) {
