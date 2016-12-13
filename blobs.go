@@ -15,6 +15,15 @@ type Blob struct {
 	obj plumbing.EncodedObject
 }
 
+func DecodeBlob(o plumbing.EncodedObject) (*Blob, error) {
+	b := &Blob{}
+	if err := b.Decode(o); err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
 // ID returns the object ID of the blob. The returned value will always match
 // the current value of Blob.Hash.
 //
@@ -68,15 +77,15 @@ func (b *Blob) Reader() (io.ReadCloser, error) {
 // BlobIter provides an iterator for a set of blobs.
 type BlobIter struct {
 	storer.EncodedObjectIter
-	r *Repository
+	s storer.EncodedObjectStorer
 }
 
 // NewBlobIter returns a CommitIter for the given repository and underlying
 // object iterator.
 //
 // The returned BlobIter will automatically skip over non-blob objects.
-func NewBlobIter(r *Repository, iter storer.EncodedObjectIter) *BlobIter {
-	return &BlobIter{iter, r}
+func NewBlobIter(s storer.EncodedObjectStorer, iter storer.EncodedObjectIter) *BlobIter {
+	return &BlobIter{iter, s}
 }
 
 // Next moves the iterator to the next blob and returns a pointer to it. If it
@@ -92,8 +101,7 @@ func (iter *BlobIter) Next() (*Blob, error) {
 			continue
 		}
 
-		blob := &Blob{}
-		return blob, blob.Decode(obj)
+		return DecodeBlob(obj)
 	}
 }
 
@@ -106,11 +114,11 @@ func (iter *BlobIter) ForEach(cb func(*Blob) error) error {
 			return nil
 		}
 
-		blob := &Blob{}
-		if err := blob.Decode(obj); err != nil {
+		b, err := DecodeBlob(obj)
+		if err != nil {
 			return err
 		}
 
-		return cb(blob)
+		return cb(b)
 	})
 }

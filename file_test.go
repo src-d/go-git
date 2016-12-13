@@ -6,12 +6,13 @@ import (
 	"gopkg.in/src-d/go-git.v4/fixtures"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
 	. "gopkg.in/check.v1"
 )
 
 type FileSuite struct {
-	BaseSuite
+	BaseObjectsSuite
 }
 
 var _ = Suite(&FileSuite{})
@@ -41,14 +42,21 @@ var fileIterTests = []struct {
 
 func (s *FileSuite) TestIter(c *C) {
 	for i, t := range fileIterTests {
-		r := s.NewRepository(fixtures.ByURL(t.repo).One())
-		commit, err := r.Commit(plumbing.NewHash(t.commit))
+		f := fixtures.ByURL(t.repo).One()
+		sto, err := filesystem.NewStorage(f.DotGit())
+		c.Assert(err, IsNil)
+
+		h := plumbing.NewHash(t.commit)
+		o, err := sto.EncodedObject(plumbing.CommitObject, h)
+		c.Assert(err, IsNil)
+
+		commit, err := DecodeCommit(sto, o)
 		c.Assert(err, IsNil, Commentf("subtest %d: %v (%s)", i, err, t.commit))
 
 		tree, err := commit.Tree()
 		c.Assert(err, IsNil)
 
-		iter := NewFileIter(s.Repository, tree)
+		iter := NewFileIter(sto, tree)
 		for k := 0; k < len(t.files); k++ {
 			exp := t.files[k]
 			file, err := iter.Next()
@@ -99,8 +107,15 @@ hs_err_pid*
 
 func (s *FileSuite) TestContents(c *C) {
 	for i, t := range contentsTests {
-		r := s.NewRepository(fixtures.ByURL(t.repo).One())
-		commit, err := r.Commit(plumbing.NewHash(t.commit))
+		f := fixtures.ByURL(t.repo).One()
+		sto, err := filesystem.NewStorage(f.DotGit())
+		c.Assert(err, IsNil)
+
+		h := plumbing.NewHash(t.commit)
+		o, err := sto.EncodedObject(plumbing.CommitObject, h)
+		c.Assert(err, IsNil)
+
+		commit, err := DecodeCommit(sto, o)
 		c.Assert(err, IsNil, Commentf("subtest %d: %v (%s)", i, err, t.commit))
 
 		file, err := commit.File(t.path)
@@ -149,8 +164,15 @@ var linesTests = []struct {
 
 func (s *FileSuite) TestLines(c *C) {
 	for i, t := range linesTests {
-		r := s.NewRepository(fixtures.ByURL(t.repo).One())
-		commit, err := r.Commit(plumbing.NewHash(t.commit))
+		f := fixtures.ByURL(t.repo).One()
+		sto, err := filesystem.NewStorage(f.DotGit())
+		c.Assert(err, IsNil)
+
+		h := plumbing.NewHash(t.commit)
+		o, err := sto.EncodedObject(plumbing.CommitObject, h)
+		c.Assert(err, IsNil)
+
+		commit, err := DecodeCommit(sto, o)
 		c.Assert(err, IsNil, Commentf("subtest %d: %v (%s)", i, err, t.commit))
 
 		file, err := commit.File(t.path)
@@ -180,8 +202,15 @@ var ignoreEmptyDirEntriesTests = []struct {
 // we don't ignore empty dirs.
 func (s *FileSuite) TestIgnoreEmptyDirEntries(c *C) {
 	for i, t := range ignoreEmptyDirEntriesTests {
-		r := s.NewRepository(fixtures.ByURL(t.repo).One())
-		commit, err := r.Commit(plumbing.NewHash(t.commit))
+		f := fixtures.ByURL(t.repo).One()
+		sto, err := filesystem.NewStorage(f.DotGit())
+		c.Assert(err, IsNil)
+
+		h := plumbing.NewHash(t.commit)
+		o, err := sto.EncodedObject(plumbing.CommitObject, h)
+		c.Assert(err, IsNil)
+
+		commit, err := DecodeCommit(sto, o)
 		c.Assert(err, IsNil, Commentf("subtest %d: %v (%s)", i, err, t.commit))
 
 		tree, err := commit.Tree()
@@ -199,7 +228,10 @@ func (s *FileSuite) TestIgnoreEmptyDirEntries(c *C) {
 func (s *FileSuite) TestFileIter(c *C) {
 	hash := plumbing.NewHash("1669dce138d9b841a518c64b10914d88f5e488ea")
 
-	commit, err := s.Repository.Commit(hash)
+	o, err := s.Storer.EncodedObject(plumbing.CommitObject, hash)
+	c.Assert(err, IsNil)
+
+	commit, err := DecodeCommit(s.Storer, o)
 	c.Assert(err, IsNil)
 
 	tree, err := commit.Tree()

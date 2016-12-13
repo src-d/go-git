@@ -7,8 +7,8 @@ import (
 
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
-import "gopkg.in/src-d/go-git.v4/plumbing/storer"
 
 func c_Tag_get_Hash(t uint64) *C.char {
 	obj, ok := GetObject(Handle(t))
@@ -161,13 +161,13 @@ func c_NewTagIter(r uint64, i uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	repo := obj.(*git.Repository)
+	s := obj.(storer.EncodedObjectStorer)
 	obj, ok = GetObject(Handle(i))
 	if !ok {
 		return IH
 	}
 	iter := obj.(*storer.EncodedObjectIter)
-	return uint64(RegisterObject(git.NewTagIter(repo, *iter)))
+	return uint64(RegisterObject(git.NewTagIter(s, *iter)))
 }
 
 //export c_TagIter_Next

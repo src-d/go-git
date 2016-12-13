@@ -7,22 +7,21 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 type TreeSuite struct {
-	BaseSuite
+	BaseObjectsSuite
 	Tree *Tree
 }
 
 var _ = Suite(&TreeSuite{})
 
 func (s *TreeSuite) SetUpSuite(c *C) {
-	s.BaseSuite.SetUpSuite(c)
+	s.BaseObjectsSuite.SetUpSuite(c)
 	hash := plumbing.NewHash("a8d315b2b1c615d43042c3a62402b8a54288cf5c")
 
-	var err error
-	s.Tree, err = s.Repository.Tree(hash)
-	c.Assert(err, IsNil)
+	s.Tree = s.tree(c, hash)
 }
 
 func (s *TreeSuite) TestDecode(c *C) {
@@ -37,7 +36,7 @@ func (s *TreeSuite) TestDecode(c *C) {
 
 func (s *TreeSuite) TestDecodeNonTree(c *C) {
 	hash := plumbing.NewHash("9a48f23120e880dfbe41f7c9b7b708e9ee62a492")
-	blob, err := s.Repository.s.EncodedObject(plumbing.BlobObject, hash)
+	blob, err := s.Storer.EncodedObject(plumbing.BlobObject, hash)
 	c.Assert(err, IsNil)
 
 	tree := &Tree{}
@@ -147,12 +146,13 @@ func (s *TreeSuite) TestTreeDecodeEncodeIdempotent(c *C) {
 }
 
 func (s *TreeSuite) TestTreeIter(c *C) {
-	iter, err := s.Repository.Trees()
+	encIter, err := s.Storer.IterEncodedObjects(plumbing.TreeObject)
 	c.Assert(err, IsNil)
+	iter := NewTreeIter(s.Storer, encIter)
 
 	trees := []*Tree{}
 	iter.ForEach(func(t *Tree) error {
-		t.r = nil
+		t.s = nil
 		trees = append(trees, t)
 		return nil
 	})
@@ -160,8 +160,9 @@ func (s *TreeSuite) TestTreeIter(c *C) {
 	c.Assert(len(trees) > 0, Equals, true)
 	iter.Close()
 
-	iter, err = s.Repository.Trees()
+	encIter, err = s.Storer.IterEncodedObjects(plumbing.TreeObject)
 	c.Assert(err, IsNil)
+	iter = NewTreeIter(s.Storer, encIter)
 
 	i := 0
 	for {
@@ -170,7 +171,7 @@ func (s *TreeSuite) TestTreeIter(c *C) {
 			break
 		}
 
-		t.r = nil
+		t.s = nil
 		c.Assert(err, IsNil)
 		c.Assert(t, DeepEquals, trees[i])
 		i += 1
@@ -180,14 +181,14 @@ func (s *TreeSuite) TestTreeIter(c *C) {
 }
 
 func (s *TreeSuite) TestTreeWalkerNext(c *C) {
-	r := s.Repository
-	commit, err := r.Commit(plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	o, err := s.Storer.EncodedObject(plumbing.CommitObject, plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 	c.Assert(err, IsNil)
-
+	commit, err := DecodeCommit(s.Storer, o)
+	c.Assert(err, IsNil)
 	tree, err := commit.Tree()
 	c.Assert(err, IsNil)
 
-	walker := NewTreeWalker(r, tree, true)
+	walker := NewTreeWalker(s.Storer, tree, true)
 	for _, e := range treeWalkerExpects {
 		name, entry, err := walker.Next()
 		if err == io.EOF {
@@ -205,15 +206,15 @@ func (s *TreeSuite) TestTreeWalkerNext(c *C) {
 }
 
 func (s *TreeSuite) TestTreeWalkerNextNonRecursive(c *C) {
-	r := s.Repository
-	commit, err := r.Commit(plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	o, err := s.Storer.EncodedObject(plumbing.CommitObject, plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 	c.Assert(err, IsNil)
-
+	commit, err := DecodeCommit(s.Storer, o)
+	c.Assert(err, IsNil)
 	tree, err := commit.Tree()
 	c.Assert(err, IsNil)
 
 	var count int
-	walker := NewTreeWalker(r, tree, false)
+	walker := NewTreeWalker(s.Storer, tree, false)
 	for {
 		name, entry, err := walker.Next()
 		if err == io.EOF {
@@ -1418,7 +1419,7 @@ func (s *TreeSuite) TestTreeDecodeReadBug(c *C) {
 			},
 		},
 		Hash: plumbing.Hash{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-		r:    (*Repository)(nil),
+		s:    (storer.EncodedObjectStorer)(nil),
 		m:    map[string]*TreeEntry(nil),
 	}
 

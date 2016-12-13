@@ -33,8 +33,19 @@ type Tree struct {
 	Entries []TreeEntry
 	Hash    plumbing.Hash
 
-	r *Repository
+	s storer.EncodedObjectStorer
 	m map[string]*TreeEntry
+}
+
+// DecodeTree decodes an encoded object into a *Tree and associates it to the
+// given object storer.
+func DecodeTree(s storer.EncodedObjectStorer, o plumbing.EncodedObject) (*Tree, error) {
+	t := &Tree{s: s}
+	if err := t.Decode(o); err != nil {
+		return nil, err
+	}
+
+	return t, nil
 }
 
 // TreeEntry represents a file
@@ -52,7 +63,7 @@ func (t *Tree) File(path string) (*File, error) {
 		return nil, ErrFileNotFound
 	}
 
-	obj, err := t.r.s.EncodedObject(plumbing.BlobObject, e.Hash)
+	obj, err := t.s.EncodedObject(plumbing.BlobObject, e.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -85,12 +96,12 @@ func (t *Tree) dir(baseName string) (*Tree, error) {
 		return nil, errDirNotFound
 	}
 
-	obj, err := t.r.s.EncodedObject(plumbing.TreeObject, entry.Hash)
+	obj, err := t.s.EncodedObject(plumbing.TreeObject, entry.Hash)
 	if err != nil {
 		return nil, err
 	}
 
-	tree := &Tree{r: t.r}
+	tree := &Tree{s: t.s}
 	tree.Decode(obj)
 
 	return tree, nil
@@ -112,7 +123,7 @@ func (t *Tree) entry(baseName string) (*TreeEntry, error) {
 
 // Files returns a FileIter allowing to iterate over the Tree
 func (t *Tree) Files() *FileIter {
-	return NewFileIter(t.r, t)
+	return NewFileIter(t.s, t)
 }
 
 // ID returns the object ID of the tree. The returned value will always match
@@ -263,15 +274,15 @@ type TreeWalker struct {
 	base      string
 	recursive bool
 
-	r *Repository
+	s storer.EncodedObjectStorer
 	t *Tree
 }
 
-// NewTreeWalker returns a new TreeWalker for the given repository and tree.
+// NewTreeWalker returns a new TreeWalker for the given object storer and tree.
 //
 // It is the caller's responsibility to call Close() when finished with the
 // tree walker.
-func NewTreeWalker(r *Repository, t *Tree, recursive bool) *TreeWalker {
+func NewTreeWalker(s storer.EncodedObjectStorer, t *Tree, recursive bool) *TreeWalker {
 	stack := make([]treeEntryIter, 0, startingStackSize)
 	stack = append(stack, treeEntryIter{t, 0})
 
@@ -279,7 +290,7 @@ func NewTreeWalker(r *Repository, t *Tree, recursive bool) *TreeWalker {
 		stack:     stack,
 		recursive: recursive,
 
-		r: r,
+		s: s,
 		t: t,
 	}
 }
@@ -326,7 +337,11 @@ func (w *TreeWalker) Next() (name string, entry TreeEntry, err error) {
 		}
 
 		if entry.Mode.IsDir() {
-			obj, err = w.r.Tree(entry.Hash)
+			var eo plumbing.EncodedObject
+			eo, err = w.s.EncodedObject(plumbing.TreeObject, entry.Hash)
+			if err == nil {
+				obj, err = DecodeTree(w.s, eo)
+			}
 		}
 
 		name = path.Join(w.base, entry.Name)
@@ -373,15 +388,15 @@ func (w *TreeWalker) Close() {
 // TreeIter provides an iterator for a set of trees.
 type TreeIter struct {
 	storer.EncodedObjectIter
-	r *Repository
+	s storer.EncodedObjectStorer
 }
 
 // NewTreeIter returns a TreeIter for the given repository and underlying
 // object iterator.
 //
 // The returned TreeIter will automatically skip over non-tree objects.
-func NewTreeIter(r *Repository, iter storer.EncodedObjectIter) *TreeIter {
-	return &TreeIter{iter, r}
+func NewTreeIter(s storer.EncodedObjectStorer, iter storer.EncodedObjectIter) *TreeIter {
+	return &TreeIter{iter, s}
 }
 
 // Next moves the iterator to the next tree and returns a pointer to it. If it
@@ -397,8 +412,7 @@ func (iter *TreeIter) Next() (*Tree, error) {
 			continue
 		}
 
-		tree := &Tree{r: iter.r}
-		return tree, tree.Decode(obj)
+		return DecodeTree(iter.s, obj)
 	}
 }
 
@@ -411,11 +425,11 @@ func (iter *TreeIter) ForEach(cb func(*Tree) error) error {
 			return nil
 		}
 
-		tree := &Tree{r: iter.r}
-		if err := tree.Decode(obj); err != nil {
+		t, err := DecodeTree(iter.s, obj)
+		if err != nil {
 			return err
 		}
 
-		return cb(tree)
+		return cb(t)
 	})
 }

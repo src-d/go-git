@@ -313,7 +313,7 @@ func (r *Repository) Commits() (*CommitIter, error) {
 		return nil, err
 	}
 
-	return NewCommitIter(r, iter), nil
+	return NewCommitIter(r.s, iter), nil
 }
 
 // Tree return the tree with the given hash
@@ -333,7 +333,7 @@ func (r *Repository) Trees() (*TreeIter, error) {
 		return nil, err
 	}
 
-	return NewTreeIter(r, iter), nil
+	return NewTreeIter(r.s, iter), nil
 }
 
 // Blob returns the blob with the given hash
@@ -353,7 +353,7 @@ func (r *Repository) Blobs() (*BlobIter, error) {
 		return nil, err
 	}
 
-	return NewBlobIter(r, iter), nil
+	return NewBlobIter(r.s, iter), nil
 }
 
 // Tag returns a tag with the given hash.
@@ -374,7 +374,7 @@ func (r *Repository) Tags() (*TagIter, error) {
 		return nil, err
 	}
 
-	return NewTagIter(r, iter), nil
+	return NewTagIter(r.s, iter), nil
 }
 
 // Object returns an object with the given hash.
@@ -384,25 +384,11 @@ func (r *Repository) Object(t plumbing.ObjectType, h plumbing.Hash) (Object, err
 		if err == plumbing.ErrObjectNotFound {
 			return nil, ErrObjectNotFound
 		}
+
 		return nil, err
 	}
 
-	switch obj.Type() {
-	case plumbing.CommitObject:
-		commit := &Commit{r: r}
-		return commit, commit.Decode(obj)
-	case plumbing.TreeObject:
-		tree := &Tree{r: r}
-		return tree, tree.Decode(obj)
-	case plumbing.BlobObject:
-		blob := &Blob{}
-		return blob, blob.Decode(obj)
-	case plumbing.TagObject:
-		tag := &Tag{r: r}
-		return tag, tag.Decode(obj)
-	default:
-		return nil, plumbing.ErrInvalidType
-	}
+	return DecodeObject(r.s, obj)
 }
 
 // Objects returns an ObjectIter that can step through all of the annotated tags
@@ -413,7 +399,7 @@ func (r *Repository) Objects() (*ObjectIter, error) {
 		return nil, err
 	}
 
-	return NewObjectIter(r, iter), nil
+	return NewObjectIter(r.s, iter), nil
 }
 
 // Head returns the reference where HEAD is pointing to.

@@ -7,19 +7,59 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 	"io"
 )
 
+type BaseObjectsSuite struct {
+	fixtures.Suite
+	Storer  storer.EncodedObjectStorer
+	Fixture *fixtures.Fixture
+}
+
+func (s *BaseObjectsSuite) SetUpSuite(c *C) {
+	s.Suite.SetUpSuite(c)
+	s.Fixture = fixtures.Basic().One()
+	storer, err := filesystem.NewStorage(s.Fixture.DotGit())
+	c.Assert(err, IsNil)
+	s.Storer = storer
+}
+
+func (s *BaseObjectsSuite) tag(c *C, h plumbing.Hash) *Tag {
+	o, err := s.Storer.EncodedObject(plumbing.TagObject, h)
+	c.Assert(err, IsNil)
+	t, err := DecodeTag(s.Storer, o)
+	c.Assert(err, IsNil)
+	return t
+}
+
+func (s *BaseObjectsSuite) tree(c *C, h plumbing.Hash) *Tree {
+	o, err := s.Storer.EncodedObject(plumbing.TreeObject, h)
+	c.Assert(err, IsNil)
+	t, err := DecodeTree(s.Storer, o)
+	c.Assert(err, IsNil)
+	return t
+}
+
+func (s *BaseObjectsSuite) commit(c *C, h plumbing.Hash) *Commit {
+	o, err := s.Storer.EncodedObject(plumbing.CommitObject, h)
+	c.Assert(err, IsNil)
+	commit, err := DecodeCommit(s.Storer, o)
+	c.Assert(err, IsNil)
+	return commit
+}
+
 type ObjectsSuite struct {
-	BaseSuite
+	BaseObjectsSuite
 }
 
 var _ = Suite(&ObjectsSuite{})
 
 func (s *ObjectsSuite) TestNewCommit(c *C) {
 	hash := plumbing.NewHash("a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69")
-	commit, err := s.Repository.Commit(hash)
-	c.Assert(err, IsNil)
+	commit := s.commit(c, hash)
 
 	c.Assert(commit.Hash, Equals, commit.ID())
 	c.Assert(commit.Hash.String(), Equals, "a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69")
@@ -46,7 +86,10 @@ func (s *ObjectsSuite) TestNewCommit(c *C) {
 
 func (s *ObjectsSuite) TestParseTree(c *C) {
 	hash := plumbing.NewHash("a8d315b2b1c615d43042c3a62402b8a54288cf5c")
-	tree, err := s.Repository.Tree(hash)
+
+	o, err := s.Storer.EncodedObject(plumbing.TreeObject, hash)
+	c.Assert(err, IsNil)
+	tree, err := DecodeTree(s.Storer, o)
 	c.Assert(err, IsNil)
 
 	c.Assert(tree.Entries, HasLen, 8)
@@ -124,8 +167,9 @@ func (s *ObjectsSuite) TestParseSignature(c *C) {
 }
 
 func (s *ObjectsSuite) TestObjectIter(c *C) {
-	iter, err := s.Repository.Objects()
+	encIter, err := s.Storer.IterEncodedObjects(plumbing.AnyObject)
 	c.Assert(err, IsNil)
+	iter := NewObjectIter(s.Storer, encIter)
 
 	objects := []Object{}
 	iter.ForEach(func(o Object) error {
@@ -136,8 +180,9 @@ func (s *ObjectsSuite) TestObjectIter(c *C) {
 	c.Assert(len(objects) > 0, Equals, true)
 	iter.Close()
 
-	iter, err = s.Repository.Objects()
+	encIter, err = s.Storer.IterEncodedObjects(plumbing.AnyObject)
 	c.Assert(err, IsNil)
+	iter = NewObjectIter(s.Storer, encIter)
 
 	i := 0
 	for {

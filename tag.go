@@ -26,7 +26,18 @@ type Tag struct {
 	TargetType plumbing.ObjectType
 	Target     plumbing.Hash
 
-	r *Repository
+	s storer.EncodedObjectStorer
+}
+
+// DecodeTag decodes an encoded object into a *Commit and associates it to the
+// given object storer.
+func DecodeTag(s storer.EncodedObjectStorer, o plumbing.EncodedObject) (*Tag, error) {
+	t := &Tag{s: s}
+	if err := t.Decode(o); err != nil {
+		return nil, err
+	}
+
+	return t, nil
 }
 
 // ID returns the object ID of the tag, not the object that the tag references.
@@ -135,7 +146,13 @@ func (t *Tag) Commit() (*Commit, error) {
 	if t.TargetType != plumbing.CommitObject {
 		return nil, ErrUnsupportedObject
 	}
-	return t.r.Commit(t.Target)
+
+	o, err := t.s.EncodedObject(plumbing.CommitObject, t.Target)
+	if err != nil {
+		return nil, err
+	}
+
+	return DecodeCommit(t.s, o)
 }
 
 // Tree returns the tree pointed to by the tag. If the tag points to a commit
@@ -144,13 +161,19 @@ func (t *Tag) Commit() (*Commit, error) {
 func (t *Tag) Tree() (*Tree, error) {
 	switch t.TargetType {
 	case plumbing.CommitObject:
-		commit, err := t.r.Commit(t.Target)
+		c, err := t.Commit()
 		if err != nil {
 			return nil, err
 		}
-		return commit.Tree()
+
+		return c.Tree()
 	case plumbing.TreeObject:
-		return t.r.Tree(t.Target)
+		o, err := t.s.EncodedObject(plumbing.TreeObject, t.Target)
+		if err != nil {
+			return nil, err
+		}
+
+		return DecodeTree(t.s, o)
 	default:
 		return nil, ErrUnsupportedObject
 	}
@@ -162,12 +185,23 @@ func (t *Tag) Blob() (*Blob, error) {
 	if t.TargetType != plumbing.BlobObject {
 		return nil, ErrUnsupportedObject
 	}
-	return t.r.Blob(t.Target)
+
+	o, err := t.s.EncodedObject(plumbing.BlobObject, t.Target)
+	if err != nil {
+		return nil, err
+	}
+
+	return DecodeBlob(o)
 }
 
 // Object returns the object pointed to by the tag.
 func (t *Tag) Object() (Object, error) {
-	return t.r.Object(t.TargetType, t.Target)
+	o, err := t.s.EncodedObject(t.TargetType, t.Target)
+	if err != nil {
+		return nil, err
+	}
+
+	return DecodeObject(t.s, o)
 }
 
 // String returns the meta information contained in the tag as a formatted
@@ -185,15 +219,15 @@ func (t *Tag) String() string {
 // TagIter provides an iterator for a set of tags.
 type TagIter struct {
 	storer.EncodedObjectIter
-	r *Repository
+	s storer.EncodedObjectStorer
 }
 
-// NewTagIter returns a TagIter for the given repository and underlying
+// NewTagIter returns a TagIter for the given object storer and underlying
 // object iterator.
 //
 // The returned TagIter will automatically skip over non-tag objects.
-func NewTagIter(r *Repository, iter storer.EncodedObjectIter) *TagIter {
-	return &TagIter{iter, r}
+func NewTagIter(s storer.EncodedObjectStorer, iter storer.EncodedObjectIter) *TagIter {
+	return &TagIter{iter, s}
 }
 
 // Next moves the iterator to the next tag and returns a pointer to it. If it
@@ -204,8 +238,7 @@ func (iter *TagIter) Next() (*Tag, error) {
 		return nil, err
 	}
 
-	tag := &Tag{r: iter.r}
-	return tag, tag.Decode(obj)
+	return DecodeTag(iter.s, obj)
 }
 
 // ForEach call the cb function for each tag contained on this iter until
@@ -213,12 +246,12 @@ func (iter *TagIter) Next() (*Tag, error) {
 // the iteration is stop but no error is returned. The iterator is closed.
 func (iter *TagIter) ForEach(cb func(*Tag) error) error {
 	return iter.EncodedObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
-		tag := &Tag{r: iter.r}
-		if err := tag.Decode(obj); err != nil {
+		t, err := DecodeTag(iter.s, obj)
+		if err != nil {
 			return err
 		}
 
-		return cb(tag)
+		return cb(t)
 	})
 }
 

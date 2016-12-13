@@ -7,6 +7,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 //export c_File_get_Name
@@ -96,13 +97,13 @@ func c_NewFileIter(r uint64, t uint64) uint64 {
 	if !ok {
 		return IH
 	}
-	repo := obj.(*git.Repository)
+	storer := obj.(storer.EncodedObjectStorer)
 	obj, ok = GetObject(Handle(t))
 	if !ok {
 		return IH
 	}
 	tree := obj.(*git.Tree)
-	iter := git.NewFileIter(repo, tree)
+	iter := git.NewFileIter(storer, tree)
 	return uint64(RegisterObject(iter))
 }
 

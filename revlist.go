@@ -4,22 +4,24 @@ import (
 	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 // RevListObjects applies a complementary set. It gets all the hashes from all
 // the reachable objects from the given commits. Ignore param are object hashes
 // that we want to ignore on the result. It is a list because is
 // easier to interact with other porcelain elements, but internally it is
-// converted to a map. All that objects must be accessible from the Repository.
+// converted to a map. All that objects must be accessible from the object
+// storer.
 func RevListObjects(
-	r *Repository,
+	s storer.EncodedObjectStorer,
 	commits []*Commit,
 	ignore []plumbing.Hash) ([]plumbing.Hash, error) {
 
 	seen := hashListToSet(ignore)
 	result := make(map[plumbing.Hash]bool)
 	for _, c := range commits {
-		err := reachableObjects(r, c, seen, func(h plumbing.Hash) error {
+		err := reachableObjects(s, c, seen, func(h plumbing.Hash) error {
 			if !seen[h] {
 				result[h] = true
 				seen[h] = true
@@ -41,7 +43,7 @@ func RevListObjects(
 // if a commit hash is into the 'seen' set, we will not iterate all his trees
 // and blobs objects.
 func reachableObjects(
-	r *Repository,
+	s storer.EncodedObjectStorer,
 	commit *Commit,
 	seen map[plumbing.Hash]bool,
 	cb func(h plumbing.Hash) error) error {
@@ -55,7 +57,7 @@ func reachableObjects(
 			return err
 		}
 
-		return iterateCommitTrees(r, commit, func(h plumbing.Hash) error {
+		return iterateCommitTrees(s, commit, func(h plumbing.Hash) error {
 			return cb(h)
 		})
 	})
@@ -74,7 +76,7 @@ func iterateCommits(commit *Commit, cb func(c *Commit) error) error {
 
 // iterateCommitTrees iterate all reachable trees from the given commit
 func iterateCommitTrees(
-	repository *Repository,
+	s storer.EncodedObjectStorer,
 	commit *Commit,
 	cb func(h plumbing.Hash) error) error {
 
@@ -86,7 +88,7 @@ func iterateCommitTrees(
 		return err
 	}
 
-	treeWalker := NewTreeWalker(repository, tree, true)
+	treeWalker := NewTreeWalker(s, tree, true)
 
 	for {
 		_, e, err := treeWalker.Next()

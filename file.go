@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
@@ -56,12 +57,12 @@ func (f *File) Lines() ([]string, error) {
 }
 
 type FileIter struct {
-	r *Repository
+	s storer.EncodedObjectStorer
 	w TreeWalker
 }
 
-func NewFileIter(r *Repository, t *Tree) *FileIter {
-	return &FileIter{r: r, w: *NewTreeWalker(r, t, true)}
+func NewFileIter(s storer.EncodedObjectStorer, t *Tree) *FileIter {
+	return &FileIter{s: s, w: *NewTreeWalker(s, t, true)}
 }
 
 func (iter *FileIter) Next() (*File, error) {
@@ -75,7 +76,12 @@ func (iter *FileIter) Next() (*File, error) {
 			continue
 		}
 
-		blob, err := iter.r.Blob(entry.Hash)
+		o, err := iter.s.EncodedObject(plumbing.BlobObject, entry.Hash)
+		if err != nil {
+			return nil, err
+		}
+
+		blob, err := DecodeBlob(o)
 		if err != nil {
 			return nil, err
 		}

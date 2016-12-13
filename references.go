@@ -21,7 +21,7 @@ import (
 func (c *Commit) References(path string) ([]*Commit, error) {
 	var result []*Commit
 	seen := make(map[plumbing.Hash]struct{}, 0)
-	if err := walkGraph(&result, &seen, c.r, c, path); err != nil {
+	if err := walkGraph(&result, &seen, c, path); err != nil {
 		return nil, err
 	}
 
@@ -31,9 +31,9 @@ func (c *Commit) References(path string) ([]*Commit, error) {
 	return removeComp(path, result, equivalent)
 }
 
-// Recursive traversal of the commit graph, generating a linear history
-// of the path.
-func walkGraph(result *[]*Commit, seen *map[plumbing.Hash]struct{}, repo *Repository, current *Commit, path string) error {
+// Recursive traversal of the commit graph, generating a linear history of the
+// path.
+func walkGraph(result *[]*Commit, seen *map[plumbing.Hash]struct{}, current *Commit, path string) error {
 	// check and update seen
 	if _, ok := (*seen)[current.Hash]; ok {
 		return nil
@@ -67,12 +67,12 @@ func walkGraph(result *[]*Commit, seen *map[plumbing.Hash]struct{}, repo *Reposi
 			*result = append(*result, current)
 		}
 		// in any case, walk the parent
-		return walkGraph(result, seen, repo, parents[0], path)
+		return walkGraph(result, seen, parents[0], path)
 	default: // more than one parent contains the path
 		// TODO: detect merges that had a conflict, because they must be
 		// included in the result here.
 		for _, p := range parents {
-			err := walkGraph(result, seen, repo, p, path)
+			err := walkGraph(result, seen, p, path)
 			if err != nil {
 				return err
 			}

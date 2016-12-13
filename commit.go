@@ -28,18 +28,34 @@ type Commit struct {
 
 	tree    plumbing.Hash
 	parents []plumbing.Hash
-	r       *Repository
+	s       storer.EncodedObjectStorer
+}
+
+// DecodeCommit decodes an encoded object into a *Commit and associates it to
+// the given object storer.
+func DecodeCommit(s storer.EncodedObjectStorer, o plumbing.EncodedObject) (*Commit, error) {
+	c := &Commit{s: s}
+	if err := c.Decode(o); err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
 
 // Tree returns the Tree from the commit
 func (c *Commit) Tree() (*Tree, error) {
-	return c.r.Tree(c.tree)
+	o, err := c.s.EncodedObject(plumbing.TreeObject, c.tree)
+	if err != nil {
+		return nil, err
+	}
+
+	return DecodeTree(c.s, o)
 }
 
 // Parents return a CommitIter to the parent Commits
 func (c *Commit) Parents() *CommitIter {
-	return NewCommitIter(c.r,
-		storer.NewEncodedObjectLookupIter(c.r.s, plumbing.CommitObject, c.parents),
+	return NewCommitIter(c.s,
+		storer.NewEncodedObjectLookupIter(c.s, plumbing.CommitObject, c.parents),
 	)
 }
 
@@ -206,15 +222,15 @@ func indent(t string) string {
 // CommitIter provides an iterator for a set of commits.
 type CommitIter struct {
 	storer.EncodedObjectIter
-	r *Repository
+	s storer.EncodedObjectStorer
 }
 
-// NewCommitIter returns a CommitIter for the given repository and underlying
+// NewCommitIter returns a CommitIter for the given object storer and underlying
 // object iterator.
 //
 // The returned CommitIter will automatically skip over non-commit objects.
-func NewCommitIter(r *Repository, iter storer.EncodedObjectIter) *CommitIter {
-	return &CommitIter{iter, r}
+func NewCommitIter(s storer.EncodedObjectStorer, iter storer.EncodedObjectIter) *CommitIter {
+	return &CommitIter{iter, s}
 }
 
 // Next moves the iterator to the next commit and returns a pointer to it. If it
@@ -225,21 +241,20 @@ func (iter *CommitIter) Next() (*Commit, error) {
 		return nil, err
 	}
 
-	commit := &Commit{r: iter.r}
-	return commit, commit.Decode(obj)
+	return DecodeCommit(iter.s, obj)
 }
 
 // ForEach call the cb function for each commit contained on this iter until
-// an error happends or the end of the iter is reached. If ErrStop is sent
+// an error appends or the end of the iter is reached. If ErrStop is sent
 // the iteration is stop but no error is returned. The iterator is closed.
 func (iter *CommitIter) ForEach(cb func(*Commit) error) error {
 	return iter.EncodedObjectIter.ForEach(func(obj plumbing.EncodedObject) error {
-		commit := &Commit{r: iter.r}
-		if err := commit.Decode(obj); err != nil {
+		c, err := DecodeCommit(iter.s, obj)
+		if err != nil {
 			return err
 		}
 
-		return cb(commit)
+		return cb(c)
 	})
 }
 

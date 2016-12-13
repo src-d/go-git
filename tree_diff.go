@@ -63,7 +63,12 @@ func (c *Change) Files() (from *File, to *File, err error) {
 }
 
 func newFileFromTreeEntry(t *Tree, e *TreeEntry) (*File, error) {
-	blob, err := t.r.Blob(e.Hash)
+	o, err := t.s.EncodedObject(plumbing.BlobObject, e.Hash)
+	if err != nil {
+		return nil, err
+	}
+
+	blob, err := DecodeBlob(o)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +145,7 @@ func newWithEmpty(a, b *Tree) (Changes, error) {
 		tree = a
 	}
 
-	w := NewTreeWalker(tree.r, tree, true)
+	w := NewTreeWalker(tree.s, tree, true)
 	defer w.Close()
 
 	for {

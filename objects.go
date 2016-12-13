@@ -44,6 +44,23 @@ type Object interface {
 	Encode(plumbing.EncodedObject) error
 }
 
+// DecodeObject decodes an encoded object into an Object and associates it to
+// the given object storer.
+func DecodeObject(s storer.EncodedObjectStorer, o plumbing.EncodedObject) (Object, error) {
+	switch o.Type() {
+	case plumbing.CommitObject:
+		return DecodeCommit(s, o)
+	case plumbing.TreeObject:
+		return DecodeTree(s, o)
+	case plumbing.BlobObject:
+		return DecodeBlob(o)
+	case plumbing.TagObject:
+		return DecodeTag(s, o)
+	default:
+		return nil, plumbing.ErrInvalidType
+	}
+}
+
 // Signature represents an action signed by a person
 type Signature struct {
 	Name  string
@@ -118,13 +135,13 @@ func (s *Signature) String() string {
 // ObjectIter provides an iterator for a set of objects.
 type ObjectIter struct {
 	storer.EncodedObjectIter
-	r *Repository
+	s storer.EncodedObjectStorer
 }
 
 // NewObjectIter returns a ObjectIter for the given repository and underlying
 // object iterator.
-func NewObjectIter(r *Repository, iter storer.EncodedObjectIter) *ObjectIter {
-	return &ObjectIter{iter, r}
+func NewObjectIter(s storer.EncodedObjectStorer, iter storer.EncodedObjectIter) *ObjectIter {
+	return &ObjectIter{iter, s}
 }
 
 // Next moves the iterator to the next object and returns a pointer to it. If it
@@ -173,7 +190,7 @@ func (iter *ObjectIter) toObject(obj plumbing.EncodedObject) (Object, error) {
 		blob := &Blob{}
 		return blob, blob.Decode(obj)
 	case plumbing.TreeObject:
-		tree := &Tree{r: iter.r}
+		tree := &Tree{s: iter.s}
 		return tree, tree.Decode(obj)
 	case plumbing.CommitObject:
 		commit := &Commit{}
