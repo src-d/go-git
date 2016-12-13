@@ -42,19 +42,19 @@ func NewEncoder(w io.Writer, s storer.ObjectStorer) *Encoder {
 // Encode creates a packfile containing all the objects referenced in hashes
 // and writes it to the writer in the Encoder.
 func (e *Encoder) Encode(hashes []plumbing.Hash) (plumbing.Hash, error) {
-	var objects []*plumbing.ObjectToPack
+	var objects []*ObjectToPack
 	for _, h := range hashes {
 		o, err := e.storage.Object(plumbing.AnyObject, h)
 		if err != nil {
 			return plumbing.ZeroHash, err
 		}
 		// TODO delta selection logic
-		objects = append(objects, plumbing.NewObjectToPack(o))
+		objects = append(objects, newObjectToPack(o))
 	}
 
 	return e.encode(objects)
 }
-func (e *Encoder) encode(objects []*plumbing.ObjectToPack) (plumbing.Hash, error) {
+func (e *Encoder) encode(objects []*ObjectToPack) (plumbing.Hash, error) {
 	if err := e.head(len(objects)); err != nil {
 		return plumbing.ZeroHash, err
 	}
@@ -76,7 +76,7 @@ func (e *Encoder) head(numEntries int) error {
 	)
 }
 
-func (e *Encoder) entry(o *plumbing.ObjectToPack) error {
+func (e *Encoder) entry(o *ObjectToPack) error {
 	offset := e.w.Offset()
 
 	if err := e.entryHead(o.Object.Type(), o.Object.Size()); err != nil {
@@ -103,7 +103,7 @@ func (e *Encoder) entry(o *plumbing.ObjectToPack) error {
 	return e.zw.Close()
 }
 
-func (e *Encoder) writeDeltaHeaderIfAny(o *plumbing.ObjectToPack, offset int64) error {
+func (e *Encoder) writeDeltaHeaderIfAny(o *ObjectToPack, offset int64) error {
 	if o.IsDelta() {
 		switch o.Object.Type() {
 		case plumbing.OFSDeltaObject:
