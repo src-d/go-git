@@ -15,6 +15,7 @@ import (
 type Storer interface {
 	storer.ObjectStorer
 	storer.ReferenceStorer
+	storer.ShallowStorer
 	config.ConfigStorer
 }
 
