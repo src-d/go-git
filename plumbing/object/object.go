@@ -44,6 +44,16 @@ type Object interface {
 	Encode(plumbing.EncodedObject) error
 }
 
+// GetObject gets an object from an object storer and decodes it.
+func GetObject(s storer.EncodedObjectStorer, h plumbing.Hash) (Object, error) {
+	o, err := s.EncodedObject(plumbing.AnyObject, h)
+	if err != nil {
+		return nil, err
+	}
+
+	return DecodeObject(s, o)
+}
+
 // DecodeObject decodes an encoded object into an Object and associates it to
 // the given object storer.
 func DecodeObject(s storer.EncodedObjectStorer, o plumbing.EncodedObject) (Object, error) {

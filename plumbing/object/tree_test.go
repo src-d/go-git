@@ -181,9 +181,7 @@ func (s *TreeSuite) TestTreeIter(c *C) {
 }
 
 func (s *TreeSuite) TestTreeWalkerNext(c *C) {
-	o, err := s.Storer.EncodedObject(plumbing.CommitObject, plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
-	c.Assert(err, IsNil)
-	commit, err := DecodeCommit(s.Storer, o)
+	commit, err := GetCommit(s.Storer, plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 	c.Assert(err, IsNil)
 	tree, err := commit.Tree()
 	c.Assert(err, IsNil)
@@ -206,10 +204,7 @@ func (s *TreeSuite) TestTreeWalkerNext(c *C) {
 }
 
 func (s *TreeSuite) TestTreeWalkerNextNonRecursive(c *C) {
-	o, err := s.Storer.EncodedObject(plumbing.CommitObject, plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
-	c.Assert(err, IsNil)
-	commit, err := DecodeCommit(s.Storer, o)
-	c.Assert(err, IsNil)
+	commit := s.commit(c, plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 	tree, err := commit.Tree()
 	c.Assert(err, IsNil)
 

@@ -299,12 +299,7 @@ func (r *Repository) Pull(o *PullOptions) error {
 
 // object.Commit return the commit with the given hash
 func (r *Repository) Commit(h plumbing.Hash) (*object.Commit, error) {
-	commit, err := r.Object(plumbing.CommitObject, h)
-	if err != nil {
-		return nil, err
-	}
-
-	return commit.(*object.Commit), nil
+	return object.GetCommit(r.s, h)
 }
 
 // Commits decode the objects into commits
@@ -317,14 +312,9 @@ func (r *Repository) Commits() (*object.CommitIter, error) {
 	return object.NewCommitIter(r.s, iter), nil
 }
 
-// object.Tree return the tree with the given hash
+// Tree return the tree with the given hash
 func (r *Repository) Tree(h plumbing.Hash) (*object.Tree, error) {
-	tree, err := r.Object(plumbing.TreeObject, h)
-	if err != nil {
-		return nil, err
-	}
-
-	return tree.(*object.Tree), nil
+	return object.GetTree(r.s, h)
 }
 
 // Trees decodes the objects into trees
@@ -337,14 +327,9 @@ func (r *Repository) Trees() (*object.TreeIter, error) {
 	return object.NewTreeIter(r.s, iter), nil
 }
 
-// object.Blob returns the blob with the given hash
+// Blob returns the blob with the given hash
 func (r *Repository) Blob(h plumbing.Hash) (*object.Blob, error) {
-	blob, err := r.Object(plumbing.BlobObject, h)
-	if err != nil {
-		return nil, err
-	}
-
-	return blob.(*object.Blob), nil
+	return object.GetBlob(r.s, h)
 }
 
 // Blobs decodes the objects into blobs
@@ -357,14 +342,9 @@ func (r *Repository) Blobs() (*object.BlobIter, error) {
 	return object.NewBlobIter(r.s, iter), nil
 }
 
-// object.Tag returns a tag with the given hash.
+// Tag returns a tag with the given hash.
 func (r *Repository) Tag(h plumbing.Hash) (*object.Tag, error) {
-	tag, err := r.Object(plumbing.TagObject, h)
-	if err != nil {
-		return nil, err
-	}
-
-	return tag.(*object.Tag), nil
+	return object.GetTag(r.s, h)
 }
 
 // Tags returns a object.TagIter that can step through all of the annotated tags
@@ -378,7 +358,7 @@ func (r *Repository) Tags() (*object.TagIter, error) {
 	return object.NewTagIter(r.s, iter), nil
 }
 
-// object.Object returns an object with the given hash.
+// Object returns an object with the given hash.
 func (r *Repository) Object(t plumbing.ObjectType, h plumbing.Hash) (object.Object, error) {
 	obj, err := r.s.EncodedObject(t, h)
 	if err != nil {

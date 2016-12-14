@@ -32,6 +32,16 @@ type Commit struct {
 	s       storer.EncodedObjectStorer
 }
 
+// GetCommit gets a commit from an object storer and decodes it.
+func GetCommit(s storer.EncodedObjectStorer, h plumbing.Hash) (*Commit, error) {
+	o, err := s.EncodedObject(plumbing.CommitObject, h)
+	if err != nil {
+		return nil, err
+	}
+
+	return DecodeCommit(s, o)
+}
+
 // DecodeCommit decodes an encoded object into a *Commit and associates it to
 // the given object storer.
 func DecodeCommit(s storer.EncodedObjectStorer, o plumbing.EncodedObject) (*Commit, error) {
@@ -45,12 +55,7 @@ func DecodeCommit(s storer.EncodedObjectStorer, o plumbing.EncodedObject) (*Comm
 
 // Tree returns the Tree from the commit
 func (c *Commit) Tree() (*Tree, error) {
-	o, err := c.s.EncodedObject(plumbing.TreeObject, c.tree)
-	if err != nil {
-		return nil, err
-	}
-
-	return DecodeTree(c.s, o)
+	return GetTree(c.s, c.tree)
 }
 
 // Parents return a CommitIter to the parent Commits

@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
@@ -77,12 +76,7 @@ func (iter *FileIter) Next() (*File, error) {
 			continue
 		}
 
-		o, err := iter.s.EncodedObject(plumbing.BlobObject, entry.Hash)
-		if err != nil {
-			return nil, err
-		}
-
-		blob, err := DecodeBlob(o)
+		blob, err := GetBlob(iter.s, entry.Hash)
 		if err != nil {
 			return nil, err
 		}

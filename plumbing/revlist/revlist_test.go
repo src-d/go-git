@@ -57,9 +57,7 @@ func (s *RevListSuite) SetUpTest(c *C) {
 }
 
 func (s *RevListSuite) commit(c *C, h plumbing.Hash) *object.Commit {
-	o, err := s.Storer.EncodedObject(plumbing.CommitObject, h)
-	c.Assert(err, IsNil)
-	commit, err := object.DecodeCommit(s.Storer, o)
+	commit, err := object.GetCommit(s.Storer, h)
 	c.Assert(err, IsNil)
 	return commit
 }

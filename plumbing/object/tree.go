@@ -38,6 +38,16 @@ type Tree struct {
 	m map[string]*TreeEntry
 }
 
+// GetTree gets a tree from an object storer and decodes it.
+func GetTree(s storer.EncodedObjectStorer, h plumbing.Hash) (*Tree, error) {
+	o, err := s.EncodedObject(plumbing.TreeObject, h)
+	if err != nil {
+		return nil, err
+	}
+
+	return DecodeTree(s, o)
+}
+
 // DecodeTree decodes an encoded object into a *Tree and associates it to the
 // given object storer.
 func DecodeTree(s storer.EncodedObjectStorer, o plumbing.EncodedObject) (*Tree, error) {
@@ -64,12 +74,7 @@ func (t *Tree) File(path string) (*File, error) {
 		return nil, ErrFileNotFound
 	}
 
-	obj, err := t.s.EncodedObject(plumbing.BlobObject, e.Hash)
-	if err != nil {
-		return nil, err
-	}
-
-	blob, err := DecodeBlob(obj)
+	blob, err := GetBlob(t.s, e.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -79,12 +84,7 @@ func (t *Tree) File(path string) (*File, error) {
 
 // TreeEntryFile returns the *File for a given *TreeEntry.
 func (t *Tree) TreeEntryFile(e *TreeEntry) (*File, error) {
-	obj, err := t.s.EncodedObject(plumbing.BlobObject, e.Hash)
-	if err != nil {
-		return nil, err
-	}
-
-	blob, err := DecodeBlob(obj)
+	blob, err := GetBlob(t.s, e.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -355,11 +355,7 @@ func (w *TreeWalker) Next() (name string, entry TreeEntry, err error) {
 		}
 
 		if entry.Mode.IsDir() {
-			var eo plumbing.EncodedObject
-			eo, err = w.s.EncodedObject(plumbing.TreeObject, entry.Hash)
-			if err == nil {
-				obj, err = DecodeTree(w.s, eo)
-			}
+			obj, err = GetTree(w.s, entry.Hash)
 		}
 
 		name = path.Join(w.base, entry.Name)

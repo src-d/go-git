@@ -34,9 +34,7 @@ func (s *DiffTreeSuite) SetUpSuite(c *C) {
 }
 
 func (s *DiffTreeSuite) tree(c *C, h plumbing.Hash) *object.Tree {
-	o, err := s.Storer.EncodedObject(plumbing.TreeObject, h)
-	c.Assert(err, IsNil)
-	t, err := object.DecodeTree(s.Storer, o)
+	t, err := object.GetTree(s.Storer, h)
 	c.Assert(err, IsNil)
 	return t
 }
@@ -44,9 +42,7 @@ func (s *DiffTreeSuite) tree(c *C, h plumbing.Hash) *object.Tree {
 func (s *DiffTreeSuite) commitFromStorer(c *C, sto storer.EncodedObjectStorer,
 	h plumbing.Hash) *object.Commit {
 
-	o, err := sto.EncodedObject(plumbing.CommitObject, h)
-	c.Assert(err, IsNil)
-	commit, err := object.DecodeCommit(sto, o)
+	commit, err := object.GetCommit(sto, h)
 	c.Assert(err, IsNil)
 	return commit
 }

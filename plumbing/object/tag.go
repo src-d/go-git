@@ -30,6 +30,16 @@ type Tag struct {
 	s storer.EncodedObjectStorer
 }
 
+// GetTag gets a tag from an object storer and decodes it.
+func GetTag(s storer.EncodedObjectStorer, h plumbing.Hash) (*Tag, error) {
+	o, err := s.EncodedObject(plumbing.TagObject, h)
+	if err != nil {
+		return nil, err
+	}
+
+	return DecodeTag(s, o)
+}
+
 // DecodeTag decodes an encoded object into a *Commit and associates it to the
 // given object storer.
 func DecodeTag(s storer.EncodedObjectStorer, o plumbing.EncodedObject) (*Tag, error) {
@@ -169,12 +179,7 @@ func (t *Tag) Tree() (*Tree, error) {
 
 		return c.Tree()
 	case plumbing.TreeObject:
-		o, err := t.s.EncodedObject(plumbing.TreeObject, t.Target)
-		if err != nil {
-			return nil, err
-		}
-
-		return DecodeTree(t.s, o)
+		return GetTree(t.s, t.Target)
 	default:
 		return nil, ErrUnsupportedObject
 	}
@@ -187,12 +192,7 @@ func (t *Tag) Blob() (*Blob, error) {
 		return nil, ErrUnsupportedObject
 	}
 
-	o, err := t.s.EncodedObject(plumbing.BlobObject, t.Target)
-	if err != nil {
-		return nil, err
-	}
-
-	return DecodeBlob(o)
+	return GetBlob(t.s, t.Target)
 }
 
 // Object returns the object pointed to by the tag.

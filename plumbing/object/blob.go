@@ -16,6 +16,16 @@ type Blob struct {
 	obj plumbing.EncodedObject
 }
 
+// GetBlob gets a blob from an object storer and decodes it.
+func GetBlob(s storer.EncodedObjectStorer, h plumbing.Hash) (*Blob, error) {
+	o, err := s.EncodedObject(plumbing.BlobObject, h)
+	if err != nil {
+		return nil, err
+	}
+
+	return DecodeBlob(o)
+}
+
 func DecodeBlob(o plumbing.EncodedObject) (*Blob, error) {
 	b := &Blob{}
 	if err := b.Decode(o); err != nil {

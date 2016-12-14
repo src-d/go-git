@@ -47,10 +47,7 @@ func (s *FileSuite) TestIter(c *C) {
 		c.Assert(err, IsNil)
 
 		h := plumbing.NewHash(t.commit)
-		o, err := sto.EncodedObject(plumbing.CommitObject, h)
-		c.Assert(err, IsNil)
-
-		commit, err := DecodeCommit(sto, o)
+		commit, err := GetCommit(sto, h)
 		c.Assert(err, IsNil, Commentf("subtest %d: %v (%s)", i, err, t.commit))
 
 		tree, err := commit.Tree()
@@ -112,10 +109,7 @@ func (s *FileSuite) TestContents(c *C) {
 		c.Assert(err, IsNil)
 
 		h := plumbing.NewHash(t.commit)
-		o, err := sto.EncodedObject(plumbing.CommitObject, h)
-		c.Assert(err, IsNil)
-
-		commit, err := DecodeCommit(sto, o)
+		commit, err := GetCommit(sto, h)
 		c.Assert(err, IsNil, Commentf("subtest %d: %v (%s)", i, err, t.commit))
 
 		file, err := commit.File(t.path)
@@ -169,10 +163,7 @@ func (s *FileSuite) TestLines(c *C) {
 		c.Assert(err, IsNil)
 
 		h := plumbing.NewHash(t.commit)
-		o, err := sto.EncodedObject(plumbing.CommitObject, h)
-		c.Assert(err, IsNil)
-
-		commit, err := DecodeCommit(sto, o)
+		commit, err := GetCommit(sto, h)
 		c.Assert(err, IsNil, Commentf("subtest %d: %v (%s)", i, err, t.commit))
 
 		file, err := commit.File(t.path)
@@ -207,10 +198,7 @@ func (s *FileSuite) TestIgnoreEmptyDirEntries(c *C) {
 		c.Assert(err, IsNil)
 
 		h := plumbing.NewHash(t.commit)
-		o, err := sto.EncodedObject(plumbing.CommitObject, h)
-		c.Assert(err, IsNil)
-
-		commit, err := DecodeCommit(sto, o)
+		commit, err := GetCommit(sto, h)
 		c.Assert(err, IsNil, Commentf("subtest %d: %v (%s)", i, err, t.commit))
 
 		tree, err := commit.Tree()
@@ -227,11 +215,7 @@ func (s *FileSuite) TestIgnoreEmptyDirEntries(c *C) {
 
 func (s *FileSuite) TestFileIter(c *C) {
 	hash := plumbing.NewHash("1669dce138d9b841a518c64b10914d88f5e488ea")
-
-	o, err := s.Storer.EncodedObject(plumbing.CommitObject, hash)
-	c.Assert(err, IsNil)
-
-	commit, err := DecodeCommit(s.Storer, o)
+	commit, err := GetCommit(s.Storer, hash)
 	c.Assert(err, IsNil)
 
 	tree, err := commit.Tree()
