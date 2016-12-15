@@ -11,8 +11,8 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	"github.com/alcortesm/tgz"
-	"srcd.works/go-billy.v0"
-	osfs "srcd.works/go-billy.v0/os"
+	"srcd.works/go-billy.v1"
+	osfs "srcd.works/go-billy.v1/os"
 )
 
 var RootFolder = ""

@@ -4,7 +4,7 @@ package filesystem
 import (
 	"gopkg.in/src-d/go-git.v4/storage/filesystem/internal/dotgit"
 
-	"srcd.works/go-billy.v0"
+	"srcd.works/go-billy.v1"
 )
 
 // Storage is an implementation of git.Storer that stores data on disk in the

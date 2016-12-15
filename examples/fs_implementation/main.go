@@ -18,7 +18,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
-	"srcd.works/go-billy.v0"
+	"srcd.works/go-billy.v1"
 )
 
 func main() {

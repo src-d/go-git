@@ -11,7 +11,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 
-	fs "srcd.works/go-billy.v0/memory"
+	fs "srcd.works/go-billy.v1/memory"
 
 	. "gopkg.in/check.v1"
 )

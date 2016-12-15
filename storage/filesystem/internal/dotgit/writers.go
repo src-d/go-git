@@ -10,7 +10,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/format/objfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
 
-	"srcd.works/go-billy.v0"
+	"srcd.works/go-billy.v1"
 )
 
 // PackWriter is a io.Writer that generates the packfile index simultaneously,
