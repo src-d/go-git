@@ -88,25 +88,25 @@ func (dw *deltaSelector) walk(objectsToPack []*ObjectToPack) error {
 }
 
 func (dw *deltaSelector) tryToDeltify(base, target *ObjectToPack) error {
-
 	// If the sizes are radically different, this is a bad pairing.
 	if target.Original.Size() < base.Original.Size()>>4 {
 		return nil
 	}
 
 	msz := dw.deltaSizeLimit(
-		target.Original.Size(),
+		target.Object.Size(),
 		base.Depth,
 		target.Depth,
 		target.IsDelta(),
 	)
+
 	// Nearly impossible to fit useful delta.
 	if msz <= 8 {
 		return nil
 	}
 
 	// If we have to insert a lot to make this work, find another.
-	if target.Original.Size()-base.Original.Size() > msz {
+	if base.Original.Size()-target.Object.Size() > msz {
 		return nil
 	}
 
@@ -117,14 +117,7 @@ func (dw *deltaSelector) tryToDeltify(base, target *ObjectToPack) error {
 	}
 
 	// if delta better than target
-	newMsz := dw.deltaSizeLimit(
-		delta.Size(),
-		base.Depth,
-		target.Depth,
-		target.IsDelta(),
-	)
-
-	if newMsz < msz {
+	if delta.Size() < msz {
 		target.SetDelta(base, delta)
 	}
 

@@ -44,39 +44,88 @@ type testObject struct {
 }
 
 var testObjects []*testObject = []*testObject{{
-	id:     "base",
-	object: newObject(plumbing.BlobObject, []byte("hello cruel world test")),
-}, {
-	id:     "o1",
-	object: newObject(plumbing.BlobObject, []byte("1111111111111111111111111111")),
-}, {
-	id: "o2",
-	object: newObject(plumbing.BlobObject, []byte("1111111111111111111111111111 "+
-		"222222222222222222222222222222")),
-}, {
-	id: "o3",
-	object: newObject(plumbing.BlobObject, []byte("1111111111111111111111111111 "+
-		"222222222222222222222222222222 3333333333333333333333333333333333")),
-}, {
-	id: "bigBase",
-	object: newObject(plumbing.BlobObject,
-		genBytes([]piece{{
-			times: 100000,
-			val:   "a",
-		}})),
-}, {
-	id:     "target",
-	object: newObject(plumbing.BlobObject, []byte("hello world")),
-}, {
-	id: "changedTarget",
+	id: "base",
 	object: newObject(plumbing.BlobObject,
 		genBytes([]piece{{
 			times: 1000,
 			val:   "a",
+		}, {
+			times: 1000,
+			val:   "b",
 		}})),
 }, {
-	id:     "goodTarget",
-	object: newObject(plumbing.BlobObject, []byte("hello goat test test test")),
+	id: "smallBase",
+	object: newObject(plumbing.BlobObject,
+		genBytes([]piece{{
+			times: 1,
+			val:   "a",
+		}, {
+			times: 1,
+			val:   "b",
+		}, {
+			times: 6,
+			val:   "c",
+		}})),
+}, {
+	id: "smallTarget",
+	object: newObject(plumbing.BlobObject,
+		genBytes([]piece{{
+			times: 1,
+			val:   "a",
+		}, {
+			times: 1,
+			val:   "c",
+		}})),
+}, {
+	id: "target",
+	object: newObject(plumbing.BlobObject,
+		genBytes([]piece{{
+			times: 1000,
+			val:   "a",
+		}, {
+			times: 1000,
+			val:   "b",
+		}, {
+			times: 1000,
+			val:   "c",
+		}})),
+}, {
+	id: "o1",
+	object: newObject(plumbing.BlobObject,
+		genBytes([]piece{{
+			times: 1000,
+			val:   "a",
+		}, {
+			times: 1000,
+			val:   "b",
+		}})),
+}, {
+	id: "o2",
+	object: newObject(plumbing.BlobObject,
+		genBytes([]piece{{
+			times: 1000,
+			val:   "a",
+		}, {
+			times: 500,
+			val:   "b",
+		}})),
+}, {
+	id: "o3",
+	object: newObject(plumbing.BlobObject,
+		genBytes([]piece{{
+			times: 1000,
+			val:   "a",
+		}, {
+			times: 499,
+			val:   "b",
+		}})),
+}, {
+	id: "bigBase",
+	object: newObject(plumbing.BlobObject,
+		genBytes([]piece{{
+			times: 1000000,
+			val:   "a",
+		}})),
 }, {
 	id: "treeType",
 	object: newObject(plumbing.TreeObject,
@@ -112,43 +161,39 @@ func (s *DeltaSelectorSuite) TestObjectsToPack(c *C) {
 	c.Assert(otp[1].Object, Equals, s.store.Objects[s.hashes["target"]])
 
 	// Delta Size Limit with no best delta yet
+	hashes = []plumbing.Hash{s.hashes["smallBase"], s.hashes["smallTarget"]}
+	otp, err = s.ds.ObjectsToPack(hashes)
+	c.Assert(err, IsNil)
+	c.Assert(len(otp), Equals, 2)
+	c.Assert(otp[0].Object, Equals, s.store.Objects[s.hashes["smallBase"]])
+	c.Assert(otp[1].Object, Equals, s.store.Objects[s.hashes["smallTarget"]])
+
+	// It will create the delta
 	hashes = []plumbing.Hash{s.hashes["base"], s.hashes["target"]}
 	otp, err = s.ds.ObjectsToPack(hashes)
 	c.Assert(err, IsNil)
 	c.Assert(len(otp), Equals, 2)
-	c.Assert(otp[0].Object, Equals, s.store.Objects[s.hashes["base"]])
-	c.Assert(otp[1].Object, Equals, s.store.Objects[s.hashes["target"]])
-
-	// They need to insert a lot to create the delta
-	hashes = []plumbing.Hash{s.hashes["base"], s.hashes["changedTarget"]}
-	otp, err = s.ds.ObjectsToPack(hashes)
-	c.Assert(err, IsNil)
-	c.Assert(len(otp), Equals, 2)
-	c.Assert(otp[0].Object, Equals, s.store.Objects[s.hashes["changedTarget"]])
-	c.Assert(otp[1].Object, Equals, s.store.Objects[s.hashes["base"]])
-
-	// It will create the delta
-	hashes = []plumbing.Hash{s.hashes["o1"], s.hashes["o2"]}
-	otp, err = s.ds.ObjectsToPack(hashes)
-	c.Assert(err, IsNil)
-	c.Assert(len(otp), Equals, 2)
-	c.Assert(otp[0].Object, Equals, s.store.Objects[s.hashes["o2"]])
+	c.Assert(otp[0].Object, Equals, s.store.Objects[s.hashes["target"]])
 	c.Assert(otp[0].IsDelta(), Equals, false)
-	c.Assert(otp[1].Original, Equals, s.store.Objects[s.hashes["o1"]])
+	c.Assert(otp[1].Original, Equals, s.store.Objects[s.hashes["base"]])
 	c.Assert(otp[1].IsDelta(), Equals, true)
 	c.Assert(otp[1].Depth, Equals, 1)
 
 	// If our base is another delta, the depth will increase by one
-	hashes = []plumbing.Hash{s.hashes["o1"], s.hashes["o2"], s.hashes["o3"]}
+	hashes = []plumbing.Hash{
+		s.hashes["o1"],
+		s.hashes["o2"],
+		s.hashes["o3"],
+	}
 	otp, err = s.ds.ObjectsToPack(hashes)
 	c.Assert(err, IsNil)
 	c.Assert(len(otp), Equals, 3)
-	c.Assert(otp[0].Object, Equals, s.store.Objects[s.hashes["o3"]])
+	c.Assert(otp[0].Object, Equals, s.store.Objects[s.hashes["o1"]])
 	c.Assert(otp[0].IsDelta(), Equals, false)
 	c.Assert(otp[1].Original, Equals, s.store.Objects[s.hashes["o2"]])
 	c.Assert(otp[1].IsDelta(), Equals, true)
 	c.Assert(otp[1].Depth, Equals, 1)
-	c.Assert(otp[2].Original, Equals, s.store.Objects[s.hashes["o1"]])
+	c.Assert(otp[2].Original, Equals, s.store.Objects[s.hashes["o3"]])
 	c.Assert(otp[2].IsDelta(), Equals, true)
-	c.Assert(otp[2].Depth, Equals, 1)
+	c.Assert(otp[2].Depth, Equals, 2)
 }
