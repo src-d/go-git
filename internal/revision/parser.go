@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 )
 
 // ErrInvalidRevision is emitted if string doesn't match valid revision
@@ -61,6 +62,11 @@ type atUpstream struct {
 // atPush represents @{push}
 type atPush struct {
 	branchName string
+}
+
+// atDate represents @{"2006-01-02T15:04:05Z"}
+type atDate struct {
+	date time.Time
 }
 
 // colonReg represents :/foo bar
@@ -186,9 +192,28 @@ func (p *parser) parseAt() (revisioner, error) {
 		}
 
 		return atCheckout{n}, nil
-	}
+	default:
+		p.unscan()
 
-	return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`invalid expression "%s" in @{} structure`, lit)}
+		date := lit
+
+		for {
+			tok, lit = p.scan()
+
+			switch {
+			case tok == cbrace:
+				t, err := time.Parse("2006-01-02T15:04:05Z", date)
+
+				if err != nil {
+					return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`wrong date "%s" must fit ISO-8601 format : 2006-01-02T15:04:05Z`, date)}
+				}
+
+				return atDate{t}, nil
+			default:
+				date += lit
+			}
+		}
+	}
 }
 
 // parseTilde extract ~ statements

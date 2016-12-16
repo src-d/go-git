@@ -2,6 +2,7 @@ package revision
 
 import (
 	"bytes"
+	"time"
 
 	. "gopkg.in/check.v1"
 )
@@ -76,12 +77,15 @@ func (s *ParserSuite) TestUnscan(c *C) {
 }
 
 func (s *ParserSuite) TestParseWithValidExpression(c *C) {
+	tim, _ := time.Parse("2006-01-02T15:04:05Z", "2016-12-16T21:42:47Z")
+
 	datas := map[string]revisioner{
 		"@": []revisioner{ref("HEAD")},
 		"@~3": []revisioner{
 			ref("HEAD"),
 			tildePath{3},
 		},
+		"@{2016-12-16T21:42:47Z}": []revisioner{atDate{tim}},
 		"@{1}":  []revisioner{atReflog{1}},
 		"@{-1}": []revisioner{atCheckout{1}},
 		"master@{upstream}": []revisioner{
@@ -91,6 +95,10 @@ func (s *ParserSuite) TestParseWithValidExpression(c *C) {
 		"master@{push}": []revisioner{
 			ref("master"),
 			atPush{},
+		},
+		"master@{2016-12-16T21:42:47Z}": []revisioner{
+			ref("master"),
+			atDate{tim},
 		},
 		"HEAD^": []revisioner{
 			ref("HEAD"),
@@ -168,6 +176,8 @@ func (s *ParserSuite) TestParseWithUnValidExpression(c *C) {
 }
 
 func (s *ParserSuite) TestParseAtWithValidExpression(c *C) {
+	tim, _ := time.Parse("2006-01-02T15:04:05Z", "2016-12-16T21:42:47Z")
+
 	datas := map[string]revisioner{
 		"@":           ref("HEAD"),
 		"@{1}":        atReflog{1},
@@ -175,6 +185,7 @@ func (s *ParserSuite) TestParseAtWithValidExpression(c *C) {
 		"@{push}":     atPush{},
 		"@{upstream}": atUpstream{},
 		"@{u}":        atUpstream{},
+		"@{2016-12-16T21:42:47Z}": atDate{tim},
 	}
 
 	for d, expected := range datas {
@@ -190,7 +201,7 @@ func (s *ParserSuite) TestParseAtWithValidExpression(c *C) {
 func (s *ParserSuite) TestParseAtWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"a":       &ErrInvalidRevision{`"a" found must be "@"`},
-		"@{test}": &ErrInvalidRevision{`invalid expression "test" in @{} structure`},
+		"@{test}": &ErrInvalidRevision{`wrong date "test" must fit ISO-8601 format : 2006-01-02T15:04:05Z`},
 		"@{-1":    &ErrInvalidRevision{`missing "}" in @{-n} structure`},
 	}
 
