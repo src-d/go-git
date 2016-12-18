@@ -2,6 +2,7 @@ package revision
 
 import (
 	"bytes"
+	"regexp"
 	"time"
 
 	. "gopkg.in/check.v1"
@@ -124,10 +125,10 @@ func (s *ParserSuite) TestParseWithValidExpression(c *C) {
 		},
 		"HEAD^{/fix nasty bug}": []revisioner{
 			ref("HEAD"),
-			caretReg{"fix nasty bug", false},
+			caretReg{regexp.MustCompile("fix nasty bug"), false},
 		},
 		":/fix nasty bug": []revisioner{
-			colonReg{"fix nasty bug", false},
+			colonReg{regexp.MustCompile("fix nasty bug"), false},
 		},
 		"HEAD:README": []revisioner{
 			ref("HEAD"),
@@ -155,7 +156,7 @@ func (s *ParserSuite) TestParseWithValidExpression(c *C) {
 		"master~1^{/update}~5~^^1": []revisioner{
 			ref("master"),
 			tildePath{1},
-			caretReg{"update", false},
+			caretReg{regexp.MustCompile("update"), false},
 			tildePath{5},
 			tildePath{1},
 			caretPath{1},
@@ -246,9 +247,9 @@ func (s *ParserSuite) TestParseCaretWithValidExpression(c *C) {
 		"^{blob}":              caretType{"blob"},
 		"^{tag}":               caretType{"tag"},
 		"^{object}":            caretType{"object"},
-		"^{/hello world !}":    caretReg{"hello world !", false},
-		"^{/!-hello world !}":  caretReg{"hello world !", true},
-		"^{/!! hello world !}": caretReg{"! hello world !", false},
+		"^{/hello world !}":    caretReg{regexp.MustCompile("hello world !"), false},
+		"^{/!-hello world !}":  caretReg{regexp.MustCompile("hello world !"), true},
+		"^{/!! hello world !}": caretReg{regexp.MustCompile("! hello world !"), false},
 	}
 
 	for d, expected := range datas {
@@ -263,9 +264,10 @@ func (s *ParserSuite) TestParseCaretWithValidExpression(c *C) {
 
 func (s *ParserSuite) TestParseCaretWithUnValidExpression(c *C) {
 	datas := map[string]error{
-		"a":         &ErrInvalidRevision{`"a" found must be "^"`},
-		"^{test}":   &ErrInvalidRevision{`"test" is not a valid revision suffix brace component`},
-		"^{/!test}": &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
+		"a":          &ErrInvalidRevision{`"a" found must be "^"`},
+		"^{test}":    &ErrInvalidRevision{`"test" is not a valid revision suffix brace component`},
+		"^{/!test}":  &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
+		"^{/test**}": &ErrInvalidRevision{"revision suffix brace component, error parsing regexp: invalid nested repetition operator: `**`"},
 	}
 
 	for s, e := range datas {
@@ -310,9 +312,9 @@ func (s *ParserSuite) TestParseTildeWithUnValidExpression(c *C) {
 
 func (s *ParserSuite) TestParseColonWithValidExpression(c *C) {
 	datas := map[string]revisioner{
-		":/hello world !":    colonReg{"hello world !", false},
-		":/!-hello world !":  colonReg{"hello world !", true},
-		":/!! hello world !": colonReg{"! hello world !", false},
+		":/hello world !":    colonReg{regexp.MustCompile("hello world !"), false},
+		":/!-hello world !":  colonReg{regexp.MustCompile("hello world !"), true},
+		":/!! hello world !": colonReg{regexp.MustCompile("! hello world !"), false},
 		":../parser.go":      colonPath{"../parser.go"},
 		":./parser.go":       colonPath{"./parser.go"},
 		":parser.go":         colonPath{"parser.go"},
@@ -336,6 +338,7 @@ func (s *ParserSuite) TestParseColonWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"a":       &ErrInvalidRevision{`"a" found must be ":"`},
 		":/!test": &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
+		":/*":     &ErrInvalidRevision{"revision suffix brace component, error parsing regexp: missing argument to repetition operator: `*`"},
 	}
 
 	for s, e := range datas {

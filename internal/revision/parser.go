@@ -3,6 +3,7 @@ package revision
 import (
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -35,7 +36,7 @@ type caretPath struct {
 
 // caretReg represents ^{/foo bar}
 type caretReg struct {
-	re     string
+	re     *regexp.Regexp
 	negate bool
 }
 
@@ -71,7 +72,7 @@ type atDate struct {
 
 // colonReg represents :/foo bar
 type colonReg struct {
-	re     string
+	re     *regexp.Regexp
 	negate bool
 }
 
@@ -355,12 +356,12 @@ func (p *parser) parseCaret() (revisioner, error) {
 }
 
 // parseCaretBraces extract ^{<data>} statements
-// todo : add regexp checker
 func (p *parser) parseCaretBraces() (revisioner, error) {
 	var tok, nextTok token
 	var lit, _ string
 	start := true
-	reg := caretReg{}
+	var re string
+	var negate bool
 
 	tok, lit = p.scan()
 
@@ -375,24 +376,31 @@ func (p *parser) parseCaretBraces() (revisioner, error) {
 		switch {
 		case tok == word && nextTok == cbrace && (lit == "commit" || lit == "tree" || lit == "blob" || lit == "tag" || lit == "object"):
 			return caretType{lit}, nil
-		case reg.re == "" && tok == cbrace:
+		case re == "" && tok == cbrace:
 			return caretType{"tag"}, nil
-		case reg.re == "" && tok == emark && nextTok == emark:
-			reg.re += lit
-		case reg.re == "" && tok == emark && nextTok == minus:
-			reg.negate = true
-		case reg.re == "" && tok == emark:
+		case re == "" && tok == emark && nextTok == emark:
+			re += lit
+		case re == "" && tok == emark && nextTok == minus:
+			negate = true
+		case re == "" && tok == emark:
 			return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
-		case reg.re == "" && tok == slash:
+		case re == "" && tok == slash:
 			p.unscan()
 		case tok != slash && start:
 			return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix brace component`, lit)}
 		case tok != cbrace:
 			p.unscan()
-			reg.re += lit
+			re += lit
 		case tok == cbrace:
 			p.unscan()
-			return reg, nil
+
+			reg, err := regexp.Compile(re)
+
+			if err != nil {
+				return caretReg{}, &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component, %s`, err.Error())}
+			}
+
+			return caretReg{reg, negate}, nil
 		}
 
 		start = false
@@ -423,11 +431,11 @@ func (p *parser) parseColon() (revisioner, error) {
 }
 
 // parseColonSlash extract :/<data> statements
-// todo : add regexp checker
 func (p *parser) parseColonSlash() (revisioner, error) {
 	var tok, nextTok token
 	var lit string
-	reg := colonReg{}
+	var re string
+	var negate bool
 
 	tok, lit = p.scan()
 
@@ -441,16 +449,24 @@ func (p *parser) parseColonSlash() (revisioner, error) {
 
 		switch {
 		case tok == emark && nextTok == emark:
-			reg.re += lit
-		case reg.re == "" && tok == emark && nextTok == minus:
-			reg.negate = true
-		case reg.re == "" && tok == emark:
+			re += lit
+		case re == "" && tok == emark && nextTok == minus:
+			negate = true
+		case re == "" && tok == emark:
 			return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
 		case tok == eof:
-			return reg, nil
+			p.unscan()
+
+			reg, err := regexp.Compile(re)
+
+			if err != nil {
+				return colonReg{}, &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component, %s`, err.Error())}
+			}
+
+			return colonReg{reg, negate}, nil
 		default:
 			p.unscan()
-			reg.re += lit
+			re += lit
 		}
 	}
 }
