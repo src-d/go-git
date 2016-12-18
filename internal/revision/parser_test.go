@@ -140,6 +140,12 @@ func (s *ParserSuite) TestParseWithValidExpression(c *C) {
 			ref("master"),
 			colonPath{"./README"},
 		},
+		"master^1~:./README": []revisioner{
+			ref("master"),
+			caretPath{1},
+			tildePath{1},
+			colonPath{"./README"},
+		},
 		":0:README": []revisioner{
 			colonStagePath{"README", 0},
 		},
@@ -181,6 +187,7 @@ func (s *ParserSuite) TestParseWithUnValidExpression(c *C) {
 		"^{/test}":                        &ErrInvalidRevision{`"~" or "^" statement must have a reference defined at the beginning`},
 		"~1":                              &ErrInvalidRevision{`"~" or "^" statement must have a reference defined at the beginning`},
 		"master:/test":                    &ErrInvalidRevision{`":" statement is not valid, could be : :/<regexp>`},
+		"master:0:README":                 &ErrInvalidRevision{`":" statement is not valid, could be : :<n>:<path>`},
 	}
 
 	for s, e := range datas {

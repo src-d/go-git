@@ -213,6 +213,18 @@ func (p *parser) validateFullRevision(chunks *[]revisioner) error {
 			}
 
 			return &ErrInvalidRevision{`":" statement is not valid, could be : :/<regexp>`}
+		case colonPath:
+			if i == len(*chunks)-1 && hasReference || len(*chunks) == 1 {
+				return nil
+			}
+
+			return &ErrInvalidRevision{`":" statement is not valid, could be : <revision>:<path>`}
+		case colonStagePath:
+			if len(*chunks) == 1 {
+				return nil
+			}
+
+			return &ErrInvalidRevision{`":" statement is not valid, could be : :<n>:<path>`}
 		}
 	}
 
