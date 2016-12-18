@@ -171,12 +171,16 @@ func (s *ParserSuite) TestParseWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"..":                              &ErrInvalidRevision{`must not start with "."`},
 		"master^1master":                  &ErrInvalidRevision{`reference must be defined once at the beginning`},
-		"master^1@{2016-12-16T21:42:47Z}": &ErrInvalidRevision{`@ statement is not valid, could be : <refname>@{<ISO-8601 date>}, @{<ISO-8601 date>}`},
-		"master^1@{1}":                    &ErrInvalidRevision{`@ statement is not valid, could be : <refname>@{<n>}, @{<n>}`},
-		"master@{-1}":                     &ErrInvalidRevision{`@ statement is not valid, could be : @{-<n>}`},
-		"master^1@{upstream}":             &ErrInvalidRevision{`@ statement is not valid, could be : <refname>@{upstream}, @{upstream}, <refname>@{u}, @{u}`},
-		"master^1@{u}":                    &ErrInvalidRevision{`@ statement is not valid, could be : <refname>@{upstream}, @{upstream}, <refname>@{u}, @{u}`},
-		"master^1@{push}":                 &ErrInvalidRevision{`@ statement is not valid, could be : <refname>@{push}, @{push}`},
+		"master^1@{2016-12-16T21:42:47Z}": &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{<ISO-8601 date>}, @{<ISO-8601 date>}`},
+		"master^1@{1}":                    &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{<n>}, @{<n>}`},
+		"master@{-1}":                     &ErrInvalidRevision{`"@" statement is not valid, could be : @{-<n>}`},
+		"master^1@{upstream}":             &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{upstream}, @{upstream}, <refname>@{u}, @{u}`},
+		"master^1@{u}":                    &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{upstream}, @{upstream}, <refname>@{u}, @{u}`},
+		"master^1@{push}":                 &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{push}, @{push}`},
+		"^1":                              &ErrInvalidRevision{`"~" or "^" statement must have a reference defined at the beginning`},
+		"^{/test}":                        &ErrInvalidRevision{`"~" or "^" statement must have a reference defined at the beginning`},
+		"~1":                              &ErrInvalidRevision{`"~" or "^" statement must have a reference defined at the beginning`},
+		"master:/test":                    &ErrInvalidRevision{`":" statement is not valid, could be : :/<regexp>`},
 	}
 
 	for s, e := range datas {

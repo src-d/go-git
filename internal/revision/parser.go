@@ -166,38 +166,48 @@ func (p *parser) validateFullRevision(chunks *[]revisioner) error {
 			if i == 0 {
 				hasReference = true
 			} else {
-				return &ErrInvalidRevision{"reference must be defined once at the beginning"}
+				return &ErrInvalidRevision{`reference must be defined once at the beginning`}
 			}
 		case atDate:
 			if len(*chunks) == 1 || hasReference && len(*chunks) == 2 {
 				return nil
 			}
 
-			return &ErrInvalidRevision{"@ statement is not valid, could be : <refname>@{<ISO-8601 date>}, @{<ISO-8601 date>}"}
+			return &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{<ISO-8601 date>}, @{<ISO-8601 date>}`}
 		case atReflog:
 			if len(*chunks) == 1 || hasReference && len(*chunks) == 2 {
 				return nil
 			}
 
-			return &ErrInvalidRevision{"@ statement is not valid, could be : <refname>@{<n>}, @{<n>}"}
+			return &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{<n>}, @{<n>}`}
 		case atCheckout:
 			if len(*chunks) == 1 {
 				return nil
 			}
 
-			return &ErrInvalidRevision{"@ statement is not valid, could be : @{-<n>}"}
+			return &ErrInvalidRevision{`"@" statement is not valid, could be : @{-<n>}`}
 		case atUpstream:
 			if len(*chunks) == 1 || hasReference && len(*chunks) == 2 {
 				return nil
 			}
 
-			return &ErrInvalidRevision{"@ statement is not valid, could be : <refname>@{upstream}, @{upstream}, <refname>@{u}, @{u}"}
+			return &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{upstream}, @{upstream}, <refname>@{u}, @{u}`}
 		case atPush:
 			if len(*chunks) == 1 || hasReference && len(*chunks) == 2 {
 				return nil
 			}
 
-			return &ErrInvalidRevision{"@ statement is not valid, could be : <refname>@{push}, @{push}"}
+			return &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{push}, @{push}`}
+		case tildePath, caretPath, caretReg:
+			if !hasReference {
+				return &ErrInvalidRevision{`"~" or "^" statement must have a reference defined at the beginning`}
+			}
+		case colonReg:
+			if len(*chunks) == 1 {
+				return nil
+			}
+
+			return &ErrInvalidRevision{`":" statement is not valid, could be : :/<regexp>`}
 		}
 	}
 
