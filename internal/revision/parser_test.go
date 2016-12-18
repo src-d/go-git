@@ -131,20 +131,20 @@ func (s *ParserSuite) TestParseWithValidExpression(c *C) {
 		},
 		"HEAD:README": []revisioner{
 			ref("HEAD"),
-			colonPath{"README", 0},
+			colonPath{"README"},
 		},
 		":README": []revisioner{
-			colonPath{"README", 0},
+			colonPath{"README"},
 		},
 		"master:./README": []revisioner{
 			ref("master"),
-			colonPath{"./README", 0},
+			colonPath{"./README"},
 		},
 		":0:README": []revisioner{
-			colonPath{"README", 0},
+			colonStagePath{"README", 0},
 		},
 		":3:README": []revisioner{
-			colonPath{"README", 3},
+			colonStagePath{"README", 3},
 		},
 		"master~1^{/update}~5~^^1": []revisioner{
 			ref("master"),
@@ -308,13 +308,13 @@ func (s *ParserSuite) TestParseColonWithValidExpression(c *C) {
 		":/hello world !":    colonReg{"hello world !", false},
 		":/!-hello world !":  colonReg{"hello world !", true},
 		":/!! hello world !": colonReg{"! hello world !", false},
-		":../parser.go":      colonPath{"../parser.go", 0},
-		":./parser.go":       colonPath{"./parser.go", 0},
-		":parser.go":         colonPath{"parser.go", 0},
-		":0:parser.go":       colonPath{"parser.go", 0},
-		":1:parser.go":       colonPath{"parser.go", 1},
-		":2:parser.go":       colonPath{"parser.go", 2},
-		":3:parser.go":       colonPath{"parser.go", 3},
+		":../parser.go":      colonPath{"../parser.go"},
+		":./parser.go":       colonPath{"./parser.go"},
+		":parser.go":         colonPath{"parser.go"},
+		":0:parser.go":       colonStagePath{"parser.go", 0},
+		":1:parser.go":       colonStagePath{"parser.go", 1},
+		":2:parser.go":       colonStagePath{"parser.go", 2},
+		":3:parser.go":       colonStagePath{"parser.go", 3},
 	}
 
 	for d, expected := range datas {

@@ -75,8 +75,13 @@ type colonReg struct {
 	negate bool
 }
 
-// colonPath represents :../<path> :./<path> :<path>
+// colonPath represents :./<path> :<path>
 type colonPath struct {
+	path string
+}
+
+// colonStagePath represents :<n>:/<path>
+type colonStagePath struct {
 	path  string
 	stage int
 }
@@ -469,8 +474,10 @@ func (p *parser) parseColonDefault() (revisioner, error) {
 		tok, lit = p.scan()
 
 		switch {
+		case tok == eof && n == -1:
+			return colonPath{path}, nil
 		case tok == eof:
-			return colonPath{path, stage}, nil
+			return colonStagePath{path, stage}, nil
 		default:
 			path += lit
 		}
