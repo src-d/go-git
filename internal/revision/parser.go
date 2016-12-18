@@ -115,7 +115,6 @@ func (p *parser) unscan() { p.buf.n = 1 }
 
 // parse explode a revision string into components
 func (p *parser) parse() ([]revisioner, error) {
-	// var tok token
 	var rev revisioner
 	var revs []revisioner
 	var err error
