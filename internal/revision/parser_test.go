@@ -257,7 +257,6 @@ func (s *ParserSuite) TestParseCaretWithValidExpression(c *C) {
 func (s *ParserSuite) TestParseCaretWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"a":         &ErrInvalidRevision{`"a" found must be "^"`},
-		"^a":        &ErrInvalidRevision{`"a" is not a valid revision suffix component`},
 		"^{test}":   &ErrInvalidRevision{`"test" is not a valid revision suffix brace component`},
 		"^{/!test}": &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
 	}
@@ -290,8 +289,7 @@ func (s *ParserSuite) TestParseTildeWithValidExpression(c *C) {
 
 func (s *ParserSuite) TestParseTildeWithUnValidExpression(c *C) {
 	datas := map[string]error{
-		"a":  &ErrInvalidRevision{`"a" found must be "~"`},
-		"~a": &ErrInvalidRevision{`"a" is not a valid revision suffix component`},
+		"a": &ErrInvalidRevision{`"a" found must be "~"`},
 	}
 
 	for s, e := range datas {

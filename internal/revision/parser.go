@@ -302,11 +302,9 @@ func (p *parser) parseTilde() (revisioner, error) {
 		n, _ := strconv.Atoi(lit)
 
 		return tildePath{n}, nil
-	case tok == tilde || tok == caret || tok == eof:
+	default:
 		p.unscan()
 		return tildePath{1}, nil
-	default:
-		return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix component`, lit)}
 	}
 }
 
@@ -338,11 +336,9 @@ func (p *parser) parseCaret() (revisioner, error) {
 		n, _ := strconv.Atoi(lit)
 
 		return caretPath{n}, nil
-	case tok == caret || tok == tilde || tok == eof:
+	default:
 		p.unscan()
 		return caretPath{1}, nil
-	default:
-		return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix component`, lit)}
 	}
 }
 
