@@ -136,6 +136,12 @@ func (p *parser) parse() ([]revisioner, error) {
 			p.unscan()
 			rev, err = p.parseColon()
 		case eof:
+			err = p.validateFullRevision(&revs)
+
+			if err != nil {
+				return []revisioner{}, err
+			}
+
 			return revs, nil
 		default:
 			p.unscan()
@@ -148,6 +154,54 @@ func (p *parser) parse() ([]revisioner, error) {
 
 		revs = append(revs, rev)
 	}
+}
+
+// validateFullRevision ensures all revisioner chunks make a valid revision
+func (p *parser) validateFullRevision(chunks *[]revisioner) error {
+	var hasReference bool
+
+	for i, chunk := range *chunks {
+		switch chunk.(type) {
+		case ref:
+			if i == 0 {
+				hasReference = true
+			} else {
+				return &ErrInvalidRevision{"reference must be defined once at the beginning"}
+			}
+		case atDate:
+			if len(*chunks) == 1 || hasReference && len(*chunks) == 2 {
+				return nil
+			}
+
+			return &ErrInvalidRevision{"@ statement is not valid, could be : <refname>@{<ISO-8601 date>}, @{<ISO-8601 date>}"}
+		case atReflog:
+			if len(*chunks) == 1 || hasReference && len(*chunks) == 2 {
+				return nil
+			}
+
+			return &ErrInvalidRevision{"@ statement is not valid, could be : <refname>@{<n>}, @{<n>}"}
+		case atCheckout:
+			if len(*chunks) == 1 {
+				return nil
+			}
+
+			return &ErrInvalidRevision{"@ statement is not valid, could be : @{-<n>}"}
+		case atUpstream:
+			if len(*chunks) == 1 || hasReference && len(*chunks) == 2 {
+				return nil
+			}
+
+			return &ErrInvalidRevision{"@ statement is not valid, could be : <refname>@{upstream}, @{upstream}, <refname>@{u}, @{u}"}
+		case atPush:
+			if len(*chunks) == 1 || hasReference && len(*chunks) == 2 {
+				return nil
+			}
+
+			return &ErrInvalidRevision{"@ statement is not valid, could be : <refname>@{push}, @{push}"}
+		}
+	}
+
+	return nil
 }
 
 // parseAt extract @ statements

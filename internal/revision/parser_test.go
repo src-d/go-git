@@ -92,6 +92,12 @@ func (s *ParserSuite) TestParseWithValidExpression(c *C) {
 			ref("master"),
 			atUpstream{},
 		},
+		"@{upstream}": []revisioner{
+			atUpstream{},
+		},
+		"@{u}": []revisioner{
+			atUpstream{},
+		},
 		"master@{push}": []revisioner{
 			ref("master"),
 			atPush{},
@@ -163,14 +169,19 @@ func (s *ParserSuite) TestParseWithValidExpression(c *C) {
 
 func (s *ParserSuite) TestParseWithUnValidExpression(c *C) {
 	datas := map[string]error{
-		"..": &ErrInvalidRevision{`must not start with "."`},
+		"..":                              &ErrInvalidRevision{`must not start with "."`},
+		"master^1master":                  &ErrInvalidRevision{`reference must be defined once at the beginning`},
+		"master^1@{2016-12-16T21:42:47Z}": &ErrInvalidRevision{`@ statement is not valid, could be : <refname>@{<ISO-8601 date>}, @{<ISO-8601 date>}`},
+		"master^1@{1}":                    &ErrInvalidRevision{`@ statement is not valid, could be : <refname>@{<n>}, @{<n>}`},
+		"master@{-1}":                     &ErrInvalidRevision{`@ statement is not valid, could be : @{-<n>}`},
+		"master^1@{upstream}":             &ErrInvalidRevision{`@ statement is not valid, could be : <refname>@{upstream}, @{upstream}, <refname>@{u}, @{u}`},
+		"master^1@{u}":                    &ErrInvalidRevision{`@ statement is not valid, could be : <refname>@{upstream}, @{upstream}, <refname>@{u}, @{u}`},
+		"master^1@{push}":                 &ErrInvalidRevision{`@ statement is not valid, could be : <refname>@{push}, @{push}`},
 	}
 
 	for s, e := range datas {
 		parser := newParser(bytes.NewBufferString(s))
-
-		t, err := parser.parse()
-		c.Log(t)
+		_, err := parser.parse()
 		c.Assert(err, DeepEquals, e)
 	}
 }
