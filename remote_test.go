@@ -2,11 +2,13 @@ package git
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 
 	"gopkg.in/src-d/go-git.v4/config"
+	"gopkg.in/src-d/go-git.v4/fixtures"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
@@ -193,4 +195,61 @@ func (s *RemoteSuite) TestString(c *C) {
 		"foo\thttps://github.com/git-fixtures/basic.git (fetch)\n"+
 		"foo\thttps://github.com/git-fixtures/basic.git (push)",
 	)
+}
+
+func (s *RemoteSuite) TestPushToEmptyRepository(c *C) {
+	srcFs := fixtures.Basic().One().DotGit()
+	sto, err := filesystem.NewStorage(srcFs)
+	c.Assert(err, IsNil)
+
+	dstFs := fixtures.ByTag("empty").One().DotGit()
+	url := fmt.Sprintf("file://%s", dstFs.Base())
+
+	r := newRemote(sto, nil, &config.RemoteConfig{
+		Name: DefaultRemoteName,
+		URL:  url,
+	})
+
+	rs := config.RefSpec("refs/heads/*:refs/heads/*")
+	err = r.Push(&PushOptions{
+		RefSpecs: []config.RefSpec{rs},
+	})
+	c.Assert(err, IsNil)
+
+	sto, err = filesystem.NewStorage(dstFs)
+	c.Assert(err, IsNil)
+	dstRepo, err := NewRepository(sto)
+	c.Assert(err, IsNil)
+
+	iter, err := sto.IterReferences()
+	c.Assert(err, IsNil)
+	err = iter.ForEach(func(ref *plumbing.Reference) error {
+		if !ref.IsBranch() {
+			return nil
+		}
+
+		dstRef, err := dstRepo.Reference(ref.Name(), true)
+		c.Assert(err, IsNil)
+		c.Assert(dstRef, DeepEquals, ref)
+
+		return nil
+	})
+	c.Assert(err, IsNil)
+}
+
+func (s *RemoteSuite) TestPushNoErrAlreadyUpToDate(c *C) {
+	f := fixtures.Basic().One()
+	sto, err := filesystem.NewStorage(f.DotGit())
+	c.Assert(err, IsNil)
+	url := fmt.Sprintf("file://%s", f.DotGit().Base())
+	r := newRemote(sto, nil, &config.RemoteConfig{
+		Name: DefaultRemoteName,
+		URL:  url,
+	})
+
+	rs := config.RefSpec("refs/heads/*:refs/heads/*")
+	err = r.Push(&PushOptions{
+		RefSpecs: []config.RefSpec{rs},
+	})
+	c.Assert(err, Equals, NoErrAlreadyUpToDate)
 }

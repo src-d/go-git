@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	// DefaultRefSpec is the default refspec used, when none is given
-	DefaultRefSpec = "+refs/heads/*:refs/remotes/%s/*"
+	// DefaultFetchRefSpec is the default refspec used for fetch.
+	DefaultFetchRefSpec = "+refs/heads/*:refs/remotes/%s/*"
 )
 
 // ConfigStorer generic storage of Config object
@@ -72,7 +72,7 @@ func (c *RemoteConfig) Validate() error {
 	}
 
 	if len(c.Fetch) == 0 {
-		c.Fetch = []RefSpec{RefSpec(fmt.Sprintf(DefaultRefSpec, c.Name))}
+		c.Fetch = []RefSpec{RefSpec(fmt.Sprintf(DefaultFetchRefSpec, c.Name))}
 	}
 
 	return nil

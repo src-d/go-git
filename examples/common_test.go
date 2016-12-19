@@ -2,6 +2,7 @@ package examples
 
 import (
 	"flag"
+	"fmt"
 	"go/build"
 	"io/ioutil"
 	"os"
@@ -20,6 +21,16 @@ var args = map[string][]string{
 	"clone":       []string{defaultURL, tempFolder()},
 	"progress":    []string{defaultURL, tempFolder()},
 	"open":        []string{filepath.Join(cloneRepository(defaultURL, tempFolder()), ".git")},
+	"push": []string{
+		func() string {
+			remote := createBareRepository(tempFolder())
+			local := filepath.Join(cloneRepository(defaultURL, tempFolder()), ".git")
+			setRemote(local, fmt.Sprintf("file://%s", remote))
+			return local
+		}(),
+		"origin",
+		"refs/heads/*:refs/heads/*",
+	},
 }
 
 var ignored = map[string]bool{
@@ -83,6 +94,21 @@ func cloneRepository(url, folder string) string {
 	CheckIfError(err)
 
 	return folder
+}
+
+func createBareRepository(dir string) string {
+	cmd := exec.Command("git", "init", "--bare", dir)
+	err := cmd.Run()
+	CheckIfError(err)
+
+	return dir
+}
+
+func setRemote(local, remote string) {
+	cmd := exec.Command("git", "remote", "set-url", "origin", remote)
+	cmd.Dir = local
+	err := cmd.Run()
+	CheckIfError(err)
 }
 
 func testExample(t *testing.T, name, example string) {
