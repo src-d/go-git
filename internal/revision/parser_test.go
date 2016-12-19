@@ -19,7 +19,7 @@ func (s *ParserSuite) TestErrInvalidRevision(c *C) {
 }
 
 func (s *ParserSuite) TestScan(c *C) {
-	parser := newParser(bytes.NewBufferString("Hello world !"))
+	parser := NewParser(bytes.NewBufferString("Hello world !"))
 
 	expected := []struct {
 		t token
@@ -62,7 +62,7 @@ func (s *ParserSuite) TestScan(c *C) {
 }
 
 func (s *ParserSuite) TestUnscan(c *C) {
-	parser := newParser(bytes.NewBufferString("Hello world !"))
+	parser := NewParser(bytes.NewBufferString("Hello world !"))
 
 	tok, str := parser.scan()
 
@@ -80,94 +80,94 @@ func (s *ParserSuite) TestUnscan(c *C) {
 func (s *ParserSuite) TestParseWithValidExpression(c *C) {
 	tim, _ := time.Parse("2006-01-02T15:04:05Z", "2016-12-16T21:42:47Z")
 
-	datas := map[string]revisioner{
-		"@": []revisioner{ref("HEAD")},
-		"@~3": []revisioner{
-			ref("HEAD"),
-			tildePath{3},
+	datas := map[string]Revisioner{
+		"@": []Revisioner{Ref("HEAD")},
+		"@~3": []Revisioner{
+			Ref("HEAD"),
+			TildePath{3},
 		},
-		"@{2016-12-16T21:42:47Z}": []revisioner{atDate{tim}},
-		"@{1}":  []revisioner{atReflog{1}},
-		"@{-1}": []revisioner{atCheckout{1}},
-		"master@{upstream}": []revisioner{
-			ref("master"),
-			atUpstream{},
+		"@{2016-12-16T21:42:47Z}": []Revisioner{AtDate{tim}},
+		"@{1}":  []Revisioner{AtReflog{1}},
+		"@{-1}": []Revisioner{AtCheckout{1}},
+		"master@{upstream}": []Revisioner{
+			Ref("master"),
+			AtUpstream{},
 		},
-		"@{upstream}": []revisioner{
-			atUpstream{},
+		"@{upstream}": []Revisioner{
+			AtUpstream{},
 		},
-		"@{u}": []revisioner{
-			atUpstream{},
+		"@{u}": []Revisioner{
+			AtUpstream{},
 		},
-		"master@{push}": []revisioner{
-			ref("master"),
-			atPush{},
+		"master@{push}": []Revisioner{
+			Ref("master"),
+			AtPush{},
 		},
-		"master@{2016-12-16T21:42:47Z}": []revisioner{
-			ref("master"),
-			atDate{tim},
+		"master@{2016-12-16T21:42:47Z}": []Revisioner{
+			Ref("master"),
+			AtDate{tim},
 		},
-		"HEAD^": []revisioner{
-			ref("HEAD"),
-			caretPath{1},
+		"HEAD^": []Revisioner{
+			Ref("HEAD"),
+			CaretPath{1},
 		},
-		"master~3": []revisioner{
-			ref("master"),
-			tildePath{3},
+		"master~3": []Revisioner{
+			Ref("master"),
+			TildePath{3},
 		},
-		"v0.99.8^{commit}": []revisioner{
-			ref("v0.99.8"),
-			caretType{"commit"},
+		"v0.99.8^{commit}": []Revisioner{
+			Ref("v0.99.8"),
+			CaretType{"commit"},
 		},
-		"v0.99.8^{}": []revisioner{
-			ref("v0.99.8"),
-			caretType{"tag"},
+		"v0.99.8^{}": []Revisioner{
+			Ref("v0.99.8"),
+			CaretType{"tag"},
 		},
-		"HEAD^{/fix nasty bug}": []revisioner{
-			ref("HEAD"),
-			caretReg{regexp.MustCompile("fix nasty bug"), false},
+		"HEAD^{/fix nasty bug}": []Revisioner{
+			Ref("HEAD"),
+			CaretReg{regexp.MustCompile("fix nasty bug"), false},
 		},
-		":/fix nasty bug": []revisioner{
-			colonReg{regexp.MustCompile("fix nasty bug"), false},
+		":/fix nasty bug": []Revisioner{
+			ColonReg{regexp.MustCompile("fix nasty bug"), false},
 		},
-		"HEAD:README": []revisioner{
-			ref("HEAD"),
-			colonPath{"README"},
+		"HEAD:README": []Revisioner{
+			Ref("HEAD"),
+			ColonPath{"README"},
 		},
-		":README": []revisioner{
-			colonPath{"README"},
+		":README": []Revisioner{
+			ColonPath{"README"},
 		},
-		"master:./README": []revisioner{
-			ref("master"),
-			colonPath{"./README"},
+		"master:./README": []Revisioner{
+			Ref("master"),
+			ColonPath{"./README"},
 		},
-		"master^1~:./README": []revisioner{
-			ref("master"),
-			caretPath{1},
-			tildePath{1},
-			colonPath{"./README"},
+		"master^1~:./README": []Revisioner{
+			Ref("master"),
+			CaretPath{1},
+			TildePath{1},
+			ColonPath{"./README"},
 		},
-		":0:README": []revisioner{
-			colonStagePath{"README", 0},
+		":0:README": []Revisioner{
+			ColonStagePath{"README", 0},
 		},
-		":3:README": []revisioner{
-			colonStagePath{"README", 3},
+		":3:README": []Revisioner{
+			ColonStagePath{"README", 3},
 		},
-		"master~1^{/update}~5~^^1": []revisioner{
-			ref("master"),
-			tildePath{1},
-			caretReg{regexp.MustCompile("update"), false},
-			tildePath{5},
-			tildePath{1},
-			caretPath{1},
-			caretPath{1},
+		"master~1^{/update}~5~^^1": []Revisioner{
+			Ref("master"),
+			TildePath{1},
+			CaretReg{regexp.MustCompile("update"), false},
+			TildePath{5},
+			TildePath{1},
+			CaretPath{1},
+			CaretPath{1},
 		},
 	}
 
 	for d, expected := range datas {
-		parser := newParser(bytes.NewBufferString(d))
+		parser := NewParser(bytes.NewBufferString(d))
 
-		result, err := parser.parse()
+		result, err := parser.Parse()
 
 		c.Assert(err, Equals, nil)
 		c.Assert(result, DeepEquals, expected)
@@ -192,8 +192,8 @@ func (s *ParserSuite) TestParseWithUnValidExpression(c *C) {
 	}
 
 	for s, e := range datas {
-		parser := newParser(bytes.NewBufferString(s))
-		_, err := parser.parse()
+		parser := NewParser(bytes.NewBufferString(s))
+		_, err := parser.Parse()
 		c.Assert(err, DeepEquals, e)
 	}
 }
@@ -201,18 +201,18 @@ func (s *ParserSuite) TestParseWithUnValidExpression(c *C) {
 func (s *ParserSuite) TestParseAtWithValidExpression(c *C) {
 	tim, _ := time.Parse("2006-01-02T15:04:05Z", "2016-12-16T21:42:47Z")
 
-	datas := map[string]revisioner{
-		"@":           ref("HEAD"),
-		"@{1}":        atReflog{1},
-		"@{-1}":       atCheckout{1},
-		"@{push}":     atPush{},
-		"@{upstream}": atUpstream{},
-		"@{u}":        atUpstream{},
-		"@{2016-12-16T21:42:47Z}": atDate{tim},
+	datas := map[string]Revisioner{
+		"@":           Ref("HEAD"),
+		"@{1}":        AtReflog{1},
+		"@{-1}":       AtCheckout{1},
+		"@{push}":     AtPush{},
+		"@{upstream}": AtUpstream{},
+		"@{u}":        AtUpstream{},
+		"@{2016-12-16T21:42:47Z}": AtDate{tim},
 	}
 
 	for d, expected := range datas {
-		parser := newParser(bytes.NewBufferString(d))
+		parser := NewParser(bytes.NewBufferString(d))
 
 		result, err := parser.parseAt()
 
@@ -229,7 +229,7 @@ func (s *ParserSuite) TestParseAtWithUnValidExpression(c *C) {
 	}
 
 	for s, e := range datas {
-		parser := newParser(bytes.NewBufferString(s))
+		parser := NewParser(bytes.NewBufferString(s))
 
 		_, err := parser.parseAt()
 
@@ -238,22 +238,22 @@ func (s *ParserSuite) TestParseAtWithUnValidExpression(c *C) {
 }
 
 func (s *ParserSuite) TestParseCaretWithValidExpression(c *C) {
-	datas := map[string]revisioner{
-		"^":                    caretPath{1},
-		"^3":                   caretPath{3},
-		"^{}":                  caretType{"tag"},
-		"^{commit}":            caretType{"commit"},
-		"^{tree}":              caretType{"tree"},
-		"^{blob}":              caretType{"blob"},
-		"^{tag}":               caretType{"tag"},
-		"^{object}":            caretType{"object"},
-		"^{/hello world !}":    caretReg{regexp.MustCompile("hello world !"), false},
-		"^{/!-hello world !}":  caretReg{regexp.MustCompile("hello world !"), true},
-		"^{/!! hello world !}": caretReg{regexp.MustCompile("! hello world !"), false},
+	datas := map[string]Revisioner{
+		"^":                    CaretPath{1},
+		"^3":                   CaretPath{3},
+		"^{}":                  CaretType{"tag"},
+		"^{commit}":            CaretType{"commit"},
+		"^{tree}":              CaretType{"tree"},
+		"^{blob}":              CaretType{"blob"},
+		"^{tag}":               CaretType{"tag"},
+		"^{object}":            CaretType{"object"},
+		"^{/hello world !}":    CaretReg{regexp.MustCompile("hello world !"), false},
+		"^{/!-hello world !}":  CaretReg{regexp.MustCompile("hello world !"), true},
+		"^{/!! hello world !}": CaretReg{regexp.MustCompile("! hello world !"), false},
 	}
 
 	for d, expected := range datas {
-		parser := newParser(bytes.NewBufferString(d))
+		parser := NewParser(bytes.NewBufferString(d))
 
 		result, err := parser.parseCaret()
 
@@ -271,7 +271,7 @@ func (s *ParserSuite) TestParseCaretWithUnValidExpression(c *C) {
 	}
 
 	for s, e := range datas {
-		parser := newParser(bytes.NewBufferString(s))
+		parser := NewParser(bytes.NewBufferString(s))
 
 		_, err := parser.parseCaret()
 
@@ -280,14 +280,14 @@ func (s *ParserSuite) TestParseCaretWithUnValidExpression(c *C) {
 }
 
 func (s *ParserSuite) TestParseTildeWithValidExpression(c *C) {
-	datas := map[string]revisioner{
-		"~3": tildePath{3},
-		"~1": tildePath{1},
-		"~":  tildePath{1},
+	datas := map[string]Revisioner{
+		"~3": TildePath{3},
+		"~1": TildePath{1},
+		"~":  TildePath{1},
 	}
 
 	for d, expected := range datas {
-		parser := newParser(bytes.NewBufferString(d))
+		parser := NewParser(bytes.NewBufferString(d))
 
 		result, err := parser.parseTilde()
 
@@ -302,7 +302,7 @@ func (s *ParserSuite) TestParseTildeWithUnValidExpression(c *C) {
 	}
 
 	for s, e := range datas {
-		parser := newParser(bytes.NewBufferString(s))
+		parser := NewParser(bytes.NewBufferString(s))
 
 		_, err := parser.parseTilde()
 
@@ -311,21 +311,21 @@ func (s *ParserSuite) TestParseTildeWithUnValidExpression(c *C) {
 }
 
 func (s *ParserSuite) TestParseColonWithValidExpression(c *C) {
-	datas := map[string]revisioner{
-		":/hello world !":    colonReg{regexp.MustCompile("hello world !"), false},
-		":/!-hello world !":  colonReg{regexp.MustCompile("hello world !"), true},
-		":/!! hello world !": colonReg{regexp.MustCompile("! hello world !"), false},
-		":../parser.go":      colonPath{"../parser.go"},
-		":./parser.go":       colonPath{"./parser.go"},
-		":parser.go":         colonPath{"parser.go"},
-		":0:parser.go":       colonStagePath{"parser.go", 0},
-		":1:parser.go":       colonStagePath{"parser.go", 1},
-		":2:parser.go":       colonStagePath{"parser.go", 2},
-		":3:parser.go":       colonStagePath{"parser.go", 3},
+	datas := map[string]Revisioner{
+		":/hello world !":    ColonReg{regexp.MustCompile("hello world !"), false},
+		":/!-hello world !":  ColonReg{regexp.MustCompile("hello world !"), true},
+		":/!! hello world !": ColonReg{regexp.MustCompile("! hello world !"), false},
+		":../parser.go":      ColonPath{"../parser.go"},
+		":./parser.go":       ColonPath{"./parser.go"},
+		":parser.go":         ColonPath{"parser.go"},
+		":0:parser.go":       ColonStagePath{"parser.go", 0},
+		":1:parser.go":       ColonStagePath{"parser.go", 1},
+		":2:parser.go":       ColonStagePath{"parser.go", 2},
+		":3:parser.go":       ColonStagePath{"parser.go", 3},
 	}
 
 	for d, expected := range datas {
-		parser := newParser(bytes.NewBufferString(d))
+		parser := NewParser(bytes.NewBufferString(d))
 
 		result, err := parser.parseColon()
 
@@ -342,7 +342,7 @@ func (s *ParserSuite) TestParseColonWithUnValidExpression(c *C) {
 	}
 
 	for s, e := range datas {
-		parser := newParser(bytes.NewBufferString(s))
+		parser := NewParser(bytes.NewBufferString(s))
 
 		_, err := parser.parseColon()
 
@@ -364,12 +364,12 @@ func (s *ParserSuite) TestParseRefWithValidName(c *C) {
 	}
 
 	for _, d := range datas {
-		parser := newParser(bytes.NewBufferString(d))
+		parser := NewParser(bytes.NewBufferString(d))
 
 		result, err := parser.parseRef()
 
 		c.Assert(err, Equals, nil)
-		c.Assert(result, Equals, ref(d))
+		c.Assert(result, Equals, Ref(d))
 	}
 }
 
@@ -393,7 +393,7 @@ func (s *ParserSuite) TestParseRefWithUnvalidName(c *C) {
 	}
 
 	for s, e := range datas {
-		parser := newParser(bytes.NewBufferString(s))
+		parser := NewParser(bytes.NewBufferString(s))
 
 		_, err := parser.parseRef()
 

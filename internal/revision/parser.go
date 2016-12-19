@@ -1,3 +1,5 @@
+// Package revision extracts git revision from string
+// More informations about revision : https://www.kernel.org/pub/software/scm/git/docs/gitrevisions.html
 package revision
 
 import (
@@ -17,78 +19,80 @@ func (e *ErrInvalidRevision) Error() string {
 	return "Revision invalid : " + e.s
 }
 
-// revisioner represents a revision component
-type revisioner interface {
+// Revisioner represents a revision component
+type Revisioner interface {
 }
 
-// ref represents a reference name
-type ref string
+// Ref represents a reference name
+type Ref string
 
-// tildePath represents ~, ~{n}
-type tildePath struct {
-	deep int
+// TildePath represents ~, ~{n}
+type TildePath struct {
+	Depth int
 }
 
-// caretPath represents ^, ^{n}
-type caretPath struct {
-	deep int
+// CaretPath represents ^, ^{n}
+type CaretPath struct {
+	Depth int
 }
 
-// caretReg represents ^{/foo bar}
-type caretReg struct {
-	re     *regexp.Regexp
-	negate bool
+// CaretReg represents ^{/foo bar}
+type CaretReg struct {
+	Regexp *regexp.Regexp
+	Negate bool
 }
 
-// caretType represents ^{commit}
-type caretType struct {
-	object string
+// CaretType represents ^{commit}
+type CaretType struct {
+	ObjectType string
 }
 
-// atReflog represents @{n}
-type atReflog struct {
-	deep int
+// AtReflog represents @{n}
+type AtReflog struct {
+	Depth int
 }
 
-// atCheckout represents @{-n}
-type atCheckout struct {
-	deep int
+// AtCheckout represents @{-n}
+type AtCheckout struct {
+	Depth int
 }
 
-// atUpstream represents @{upstream}, @{u}
-type atUpstream struct {
-	branchName string
+// AtUpstream represents @{upstream}, @{u}
+type AtUpstream struct {
+	BranchName string
 }
 
-// atPush represents @{push}
-type atPush struct {
-	branchName string
+// AtPush represents @{push}
+type AtPush struct {
+	BranchName string
 }
 
-// atDate represents @{"2006-01-02T15:04:05Z"}
-type atDate struct {
-	date time.Time
+// AtDate represents @{"2006-01-02T15:04:05Z"}
+type AtDate struct {
+	Date time.Time
 }
 
-// colonReg represents :/foo bar
-type colonReg struct {
-	re     *regexp.Regexp
-	negate bool
+// ColonReg represents :/foo bar
+type ColonReg struct {
+	Regexp *regexp.Regexp
+	Negate bool
 }
 
-// colonPath represents :./<path> :<path>
-type colonPath struct {
-	path string
+// ColonPath represents :./<path> :<path>
+type ColonPath struct {
+	Path string
 }
 
-// colonStagePath represents :<n>:/<path>
-type colonStagePath struct {
-	path  string
-	stage int
+// ColonStagePath represents :<n>:/<path>
+type ColonStagePath struct {
+	Path  string
+	Stage int
 }
 
-// parser represents a parser.
-type parser struct {
+// Parser represents a parser
+// use to tokenize and transform to revisioner chunks
+// a given string
+type Parser struct {
 	s   *scanner
 	buf struct {
 		tok token
@@ -97,14 +101,14 @@ type parser struct {
 	}
 }
 
-// newParser returns a new instance of parser.
-func newParser(r io.Reader) *parser {
-	return &parser{s: newScanner(r)}
+// NewParser returns a new instance of parser.
+func NewParser(r io.Reader) *Parser {
+	return &Parser{s: newScanner(r)}
 }
 
 // scan returns the next token from the underlying scanner.
 // If a token has been unscanned then read that instead.
-func (p *parser) scan() (tok token, lit string) {
+func (p *Parser) scan() (tok token, lit string) {
 	if p.buf.n != 0 {
 		p.buf.n = 0
 		return p.buf.tok, p.buf.lit
@@ -117,12 +121,12 @@ func (p *parser) scan() (tok token, lit string) {
 }
 
 // unscan pushes the previously read token back onto the buffer.
-func (p *parser) unscan() { p.buf.n = 1 }
+func (p *Parser) unscan() { p.buf.n = 1 }
 
-// parse explode a revision string into components
-func (p *parser) parse() ([]revisioner, error) {
-	var rev revisioner
-	var revs []revisioner
+// Parse explode a revision string into revisioner chunks
+func (p *Parser) Parse() ([]Revisioner, error) {
+	var rev Revisioner
+	var revs []Revisioner
 	var err error
 
 	for {
@@ -145,7 +149,7 @@ func (p *parser) parse() ([]revisioner, error) {
 			err = p.validateFullRevision(&revs)
 
 			if err != nil {
-				return []revisioner{}, err
+				return []Revisioner{}, err
 			}
 
 			return revs, nil
@@ -155,7 +159,7 @@ func (p *parser) parse() ([]revisioner, error) {
 		}
 
 		if err != nil {
-			return []revisioner{}, err
+			return []Revisioner{}, err
 		}
 
 		revs = append(revs, rev)
@@ -163,64 +167,64 @@ func (p *parser) parse() ([]revisioner, error) {
 }
 
 // validateFullRevision ensures all revisioner chunks make a valid revision
-func (p *parser) validateFullRevision(chunks *[]revisioner) error {
+func (p *Parser) validateFullRevision(chunks *[]Revisioner) error {
 	var hasReference bool
 
 	for i, chunk := range *chunks {
 		switch chunk.(type) {
-		case ref:
+		case Ref:
 			if i == 0 {
 				hasReference = true
 			} else {
 				return &ErrInvalidRevision{`reference must be defined once at the beginning`}
 			}
-		case atDate:
+		case AtDate:
 			if len(*chunks) == 1 || hasReference && len(*chunks) == 2 {
 				return nil
 			}
 
 			return &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{<ISO-8601 date>}, @{<ISO-8601 date>}`}
-		case atReflog:
+		case AtReflog:
 			if len(*chunks) == 1 || hasReference && len(*chunks) == 2 {
 				return nil
 			}
 
 			return &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{<n>}, @{<n>}`}
-		case atCheckout:
+		case AtCheckout:
 			if len(*chunks) == 1 {
 				return nil
 			}
 
 			return &ErrInvalidRevision{`"@" statement is not valid, could be : @{-<n>}`}
-		case atUpstream:
+		case AtUpstream:
 			if len(*chunks) == 1 || hasReference && len(*chunks) == 2 {
 				return nil
 			}
 
 			return &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{upstream}, @{upstream}, <refname>@{u}, @{u}`}
-		case atPush:
+		case AtPush:
 			if len(*chunks) == 1 || hasReference && len(*chunks) == 2 {
 				return nil
 			}
 
 			return &ErrInvalidRevision{`"@" statement is not valid, could be : <refname>@{push}, @{push}`}
-		case tildePath, caretPath, caretReg:
+		case TildePath, CaretPath, CaretReg:
 			if !hasReference {
 				return &ErrInvalidRevision{`"~" or "^" statement must have a reference defined at the beginning`}
 			}
-		case colonReg:
+		case ColonReg:
 			if len(*chunks) == 1 {
 				return nil
 			}
 
 			return &ErrInvalidRevision{`":" statement is not valid, could be : :/<regexp>`}
-		case colonPath:
+		case ColonPath:
 			if i == len(*chunks)-1 && hasReference || len(*chunks) == 1 {
 				return nil
 			}
 
 			return &ErrInvalidRevision{`":" statement is not valid, could be : <revision>:<path>`}
-		case colonStagePath:
+		case ColonStagePath:
 			if len(*chunks) == 1 {
 				return nil
 			}
@@ -233,14 +237,14 @@ func (p *parser) validateFullRevision(chunks *[]revisioner) error {
 }
 
 // parseAt extract @ statements
-func (p *parser) parseAt() (revisioner, error) {
+func (p *Parser) parseAt() (Revisioner, error) {
 	var tok, nextTok token
 	var lit, nextLit string
 
 	tok, lit = p.scan()
 
 	if tok != at {
-		return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "@"`, lit)}
+		return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "@"`, lit)}
 	}
 
 	tok, lit = p.scan()
@@ -248,7 +252,7 @@ func (p *parser) parseAt() (revisioner, error) {
 	if tok != obrace {
 		p.unscan()
 
-		return ref("HEAD"), nil
+		return Ref("HEAD"), nil
 	}
 
 	tok, lit = p.scan()
@@ -256,13 +260,13 @@ func (p *parser) parseAt() (revisioner, error) {
 
 	switch {
 	case tok == word && (lit == "u" || lit == "upstream") && nextTok == cbrace:
-		return atUpstream{}, nil
+		return AtUpstream{}, nil
 	case tok == word && lit == "push" && nextTok == cbrace:
-		return atPush{}, nil
+		return AtPush{}, nil
 	case tok == number && nextTok == cbrace:
 		n, _ := strconv.Atoi(lit)
 
-		return atReflog{n}, nil
+		return AtReflog{n}, nil
 	case tok == minus && nextTok == number:
 		n, _ := strconv.Atoi(nextLit)
 
@@ -272,7 +276,7 @@ func (p *parser) parseAt() (revisioner, error) {
 			return nil, &ErrInvalidRevision{fmt.Sprintf(`missing "}" in @{-n} structure`)}
 		}
 
-		return atCheckout{n}, nil
+		return AtCheckout{n}, nil
 	default:
 		p.unscan()
 
@@ -286,10 +290,10 @@ func (p *parser) parseAt() (revisioner, error) {
 				t, err := time.Parse("2006-01-02T15:04:05Z", date)
 
 				if err != nil {
-					return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`wrong date "%s" must fit ISO-8601 format : 2006-01-02T15:04:05Z`, date)}
+					return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`wrong date "%s" must fit ISO-8601 format : 2006-01-02T15:04:05Z`, date)}
 				}
 
-				return atDate{t}, nil
+				return AtDate{t}, nil
 			default:
 				date += lit
 			}
@@ -298,14 +302,14 @@ func (p *parser) parseAt() (revisioner, error) {
 }
 
 // parseTilde extract ~ statements
-func (p *parser) parseTilde() (revisioner, error) {
+func (p *Parser) parseTilde() (Revisioner, error) {
 	var tok token
 	var lit string
 
 	tok, lit = p.scan()
 
 	if tok != tilde {
-		return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "~"`, lit)}
+		return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "~"`, lit)}
 	}
 
 	tok, lit = p.scan()
@@ -314,22 +318,22 @@ func (p *parser) parseTilde() (revisioner, error) {
 	case tok == number:
 		n, _ := strconv.Atoi(lit)
 
-		return tildePath{n}, nil
+		return TildePath{n}, nil
 	default:
 		p.unscan()
-		return tildePath{1}, nil
+		return TildePath{1}, nil
 	}
 }
 
 // parseCaret extract ^ statements
-func (p *parser) parseCaret() (revisioner, error) {
+func (p *Parser) parseCaret() (Revisioner, error) {
 	var tok token
 	var lit string
 
 	tok, lit = p.scan()
 
 	if tok != caret {
-		return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "^"`, lit)}
+		return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "^"`, lit)}
 	}
 
 	tok, lit = p.scan()
@@ -341,22 +345,22 @@ func (p *parser) parseCaret() (revisioner, error) {
 		r, err := p.parseCaretBraces()
 
 		if err != nil {
-			return (revisioner)(struct{}{}), err
+			return (Revisioner)(struct{}{}), err
 		}
 
 		return r, nil
 	case tok == number:
 		n, _ := strconv.Atoi(lit)
 
-		return caretPath{n}, nil
+		return CaretPath{n}, nil
 	default:
 		p.unscan()
-		return caretPath{1}, nil
+		return CaretPath{1}, nil
 	}
 }
 
 // parseCaretBraces extract ^{<data>} statements
-func (p *parser) parseCaretBraces() (revisioner, error) {
+func (p *Parser) parseCaretBraces() (Revisioner, error) {
 	var tok, nextTok token
 	var lit, _ string
 	start := true
@@ -366,7 +370,7 @@ func (p *parser) parseCaretBraces() (revisioner, error) {
 	tok, lit = p.scan()
 
 	if tok != obrace {
-		return []revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "{" after ^`, lit)}
+		return []Revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "{" after ^`, lit)}
 	}
 
 	for {
@@ -375,19 +379,19 @@ func (p *parser) parseCaretBraces() (revisioner, error) {
 
 		switch {
 		case tok == word && nextTok == cbrace && (lit == "commit" || lit == "tree" || lit == "blob" || lit == "tag" || lit == "object"):
-			return caretType{lit}, nil
+			return CaretType{lit}, nil
 		case re == "" && tok == cbrace:
-			return caretType{"tag"}, nil
+			return CaretType{"tag"}, nil
 		case re == "" && tok == emark && nextTok == emark:
 			re += lit
 		case re == "" && tok == emark && nextTok == minus:
 			negate = true
 		case re == "" && tok == emark:
-			return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
+			return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
 		case re == "" && tok == slash:
 			p.unscan()
 		case tok != slash && start:
-			return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix brace component`, lit)}
+			return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix brace component`, lit)}
 		case tok != cbrace:
 			p.unscan()
 			re += lit
@@ -397,10 +401,10 @@ func (p *parser) parseCaretBraces() (revisioner, error) {
 			reg, err := regexp.Compile(re)
 
 			if err != nil {
-				return caretReg{}, &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component, %s`, err.Error())}
+				return CaretReg{}, &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component, %s`, err.Error())}
 			}
 
-			return caretReg{reg, negate}, nil
+			return CaretReg{reg, negate}, nil
 		}
 
 		start = false
@@ -408,14 +412,14 @@ func (p *parser) parseCaretBraces() (revisioner, error) {
 }
 
 // parseColon extract : statements
-func (p *parser) parseColon() (revisioner, error) {
+func (p *Parser) parseColon() (Revisioner, error) {
 	var tok token
 	var lit string
 
 	tok, lit = p.scan()
 
 	if tok != colon {
-		return []revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be ":"`, lit)}
+		return []Revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be ":"`, lit)}
 	}
 
 	tok, lit = p.scan()
@@ -431,7 +435,7 @@ func (p *parser) parseColon() (revisioner, error) {
 }
 
 // parseColonSlash extract :/<data> statements
-func (p *parser) parseColonSlash() (revisioner, error) {
+func (p *Parser) parseColonSlash() (Revisioner, error) {
 	var tok, nextTok token
 	var lit string
 	var re string
@@ -440,7 +444,7 @@ func (p *parser) parseColonSlash() (revisioner, error) {
 	tok, lit = p.scan()
 
 	if tok != slash {
-		return []revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "/"`, lit)}
+		return []Revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "/"`, lit)}
 	}
 
 	for {
@@ -453,17 +457,17 @@ func (p *parser) parseColonSlash() (revisioner, error) {
 		case re == "" && tok == emark && nextTok == minus:
 			negate = true
 		case re == "" && tok == emark:
-			return (revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
+			return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
 		case tok == eof:
 			p.unscan()
 
 			reg, err := regexp.Compile(re)
 
 			if err != nil {
-				return colonReg{}, &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component, %s`, err.Error())}
+				return ColonReg{}, &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component, %s`, err.Error())}
 			}
 
-			return colonReg{reg, negate}, nil
+			return ColonReg{reg, negate}, nil
 		default:
 			p.unscan()
 			re += lit
@@ -472,7 +476,7 @@ func (p *parser) parseColonSlash() (revisioner, error) {
 }
 
 // parseColonDefault extract :<data> statements
-func (p *parser) parseColonDefault() (revisioner, error) {
+func (p *Parser) parseColonDefault() (Revisioner, error) {
 	var tok token
 	var lit string
 	var path string
@@ -499,9 +503,9 @@ func (p *parser) parseColonDefault() (revisioner, error) {
 
 		switch {
 		case tok == eof && n == -1:
-			return colonPath{path}, nil
+			return ColonPath{path}, nil
 		case tok == eof:
-			return colonStagePath{path, stage}, nil
+			return ColonStagePath{path, stage}, nil
 		default:
 			path += lit
 		}
@@ -509,7 +513,7 @@ func (p *parser) parseColonDefault() (revisioner, error) {
 }
 
 // parseRef extract reference name
-func (p *parser) parseRef() (revisioner, error) {
+func (p *Parser) parseRef() (Revisioner, error) {
 	var tok, prevTok token
 	var lit, buf string
 	var endOfRef bool
@@ -530,7 +534,7 @@ func (p *parser) parseRef() (revisioner, error) {
 
 		if endOfRef {
 			p.unscan()
-			return ref(buf), nil
+			return Ref(buf), nil
 		}
 
 		buf += lit
@@ -540,7 +544,7 @@ func (p *parser) parseRef() (revisioner, error) {
 
 // checkRefFormat ensure reference name follow rules defined here :
 // https://git-scm.com/docs/git-check-ref-format
-func (p *parser) checkRefFormat(token token, literal string, previousToken token, buffer string, endOfRef bool) error {
+func (p *Parser) checkRefFormat(token token, literal string, previousToken token, buffer string, endOfRef bool) error {
 	switch token {
 	case aslash, space, control, qmark, asterisk, obracket:
 		return &ErrInvalidRevision{fmt.Sprintf(`must not contains "%s"`, literal)}
