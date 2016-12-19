@@ -373,6 +373,18 @@ func (s *RepositorySuite) TestPushToEmptyRepository(c *C) {
 	c.Assert(err, IsNil)
 }
 
+func (s *RepositorySuite) TestPushNonExistentRemote(c *C) {
+	srcFs := fixtures.Basic().One().DotGit()
+	sto, err := filesystem.NewStorage(srcFs)
+	c.Assert(err, IsNil)
+
+	r, err := NewRepository(sto)
+	c.Assert(err, IsNil)
+
+	err = r.Push(&PushOptions{RemoteName: "myremote"})
+	c.Assert(err, ErrorMatches, ".*remote not found.*")
+}
+
 func (s *RepositorySuite) TestIsEmpty(c *C) {
 	r := NewMemoryRepository()
 

@@ -99,7 +99,7 @@ func (r *Remote) Push(o *PushOptions) (err error) {
 		return err
 	}
 
-	haves, err := getHaves(r.s)
+	haves, err := referencesToHashes(remoteRefs)
 	if err != nil {
 		return err
 	}
@@ -109,8 +109,12 @@ func (r *Remote) Push(o *PushOptions) (err error) {
 		return err
 	}
 
-	_, err = pushHashes(s, r.s, req, hashesToPush)
-	return err
+	rs, err := pushHashes(s, r.s, req, hashesToPush)
+	if err != nil {
+		return err
+	}
+
+	return rs.Error()
 }
 
 func (r *Remote) fetch(o *FetchOptions) (refs storer.ReferenceStorer, err error) {
@@ -504,6 +508,28 @@ func commitsToPush(s storer.EncodedObjectStorer, commands []*packp.Command) ([]*
 	}
 
 	return commits, nil
+}
+
+func referencesToHashes(refs storer.ReferenceStorer) ([]plumbing.Hash, error) {
+	iter, err := refs.IterReferences()
+	if err != nil {
+		return nil, err
+	}
+
+	var hs []plumbing.Hash
+	err = iter.ForEach(func(ref *plumbing.Reference) error {
+		if ref.Type() != plumbing.HashReference {
+			return nil
+		}
+
+		hs = append(hs, ref.Hash())
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return hs, nil
 }
 
 func pushHashes(sess transport.SendPackSession, sto storer.EncodedObjectStorer,

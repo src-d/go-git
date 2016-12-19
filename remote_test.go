@@ -216,9 +216,9 @@ func (s *RemoteSuite) TestPushToEmptyRepository(c *C) {
 	})
 	c.Assert(err, IsNil)
 
-	sto, err = filesystem.NewStorage(dstFs)
+	dstSto, err := filesystem.NewStorage(dstFs)
 	c.Assert(err, IsNil)
-	dstRepo, err := NewRepository(sto)
+	dstRepo, err := NewRepository(dstSto)
 	c.Assert(err, IsNil)
 
 	iter, err := sto.IterReferences()
@@ -229,7 +229,7 @@ func (s *RemoteSuite) TestPushToEmptyRepository(c *C) {
 		}
 
 		dstRef, err := dstRepo.Reference(ref.Name(), true)
-		c.Assert(err, IsNil)
+		c.Assert(err, IsNil, Commentf("ref: %s", ref.String()))
 		c.Assert(dstRef, DeepEquals, ref)
 
 		return nil
@@ -252,4 +252,54 @@ func (s *RemoteSuite) TestPushNoErrAlreadyUpToDate(c *C) {
 		RefSpecs: []config.RefSpec{rs},
 	})
 	c.Assert(err, Equals, NoErrAlreadyUpToDate)
+}
+
+func (s *RemoteSuite) TestPushInvalidEndpoint(c *C) {
+	r := newRemote(nil, nil, &config.RemoteConfig{Name: "foo", URL: "qux"})
+	err := r.Push(&PushOptions{})
+	c.Assert(err, ErrorMatches, ".*invalid endpoint.*")
+}
+
+func (s *RemoteSuite) TestPushNonExistentEndpoint(c *C) {
+	r := newRemote(nil, nil, &config.RemoteConfig{Name: "foo", URL: "ssh://non-existent/foo.git"})
+	err := r.Push(&PushOptions{})
+	c.Assert(err, NotNil)
+}
+
+func (s *RemoteSuite) TestPushInvalidSchemaEndpoint(c *C) {
+	r := newRemote(nil, nil, &config.RemoteConfig{Name: "foo", URL: "qux://foo"})
+	err := r.Push(&PushOptions{})
+	c.Assert(err, ErrorMatches, ".*unsupported scheme.*")
+}
+
+func (s *RemoteSuite) TestPushInvalidFetchOptions(c *C) {
+	r := newRemote(nil, nil, &config.RemoteConfig{Name: "foo", URL: "qux://foo"})
+	invalid := config.RefSpec("^*$ñ")
+	err := r.Push(&PushOptions{RefSpecs: []config.RefSpec{invalid}})
+	c.Assert(err, Equals, ErrInvalidRefSpec)
+}
+
+func (s *RemoteSuite) TestPushInvalidRefSpec(c *C) {
+	r := newRemote(nil, nil, &config.RemoteConfig{
+		Name: DefaultRemoteName,
+		URL:  "file:///some-url",
+	})
+
+	rs := config.RefSpec("^*$**")
+	err := r.Push(&PushOptions{
+		RefSpecs: []config.RefSpec{rs},
+	})
+	c.Assert(err, ErrorMatches, ".*invalid.*")
+}
+
+func (s *RemoteSuite) TestPushWrongRemoteName(c *C) {
+	r := newRemote(nil, nil, &config.RemoteConfig{
+		Name: DefaultRemoteName,
+		URL:  "file:///some-url",
+	})
+
+	err := r.Push(&PushOptions{
+		RemoteName: "other-remote",
+	})
+	c.Assert(err, ErrorMatches, ".*remote names don't match.*")
 }
