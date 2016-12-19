@@ -116,6 +116,12 @@ func (o *PushOptions) Validate() error {
 		o.RemoteName = DefaultRemoteName
 	}
 
+	if len(o.RefSpecs) == 0 {
+		o.RefSpecs = []config.RefSpec{
+			config.RefSpec(config.DefaultPushRefSpec),
+		}
+	}
+
 	for _, r := range o.RefSpecs {
 		if !r.IsValid() {
 			return ErrInvalidRefSpec

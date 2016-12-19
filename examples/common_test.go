@@ -21,16 +21,7 @@ var args = map[string][]string{
 	"clone":       []string{defaultURL, tempFolder()},
 	"progress":    []string{defaultURL, tempFolder()},
 	"open":        []string{filepath.Join(cloneRepository(defaultURL, tempFolder()), ".git")},
-	"push": []string{
-		func() string {
-			remote := createBareRepository(tempFolder())
-			local := filepath.Join(cloneRepository(defaultURL, tempFolder()), ".git")
-			setRemote(local, fmt.Sprintf("file://%s", remote))
-			return local
-		}(),
-		"origin",
-		"refs/heads/*:refs/heads/*",
-	},
+	"push":        []string{setEmptyRemote(filepath.Join(cloneRepository(defaultURL, tempFolder()), ".git"))},
 }
 
 var ignored = map[string]bool{
@@ -101,6 +92,12 @@ func createBareRepository(dir string) string {
 	err := cmd.Run()
 	CheckIfError(err)
 
+	return dir
+}
+
+func setEmptyRemote(dir string) string {
+	remote := createBareRepository(tempFolder())
+	setRemote(dir, fmt.Sprintf("file://%s", remote))
 	return dir
 }
 

@@ -9,6 +9,8 @@ import (
 const (
 	// DefaultFetchRefSpec is the default refspec used for fetch.
 	DefaultFetchRefSpec = "+refs/heads/*:refs/remotes/%s/*"
+	// DefaultPushRefSpec is the default refspec used for push.
+	DefaultPushRefSpec = "refs/heads/*:refs/heads/*"
 )
 
 // ConfigStorer generic storage of Config object

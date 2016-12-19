@@ -70,10 +70,6 @@ func (r *Remote) Push(o *PushOptions) (err error) {
 		return fmt.Errorf("remote names don't match: %s != %s", o.RemoteName, r.c.Name)
 	}
 
-	if len(o.RefSpecs) == 0 {
-		return fmt.Errorf("no refspecs given")
-	}
-
 	s, err := newSendPackSession(r.c.URL)
 	if err != nil {
 		return err
