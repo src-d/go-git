@@ -19,7 +19,7 @@ type UploadPackResponse struct {
 	ShallowUpdate
 	ServerResponse
 
-	Packfile   io.ReadCloser
+	r          io.ReadCloser
 	isShallow  bool
 	isMultiACK bool
 	isOk       bool
@@ -38,6 +38,16 @@ func NewUploadPackResponse(req *UploadPackRequest) *UploadPackResponse {
 	}
 }
 
+// NewUploadPackResponseWithPackfile creates a new UploadPackResponse instance,
+// and sets its packfile reader.
+func NewUploadPackResponseWithPackfile(req *UploadPackRequest,
+	pf io.ReadCloser) *UploadPackResponse {
+
+	r := NewUploadPackResponse(req)
+	r.r = pf
+	return r
+}
+
 // Decode decodes all the responses sent by upload-pack service into the struct
 // and prepares it to read the packfile using the Read method
 func (r *UploadPackResponse) Decode(reader io.ReadCloser) error {
@@ -52,7 +62,7 @@ func (r *UploadPackResponse) Decode(reader io.ReadCloser) error {
 	}
 
 	// now the reader is ready to read the packfile content
-	r.Packfile = reader
+	r.r = reader
 
 	return nil
 }
@@ -69,8 +79,8 @@ func (r *UploadPackResponse) Encode(w io.Writer) (err error) {
 		return err
 	}
 
-	defer ioutil.CheckClose(r.Packfile, &err)
-	_, err = io.Copy(w, r.Packfile)
+	defer ioutil.CheckClose(r.r, &err)
+	_, err = io.Copy(w, r.r)
 	return err
 }
 
@@ -78,18 +88,18 @@ func (r *UploadPackResponse) Encode(w io.Writer) (err error) {
 // capability the content read should be demultiplexed. If the methods wasn't
 // called before the ErrUploadPackResponseNotDecoded will be return
 func (r *UploadPackResponse) Read(p []byte) (int, error) {
-	if r.Packfile == nil {
+	if r.r == nil {
 		return 0, ErrUploadPackResponseNotDecoded
 	}
 
-	return r.Packfile.Read(p)
+	return r.r.Read(p)
 }
 
 // Close the underlying reader, if any
 func (r *UploadPackResponse) Close() error {
-	if r.Packfile == nil {
+	if r.r == nil {
 		return nil
 	}
 
-	return r.Packfile.Close()
+	return r.r.Close()
 }

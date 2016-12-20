@@ -136,10 +136,7 @@ func (s *upSession) UploadPack(req *packp.UploadPackRequest) (*packp.UploadPackR
 		pw.CloseWithError(err)
 	}()
 
-	resp := packp.NewUploadPackResponse(req)
-	resp.Packfile = pr
-
-	return resp, nil
+	return packp.NewUploadPackResponseWithPackfile(req, pr), nil
 }
 
 func (s *upSession) objectsToUpload(req *packp.UploadPackRequest) ([]plumbing.Hash, error) {
