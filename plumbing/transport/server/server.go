@@ -17,19 +17,14 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 )
 
-type Storer interface {
-	storer.EncodedObjectStorer
-	storer.ReferenceStorer
-}
-
 // Handler is server-side a protocol implementation.
 type Handler interface {
 	// NewUploadPackSession starts a git-upload-pack session for a given
 	// repository.
-	NewUploadPackSession(Storer) (UploadPackSession, error)
+	NewUploadPackSession(storer.Storer) (UploadPackSession, error)
 	// NewReceivePackSession starts a git-receive-pack session for a given
 	// repository.
-	NewReceivePackSession(Storer) (ReceivePackSession, error)
+	NewReceivePackSession(storer.Storer) (ReceivePackSession, error)
 }
 
 type Session interface {
@@ -60,13 +55,13 @@ func NewHandler() Handler {
 	return &handler{}
 }
 
-func (h *handler) NewUploadPackSession(s Storer) (UploadPackSession, error) {
+func (h *handler) NewUploadPackSession(s storer.Storer) (UploadPackSession, error) {
 	return &upSession{
 		session: session{storer: s},
 	}, nil
 }
 
-func (h *handler) NewReceivePackSession(s Storer) (ReceivePackSession, error) {
+func (h *handler) NewReceivePackSession(s storer.Storer) (ReceivePackSession, error) {
 	return &rpSession{
 		session:   session{storer: s},
 		cmdStatus: map[plumbing.ReferenceName]error{},
@@ -74,7 +69,7 @@ func (h *handler) NewReceivePackSession(s Storer) (ReceivePackSession, error) {
 }
 
 type session struct {
-	storer  Storer
+	storer  storer.Storer
 	advRefs *packp.AdvRefs
 }
 
@@ -346,7 +341,7 @@ func (*rpSession) setSupportedCapabilities(c *capability.List) error {
 	return nil
 }
 
-func setHEAD(s Storer, ar *packp.AdvRefs) error {
+func setHEAD(s storer.Storer, ar *packp.AdvRefs) error {
 	ref, err := s.Reference(plumbing.HEAD)
 	if err == plumbing.ErrReferenceNotFound {
 		return nil
@@ -382,7 +377,7 @@ func setHEAD(s Storer, ar *packp.AdvRefs) error {
 }
 
 //TODO: add peeled references.
-func setReferences(s Storer, ar *packp.AdvRefs) error {
+func setReferences(s storer.Storer, ar *packp.AdvRefs) error {
 	iter, err := s.IterReferences()
 	if err != nil {
 		return err
