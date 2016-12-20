@@ -74,7 +74,13 @@ type session struct {
 }
 
 func (s *session) checkSupportedCapabilities(cl *capability.List) error {
-	return s.advRefs.Capabilities.Check(cl)
+	for _, c := range cl.All() {
+		if !s.advRefs.Capabilities.Supports(c) {
+			return fmt.Errorf("unsupported capability: %s", c)
+		}
+	}
+
+	return nil
 }
 
 type upSession struct {

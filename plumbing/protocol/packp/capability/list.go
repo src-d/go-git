@@ -167,16 +167,14 @@ func (l *List) Delete(capability Capability) {
 	}
 }
 
-// Check checks that all capabilities set in the given list are supported
-// in this list.
-func (l *List) Check(ol *List) error {
-	for c, _ := range ol.m {
-		if !l.Supports(c) {
-			return fmt.Errorf("unsupported capability: %s", c)
-		}
+// All returns a slice with all defined capabilities.
+func (l *List) All() []Capability {
+	var cs []Capability
+	for _, key := range l.sort {
+		cs = append(cs, Capability(key))
 	}
 
-	return nil
+	return cs
 }
 
 // String generates the capabilities strings, the capabilities are sorted in
