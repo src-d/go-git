@@ -219,6 +219,31 @@ func (s *rpSession) ReceivePack(req *packp.ReferenceUpdateRequest) (*packp.Repor
 		return s.reportStatus(), err
 	}
 
+	updatedRefs := s.updatedReferences(req)
+
+	if s.cap.Supports(capability.Atomic) && s.firstErr != nil {
+		//TODO: add support for 'atomic' once we have reference
+		//      transactions, currently we do not announce it.
+		rs := s.reportStatus()
+		for _, cs := range rs.CommandStatuses {
+			if cs.Error() == nil {
+				cs.Status = ""
+			}
+		}
+	}
+
+	for name, ref := range updatedRefs {
+		//TODO: add support for 'delete-refs' once we can delete
+		//      references, currently we do not announce it.
+		err := s.storer.SetReference(ref)
+		s.setStatus(name, err)
+	}
+
+	return s.reportStatus(), s.firstErr
+}
+
+func (s *rpSession) updatedReferences(req *packp.ReferenceUpdateRequest) map[plumbing.ReferenceName]*plumbing.Reference {
+	refs := map[plumbing.ReferenceName]*plumbing.Reference{}
 	for _, cmd := range req.Commands {
 		switch cmd.Action() {
 		case packp.Create:
@@ -226,8 +251,7 @@ func (s *rpSession) ReceivePack(req *packp.ReferenceUpdateRequest) (*packp.Repor
 
 			if err == plumbing.ErrReferenceNotFound {
 				ref := plumbing.NewHashReference(cmd.Name, cmd.New)
-				err = s.storer.SetReference(ref)
-				s.setStatus(cmd.Name, err)
+				refs[ref.Name()] = ref
 				continue
 			}
 
@@ -249,8 +273,12 @@ func (s *rpSession) ReceivePack(req *packp.ReferenceUpdateRequest) (*packp.Repor
 				continue
 			}
 
-			//TODO: add support for 'delete-refs'.
-			s.setStatus(cmd.Name, fmt.Errorf("delete not supported"))
+			if !s.cap.Supports(capability.DeleteRefs) {
+				s.setStatus(cmd.Name, fmt.Errorf("delete not supported"))
+				continue
+			}
+
+			refs[cmd.Name] = nil
 		case packp.Update:
 			//TODO: if no change, what's the result?
 			_, err := s.storer.Reference(cmd.Name)
@@ -265,13 +293,23 @@ func (s *rpSession) ReceivePack(req *packp.ReferenceUpdateRequest) (*packp.Repor
 			}
 
 			ref := plumbing.NewHashReference(cmd.Name, cmd.New)
-			err = s.storer.SetReference(ref)
-			s.setStatus(cmd.Name, err)
+			refs[ref.Name()] = ref
 			continue
 		}
 	}
 
-	return s.reportStatus(), s.firstErr
+	return refs
+}
+
+func (s *rpSession) failAtomicUpdate() (*packp.ReportStatus, error) {
+	rs := s.reportStatus()
+	for _, cs := range rs.CommandStatuses {
+		if cs.Error() == nil {
+			cs.Status = "atomic updated"
+		}
+	}
+
+	return rs, s.firstErr
 }
 
 func (s *rpSession) writePackfile(r io.ReadCloser) error {
