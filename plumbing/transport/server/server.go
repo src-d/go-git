@@ -211,7 +211,8 @@ func (s *rpSession) ReceivePack(req *packp.ReferenceUpdateRequest) (*packp.Repor
 
 	s.cap = req.Capabilities
 
-	//TODO: Check if commands are valid.
+	//TODO: Implement 'atomic' update of references.
+
 	if err := s.writePackfile(req.Packfile); err != nil {
 		s.unpackErr = err
 		s.firstErr = err
@@ -248,7 +249,7 @@ func (s *rpSession) ReceivePack(req *packp.ReferenceUpdateRequest) (*packp.Repor
 				continue
 			}
 
-			//TODO: add support for delete.
+			//TODO: add support for 'delete-refs'.
 			s.setStatus(cmd.Name, fmt.Errorf("delete not supported"))
 		case packp.Update:
 			//TODO: if no change, what's the result?
