@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"gopkg.in/src-d/go-git.v4/fixtures"
 
@@ -12,35 +11,21 @@ import (
 )
 
 type ReceivePackSuite struct {
-	fixtures.Suite
+	CommonSuite
 	Server     *Server
 	RemoteName string
 	SrcPath    string
 	DstPath    string
 	DstURL     string
-	Bin        string
 }
 
 var _ = Suite(&ReceivePackSuite{})
 
 func (s *ReceivePackSuite) SetUpSuite(c *C) {
-	s.Suite.SetUpSuite(c)
-
-	if err := exec.Command("git", "--version").Run(); err != nil {
-		c.Skip("git command not found")
-	}
+	s.CommonSuite.SetUpSuite(c)
 
 	s.Server = DefaultServer
 	s.RemoteName = "test"
-
-	binDir := c.MkDir()
-	s.Bin = filepath.Join(binDir, "git-receive-pack")
-	f, err := os.OpenFile(s.Bin, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0700)
-	c.Assert(err, IsNil)
-	_, err = fmt.Fprintf(f, `#!/bin/bash
-exec go run "%s/../examples/git-receive-pack/main.go" "$@"`, fixtures.RootFolder)
-	c.Assert(err, IsNil)
-	c.Assert(f.Close(), IsNil)
 
 	fixture := fixtures.Basic().One()
 	s.SrcPath = fixture.DotGit().Base()
@@ -56,7 +41,7 @@ exec go run "%s/../examples/git-receive-pack/main.go" "$@"`, fixtures.RootFolder
 
 func (s *ReceivePackSuite) TestPush(c *C) {
 	cmd := exec.Command("git", "push",
-		"--receive-pack", s.Bin,
+		"--receive-pack", s.ReceivePackBin,
 		s.RemoteName,
 	)
 	cmd.Dir = s.SrcPath

@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"gopkg.in/src-d/go-git.v4/fixtures"
 
@@ -13,36 +12,18 @@ import (
 )
 
 type UploadPackSuite struct {
-	fixtures.Suite
+	CommonSuite
 	Server *Server
 	Path   string
 	URL    string
-	Bin    string
 }
 
 var _ = Suite(&UploadPackSuite{})
 
 func (s *UploadPackSuite) SetUpSuite(c *C) {
-	s.Suite.SetUpSuite(c)
-
-	if err := exec.Command("git", "--version").Run(); err != nil {
-		c.Skip("git command not found")
-	}
+	s.CommonSuite.SetUpSuite(c)
 
 	s.Server = DefaultServer
-
-	wd, err := os.Getwd()
-	c.Assert(err, IsNil)
-	s.Bin = filepath.Clean(filepath.Join(wd, "git-upload-pack"))
-
-	binDir := c.MkDir()
-	s.Bin = filepath.Join(binDir, "git-upload-pack")
-	f, err := os.OpenFile(s.Bin, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0700)
-	c.Assert(err, IsNil)
-	_, err = fmt.Fprintf(f, `#!/bin/bash
-exec go run "%s/../examples/git-upload-pack/main.go" "$@"`, fixtures.RootFolder)
-	c.Assert(err, IsNil)
-	c.Assert(f.Close(), IsNil)
 
 	fixture := fixtures.Basic().One()
 	s.Path = fixture.DotGit().Base()
@@ -53,7 +34,7 @@ func (s *UploadPackSuite) TestClone(c *C) {
 	pathToClone := c.MkDir()
 
 	cmd := exec.Command("git", "clone",
-		"--upload-pack", s.Bin,
+		"--upload-pack", s.UploadPackBin,
 		s.URL, pathToClone,
 	)
 	cmd.Env = os.Environ()

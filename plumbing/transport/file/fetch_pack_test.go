@@ -3,7 +3,6 @@ package file
 import (
 	"fmt"
 	"os"
-	"os/exec"
 
 	"gopkg.in/src-d/go-git.v4/fixtures"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
@@ -13,18 +12,14 @@ import (
 )
 
 type FetchPackSuite struct {
-	fixtures.Suite
+	CommonSuite
 	test.FetchPackSuite
 }
 
 var _ = Suite(&FetchPackSuite{})
 
 func (s *FetchPackSuite) SetUpSuite(c *C) {
-	s.Suite.SetUpSuite(c)
-
-	if err := exec.Command("git", "--version").Run(); err != nil {
-		c.Skip("git command not found")
-	}
+	s.CommonSuite.SetUpSuite(c)
 
 	s.FetchPackSuite.Client = DefaultClient
 

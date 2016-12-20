@@ -2,7 +2,6 @@ package file
 
 import (
 	"os"
-	"os/exec"
 
 	"gopkg.in/src-d/go-git.v4/fixtures"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/test"
@@ -11,19 +10,14 @@ import (
 )
 
 type SendPackSuite struct {
-	fixtures.Suite
+	CommonSuite
 	test.SendPackSuite
 }
 
 var _ = Suite(&SendPackSuite{})
 
 func (s *SendPackSuite) SetUpSuite(c *C) {
-	s.Suite.SetUpSuite(c)
-
-	if err := exec.Command("git", "--version").Run(); err != nil {
-		c.Skip("git command not found")
-	}
-
+	s.CommonSuite.SetUpSuite(c)
 	s.SendPackSuite.Client = DefaultClient
 }
 

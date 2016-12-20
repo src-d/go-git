@@ -21,12 +21,8 @@ func NewServer(loader server.Loader, handler server.Handler) *Server {
 	return &Server{loader, handler}
 }
 
-func (s *Server) Serve(cmd string, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("only one argument is currently supported")
-	}
-
-	sto, err := s.loader.Load("", args[0])
+func (s *Server) Serve(cmd string, path string, host string) error {
+	sto, err := s.loader.Load(host, path)
 	if err != nil {
 		return err
 	}
