@@ -13,12 +13,12 @@ import (
 
 type ReceivePackSuite struct {
 	fixtures.Suite
-	Server         *Server
-	RemoteName     string
-	SrcPath        string
-	DstPath        string
-	DstURL         string
-	ReceivePackBin string
+	Server     *Server
+	RemoteName string
+	SrcPath    string
+	DstPath    string
+	DstURL     string
+	Bin        string
 }
 
 var _ = Suite(&ReceivePackSuite{})
@@ -33,9 +33,14 @@ func (s *ReceivePackSuite) SetUpSuite(c *C) {
 	s.Server = DefaultServer
 	s.RemoteName = "test"
 
-	wd, err := os.Getwd()
+	binDir := c.MkDir()
+	s.Bin = filepath.Join(binDir, "git-receive-pack")
+	f, err := os.OpenFile(s.Bin, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0700)
 	c.Assert(err, IsNil)
-	s.ReceivePackBin = filepath.Clean(filepath.Join(wd, "git-receive-pack"))
+	_, err = fmt.Fprintf(f, `#!/bin/bash
+exec go run "%s/../examples/git-receive-pack/main.go" "$@"`, fixtures.RootFolder)
+	c.Assert(err, IsNil)
+	c.Assert(f.Close(), IsNil)
 
 	fixture := fixtures.Basic().One()
 	s.SrcPath = fixture.DotGit().Base()
@@ -51,7 +56,7 @@ func (s *ReceivePackSuite) SetUpSuite(c *C) {
 
 func (s *ReceivePackSuite) TestPush(c *C) {
 	cmd := exec.Command("git", "push",
-		"--receive-pack", s.ReceivePackBin,
+		"--receive-pack", s.Bin,
 		s.RemoteName,
 	)
 	cmd.Dir = s.SrcPath

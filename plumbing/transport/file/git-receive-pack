@@ -1,7 +1,0 @@
-#!/bin/bash
-# Simulates the git-upload-pack command.
-# For testing purposes only.
-# See examples/git-upload-pack.
-
-path="$(dirname $0)"
-exec go run "$path/../../../examples/git-receive-pack/main.go" "$@"

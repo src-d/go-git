@@ -14,10 +14,10 @@ import (
 
 type UploadPackSuite struct {
 	fixtures.Suite
-	Server        *Server
-	Path          string
-	URL           string
-	UploadPackBin string
+	Server *Server
+	Path   string
+	URL    string
+	Bin    string
 }
 
 var _ = Suite(&UploadPackSuite{})
@@ -33,7 +33,16 @@ func (s *UploadPackSuite) SetUpSuite(c *C) {
 
 	wd, err := os.Getwd()
 	c.Assert(err, IsNil)
-	s.UploadPackBin = filepath.Clean(filepath.Join(wd, "git-upload-pack"))
+	s.Bin = filepath.Clean(filepath.Join(wd, "git-upload-pack"))
+
+	binDir := c.MkDir()
+	s.Bin = filepath.Join(binDir, "git-upload-pack")
+	f, err := os.OpenFile(s.Bin, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0700)
+	c.Assert(err, IsNil)
+	_, err = fmt.Fprintf(f, `#!/bin/bash
+exec go run "%s/../examples/git-upload-pack/main.go" "$@"`, fixtures.RootFolder)
+	c.Assert(err, IsNil)
+	c.Assert(f.Close(), IsNil)
 
 	fixture := fixtures.Basic().One()
 	s.Path = fixture.DotGit().Base()
@@ -44,7 +53,7 @@ func (s *UploadPackSuite) TestClone(c *C) {
 	pathToClone := c.MkDir()
 
 	cmd := exec.Command("git", "clone",
-		"--upload-pack", s.UploadPackBin,
+		"--upload-pack", s.Bin,
 		s.URL, pathToClone,
 	)
 	cmd.Env = os.Environ()

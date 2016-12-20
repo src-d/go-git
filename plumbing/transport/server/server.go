@@ -245,31 +245,24 @@ func (s *rpSession) ReceivePack(req *packp.ReferenceUpdateRequest) (*packp.Repor
 func (s *rpSession) updatedReferences(req *packp.ReferenceUpdateRequest) map[plumbing.ReferenceName]*plumbing.Reference {
 	refs := map[plumbing.ReferenceName]*plumbing.Reference{}
 	for _, cmd := range req.Commands {
+		exists, err := referenceExists(s.storer, cmd.Name)
+		if err != nil {
+			s.setStatus(cmd.Name, err)
+			continue
+		}
+
 		switch cmd.Action() {
 		case packp.Create:
-			_, err := s.storer.Reference(cmd.Name)
-
-			if err == plumbing.ErrReferenceNotFound {
-				ref := plumbing.NewHashReference(cmd.Name, cmd.New)
-				refs[ref.Name()] = ref
-				continue
-			}
-
-			if err == nil {
+			if exists {
 				s.setStatus(cmd.Name, ErrReferenceAlreadyExists)
 				continue
 			}
 
-			s.setStatus(cmd.Name, err)
+			ref := plumbing.NewHashReference(cmd.Name, cmd.New)
+			refs[ref.Name()] = ref
 		case packp.Delete:
-			_, err := s.storer.Reference(cmd.Name)
-			if err == plumbing.ErrReferenceNotFound {
+			if !exists {
 				s.setStatus(cmd.Name, ErrReferenceDidNotExist)
-				continue
-			}
-
-			if err != nil {
-				s.setStatus(cmd.Name, err)
 				continue
 			}
 
@@ -280,9 +273,7 @@ func (s *rpSession) updatedReferences(req *packp.ReferenceUpdateRequest) map[plu
 
 			refs[cmd.Name] = nil
 		case packp.Update:
-			//TODO: if no change, what's the result?
-			_, err := s.storer.Reference(cmd.Name)
-			if err == plumbing.ErrReferenceNotFound {
+			if !exists {
 				s.setStatus(cmd.Name, ErrReferenceDidNotExist)
 				continue
 			}
@@ -294,7 +285,6 @@ func (s *rpSession) updatedReferences(req *packp.ReferenceUpdateRequest) map[plu
 
 			ref := plumbing.NewHashReference(cmd.Name, cmd.New)
 			refs[ref.Name()] = ref
-			continue
 		}
 	}
 
@@ -333,7 +323,6 @@ func (s *rpSession) setStatus(ref plumbing.ReferenceName, err error) {
 }
 
 func (s *rpSession) reportStatus() *packp.ReportStatus {
-
 	if !s.cap.Supports(capability.ReportStatus) {
 		return nil
 	}
@@ -373,11 +362,7 @@ func (*rpSession) setSupportedCapabilities(c *capability.List) error {
 		return err
 	}
 
-	if err := c.Set(capability.ReportStatus); err != nil {
-		return err
-	}
-
-	return nil
+	return c.Set(capability.ReportStatus)
 }
 
 func setHEAD(s storer.Storer, ar *packp.AdvRefs) error {
@@ -430,4 +415,13 @@ func setReferences(s storer.Storer, ar *packp.AdvRefs) error {
 		ar.References[ref.Name().String()] = ref.Hash()
 		return nil
 	})
+}
+
+func referenceExists(s storer.ReferenceStorer, n plumbing.ReferenceName) (bool, error) {
+	_, err := s.Reference(n)
+	if err == plumbing.ErrReferenceNotFound {
+		return false, nil
+	}
+
+	return err == nil, err
 }
