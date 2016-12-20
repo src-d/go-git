@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/internal/common"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/server"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
@@ -33,7 +35,7 @@ func (s *Server) Serve(cmd string, args []string) error {
 	}
 }
 
-var srvCmd = server.ServerCommand{
+var srvCmd = common.ServerCommand{
 	Stdin:  os.Stdin,
 	Stdout: ioutil.WriteNopCloser(os.Stdout),
 	Stderr: os.Stderr,
@@ -55,7 +57,7 @@ func serveUploadPackServiceName(h server.Handler, args []string) error {
 		return fmt.Errorf("error creating session: %s", err)
 	}
 
-	return server.UploadPack(srvCmd, sess)
+	return common.UploadPack(srvCmd, sess)
 }
 
 func serveReceivePackServiceName(h server.Handler, args []string) error {
@@ -74,9 +76,9 @@ func serveReceivePackServiceName(h server.Handler, args []string) error {
 		return fmt.Errorf("error creating session: %s", err)
 	}
 
-	return server.ReceivePack(srvCmd, sess)
+	return common.ReceivePack(srvCmd, sess)
 }
 
-func newStorerByPath(path string) (server.Storer, error) {
+func newStorerByPath(path string) (storer.Storer, error) {
 	return filesystem.NewStorage(osfs.New(path))
 }

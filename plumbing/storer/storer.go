@@ -1,9 +1,7 @@
 package storer
 
-// Storer is a full storer for encoded objects, references, index and shallow.
+// Storer is a basic storer for encoded objects and references.
 type Storer interface {
 	EncodedObjectStorer
-	IndexStorer
 	ReferenceStorer
-	ShallowStorer
 }

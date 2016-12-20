@@ -1,10 +1,11 @@
-package server
+package common
 
 import (
 	"fmt"
 	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/server"
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
@@ -15,7 +16,7 @@ type ServerCommand struct {
 	Stdin  io.Reader
 }
 
-func UploadPack(cmd ServerCommand, s UploadPackSession) (err error) {
+func UploadPack(cmd ServerCommand, s server.UploadPackSession) (err error) {
 	ioutil.CheckClose(cmd.Stdout, &err)
 
 	ar, err := s.AdvertisedReferences()
@@ -41,7 +42,7 @@ func UploadPack(cmd ServerCommand, s UploadPackSession) (err error) {
 	return resp.Encode(cmd.Stdout)
 }
 
-func ReceivePack(cmd ServerCommand, s ReceivePackSession) error {
+func ReceivePack(cmd ServerCommand, s server.ReceivePackSession) error {
 	ar, err := s.AdvertisedReferences()
 	if err != nil {
 		return fmt.Errorf("internal error in advertised references: %s", err)
