@@ -18,7 +18,7 @@ type CmdUploadPack struct {
 }
 
 func (CmdUploadPack) Usage() string {
-	//XXX: git-upload-pack returns error code 129 if arguments are invalid.
+	//TODO: git-upload-pack returns error code 129 if arguments are invalid.
 	return fmt.Sprintf("usage: %s <git-dir>", os.Args[0])
 }
 

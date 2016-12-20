@@ -40,9 +40,10 @@ func (s *ReceivePackSuite) SetUpSuite(c *C) {
 }
 
 func (s *ReceivePackSuite) TestPush(c *C) {
+	// git <2.0 cannot push to an empty repository without a refspec.
 	cmd := exec.Command("git", "push",
 		"--receive-pack", s.ReceivePackBin,
-		s.RemoteName,
+		s.RemoteName, "refs/heads/*:refs/heads/*",
 	)
 	cmd.Dir = s.SrcPath
 	cmd.Env = os.Environ()

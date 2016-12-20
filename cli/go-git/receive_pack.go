@@ -17,7 +17,7 @@ type CmdReceivePack struct {
 }
 
 func (CmdReceivePack) Usage() string {
-	//XXX: git-receive-pack returns error code 129 if arguments are invalid.
+	//TODO: git-receive-pack returns error code 129 if arguments are invalid.
 	return fmt.Sprintf("usage: %s <git-dir>", os.Args[0])
 }
 

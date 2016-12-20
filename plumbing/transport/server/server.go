@@ -17,6 +17,10 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 )
 
+// DefaultHandler is the default server handler. Use this unless you are
+// creating your own server implementation.
+var DefaultHandler = NewHandler()
+
 // Handler is server-side a protocol implementation.
 type Handler interface {
 	// NewUploadPackSession starts a git-upload-pack session for a given
@@ -42,10 +46,6 @@ type ReceivePackSession interface {
 	Session
 	ReceivePack(*packp.ReferenceUpdateRequest) (*packp.ReportStatus, error)
 }
-
-// DefaultHandler is the default server handler. Use this unless you are
-// creating your own server implementation.
-var DefaultHandler = NewHandler()
 
 type handler struct{}
 
