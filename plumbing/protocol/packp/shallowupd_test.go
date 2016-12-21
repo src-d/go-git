@@ -12,6 +12,26 @@ type ShallowUpdateSuite struct{}
 
 var _ = Suite(&ShallowUpdateSuite{})
 
+func (s *ShallowUpdateSuite) TestDecodeWithLF(c *C) {
+	raw := "" +
+		"0035shallow aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n" +
+		"0035shallow bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n" +
+		"0000"
+
+	su := &ShallowUpdate{}
+	err := su.Decode(bytes.NewBufferString(raw))
+	c.Assert(err, IsNil)
+
+	plumbing.HashesSort(su.Shallows)
+
+	c.Assert(su.Unshallows, HasLen, 0)
+	c.Assert(su.Shallows, HasLen, 2)
+	c.Assert(su.Shallows, DeepEquals, []plumbing.Hash{
+		plumbing.NewHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+		plumbing.NewHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+	})
+}
+
 func (s *ShallowUpdateSuite) TestDecode(c *C) {
 	raw := "" +
 		"0034shallow aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
@@ -84,10 +104,10 @@ func (s *ShallowUpdateSuite) TestEncode(c *C) {
 	c.Assert(su.Encode(buf), IsNil)
 
 	expected := "" +
-		"0034shallow aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-		"0034shallow bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" +
-		"0036unshallow aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-		"0036unshallow bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" +
+		"0035shallow aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n" +
+		"0035shallow bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n" +
+		"0037unshallow aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n" +
+		"0037unshallow bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n" +
 		"0000"
 
 	c.Assert(buf.String(), Equals, expected)
@@ -104,8 +124,8 @@ func (s *ShallowUpdateSuite) TestEncodeShallow(c *C) {
 	c.Assert(su.Encode(buf), IsNil)
 
 	expected := "" +
-		"0034shallow aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-		"0034shallow bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" +
+		"0035shallow aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n" +
+		"0035shallow bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n" +
 		"0000"
 
 	c.Assert(buf.String(), Equals, expected)
@@ -122,8 +142,8 @@ func (s *ShallowUpdateSuite) TestEncodeUnshallow(c *C) {
 	c.Assert(su.Encode(buf), IsNil)
 
 	expected := "" +
-		"0036unshallow aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-		"0036unshallow bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" +
+		"0037unshallow aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n" +
+		"0037unshallow bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n" +
 		"0000"
 
 	c.Assert(buf.String(), Equals, expected)

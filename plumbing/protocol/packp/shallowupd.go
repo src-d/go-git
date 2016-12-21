@@ -24,6 +24,7 @@ func (r *ShallowUpdate) Decode(reader io.Reader) error {
 
 	for s.Scan() {
 		line := s.Bytes()
+		line = bytes.TrimSpace(line)
 
 		var err error
 		switch {
@@ -76,13 +77,13 @@ func (r *ShallowUpdate) Encode(w io.Writer) error {
 	e := pktline.NewEncoder(w)
 
 	for _, h := range r.Shallows {
-		if err := e.Encodef("%s%s", shallow, h.String()); err != nil {
+		if err := e.Encodef("%s%s\n", shallow, h.String()); err != nil {
 			return err
 		}
 	}
 
 	for _, h := range r.Unshallows {
-		if err := e.Encodef("%s%s", unshallow, h.String()); err != nil {
+		if err := e.Encodef("%s%s\n", unshallow, h.String()); err != nil {
 			return err
 		}
 	}

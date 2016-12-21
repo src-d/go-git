@@ -77,8 +77,8 @@ func (r *ServerResponse) Encode(w io.Writer) error {
 
 	e := pktline.NewEncoder(w)
 	if len(r.ACKs) == 0 {
-		return e.Encode(nak)
+		return e.Encodef("%s\n", nak)
 	}
 
-	return e.Encodef("%s %s", ack, r.ACKs[0].String())
+	return e.Encodef("%s %s\n", ack, r.ACKs[0].String())
 }

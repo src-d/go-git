@@ -3,14 +3,11 @@ package server
 import (
 	"os/exec"
 	"path/filepath"
-	"testing"
 
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 
 	. "gopkg.in/check.v1"
 )
-
-func Test(t *testing.T) { TestingT(t) }
 
 type LoaderSuite struct {
 	RepoPath string
