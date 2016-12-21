@@ -14,10 +14,10 @@ var DefaultLoader = NewFilesystemLoader(os.New("/"))
 
 // Loader loads repository's storer.Storer based on an optional host and a path.
 type Loader interface {
-	// Load loads a storer.Storer given an optional host and a path.
+	// Load loads a storer.Storer given a transport.Endpoint.
 	// Returns transport.ErrRepositoryNotFound if the repository does not
 	// exist.
-	Load(host, path string) (storer.Storer, error)
+	Load(ep transport.Endpoint) (storer.Storer, error)
 }
 
 type fsLoader struct {
@@ -30,11 +30,22 @@ func NewFilesystemLoader(base billy.Filesystem) Loader {
 	return &fsLoader{base}
 }
 
-func (l *fsLoader) Load(host, path string) (storer.Storer, error) {
-	fs := l.base.Dir(path)
+func (l *fsLoader) Load(ep transport.Endpoint) (storer.Storer, error) {
+	fs := l.base.Dir(ep.Path)
 	if _, err := fs.Stat("config"); err != nil {
 		return nil, transport.ErrRepositoryNotFound
 	}
 
 	return filesystem.NewStorage(fs)
+}
+
+type MapLoader map[transport.Endpoint]storer.Storer
+
+func (l MapLoader) Load(ep transport.Endpoint) (storer.Storer, error) {
+	s, ok := l[ep]
+	if !ok {
+		return nil, transport.ErrRepositoryNotFound
+	}
+
+	return s, nil
 }

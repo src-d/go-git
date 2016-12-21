@@ -130,7 +130,7 @@ func (r *Remote) fetch(o *FetchOptions) (refs storer.ReferenceStorer, err error)
 		o.RefSpecs = r.c.Fetch
 	}
 
-	s, err := newFetchPackSession(r.c.URL)
+	s, err := newUploadPackSession(r.c.URL)
 	if err != nil {
 		return nil, err
 	}
@@ -173,25 +173,25 @@ func (r *Remote) fetch(o *FetchOptions) (refs storer.ReferenceStorer, err error)
 	return remoteRefs, err
 }
 
-func newFetchPackSession(url string) (transport.FetchPackSession, error) {
+func newUploadPackSession(url string) (transport.UploadPackSession, error) {
 	c, ep, err := newClient(url)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.NewFetchPackSession(ep)
+	return c.NewUploadPackSession(ep)
 }
 
-func newSendPackSession(url string) (transport.SendPackSession, error) {
+func newSendPackSession(url string) (transport.ReceivePackSession, error) {
 	c, ep, err := newClient(url)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.NewSendPackSession(ep)
+	return c.NewReceivePackSession(ep)
 }
 
-func newClient(url string) (transport.Client, transport.Endpoint, error) {
+func newClient(url string) (transport.Transport, transport.Endpoint, error) {
 	ep, err := transport.NewEndpoint(url)
 	if err != nil {
 		return nil, transport.Endpoint{}, err
@@ -205,10 +205,10 @@ func newClient(url string) (transport.Client, transport.Endpoint, error) {
 	return c, ep, err
 }
 
-func (r *Remote) fetchPack(o *FetchOptions, s transport.FetchPackSession,
+func (r *Remote) fetchPack(o *FetchOptions, s transport.UploadPackSession,
 	req *packp.UploadPackRequest) (err error) {
 
-	reader, err := s.FetchPack(req)
+	reader, err := s.UploadPack(req)
 	if err != nil {
 		return err
 	}
@@ -510,7 +510,7 @@ func referencesToHashes(refs storer.ReferenceStorer) ([]plumbing.Hash, error) {
 	return hs, nil
 }
 
-func pushHashes(sess transport.SendPackSession, sto storer.EncodedObjectStorer,
+func pushHashes(sess transport.ReceivePackSession, sto storer.EncodedObjectStorer,
 	req *packp.ReferenceUpdateRequest, hs []plumbing.Hash) (*packp.ReportStatus, error) {
 
 	rd, wr := io.Pipe()
@@ -526,7 +526,7 @@ func pushHashes(sess transport.SendPackSession, sto storer.EncodedObjectStorer,
 		done <- wr.Close()
 	}()
 
-	rs, err := sess.SendPack(req)
+	rs, err := sess.ReceivePack(req)
 	if err != nil {
 		return nil, err
 	}

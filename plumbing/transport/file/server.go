@@ -10,41 +10,38 @@ import (
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
-var DefaultServer = NewServer(server.DefaultLoader, server.DefaultHandler)
-
-type Server struct {
-	loader  server.Loader
-	handler server.Handler
-}
-
-func NewServer(loader server.Loader, handler server.Handler) *Server {
-	return &Server{loader, handler}
-}
-
-func (s *Server) Serve(cmd string, path string, host string) error {
-	sto, err := s.loader.Load(host, path)
+// ServeUploadPack serves a git-upload-pack request using standard output, input
+// and error. This is meant to be used when implementing a git-upload-pack
+// command.
+func ServeUploadPack(path string) error {
+	ep, err := transport.NewEndpoint(fmt.Sprintf("file://%s", path))
 	if err != nil {
 		return err
 	}
 
-	switch cmd {
-	case transport.UploadPackServiceName:
-		sess, err := s.handler.NewUploadPackSession(sto)
-		if err != nil {
-			return fmt.Errorf("error creating session: %s", err)
-		}
-
-		return common.UploadPack(srvCmd, sess)
-	case transport.ReceivePackServiceName:
-		sess, err := s.handler.NewReceivePackSession(sto)
-		if err != nil {
-			return fmt.Errorf("error creating session: %s", err)
-		}
-
-		return common.ReceivePack(srvCmd, sess)
-	default:
-		return fmt.Errorf("invalid command: %s", cmd)
+	s, err := server.DefaultServer.NewUploadPackSession(ep)
+	if err != nil {
+		return fmt.Errorf("error creating session: %s", err)
 	}
+
+	return common.ServeUploadPack(srvCmd, s)
+}
+
+// ServeReceivePack serves a git-receive-pack request using standard output,
+// input and error. This is meant to be used when implementing a
+// git-receive-pack command.
+func ServeReceivePack(path string) error {
+	ep, err := transport.NewEndpoint(fmt.Sprintf("file://%s", path))
+	if err != nil {
+		return err
+	}
+
+	s, err := server.DefaultServer.NewReceivePackSession(ep)
+	if err != nil {
+		return fmt.Errorf("error creating session: %s", err)
+	}
+
+	return common.ServeReceivePack(srvCmd, s)
 }
 
 var srvCmd = common.ServerCommand{

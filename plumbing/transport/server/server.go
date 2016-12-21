@@ -17,51 +17,46 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 )
 
-// DefaultHandler is the default server handler. Use this unless you are
-// creating your own server implementation.
-var DefaultHandler = NewHandler()
+var DefaultServer = NewServer(DefaultLoader)
 
-// Handler is server-side a protocol implementation.
-type Handler interface {
-	// NewUploadPackSession starts a git-upload-pack session for a given
-	// repository.
-	NewUploadPackSession(storer.Storer) (UploadPackSession, error)
-	// NewReceivePackSession starts a git-receive-pack session for a given
-	// repository.
-	NewReceivePackSession(storer.Storer) (ReceivePackSession, error)
+type server struct {
+	loader  Loader
+	handler *handler
 }
 
-type Session interface {
-	AdvertisedReferences() (*packp.AdvRefs, error)
+// NewServer returns a transport.Transport implementing a git server,
+// independent of transport. Each transport must wrap this.
+func NewServer(loader Loader) transport.Transport {
+	return &server{loader, &handler{}}
 }
 
-// UploadPackSession is a git-upload-pack session.
-type UploadPackSession interface {
-	Session
-	UploadPack(*packp.UploadPackRequest) (*packp.UploadPackResponse, error)
+func (s *server) NewUploadPackSession(ep transport.Endpoint) (transport.UploadPackSession, error) {
+	sto, err := s.loader.Load(ep)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.handler.NewUploadPackSession(sto)
 }
 
-// UploadPackSession is a git-receive-pack session.
-type ReceivePackSession interface {
-	Session
-	ReceivePack(*packp.ReferenceUpdateRequest) (*packp.ReportStatus, error)
+func (s *server) NewReceivePackSession(ep transport.Endpoint) (transport.ReceivePackSession, error) {
+	sto, err := s.loader.Load(ep)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.handler.NewReceivePackSession(sto)
 }
 
 type handler struct{}
 
-// NewHandler creates a new server handler.
-// Use DefaultHandler instead.
-func NewHandler() Handler {
-	return &handler{}
-}
-
-func (h *handler) NewUploadPackSession(s storer.Storer) (UploadPackSession, error) {
+func (h *handler) NewUploadPackSession(s storer.Storer) (transport.UploadPackSession, error) {
 	return &upSession{
 		session: session{storer: s},
 	}, nil
 }
 
-func (h *handler) NewReceivePackSession(s storer.Storer) (ReceivePackSession, error) {
+func (h *handler) NewReceivePackSession(s storer.Storer) (transport.ReceivePackSession, error) {
 	return &rpSession{
 		session:   session{storer: s},
 		cmdStatus: map[plumbing.ReferenceName]error{},
@@ -69,13 +64,22 @@ func (h *handler) NewReceivePackSession(s storer.Storer) (ReceivePackSession, er
 }
 
 type session struct {
-	storer  storer.Storer
-	advRefs *packp.AdvRefs
+	storer storer.Storer
+	caps   *capability.List
+}
+
+func (s *session) Close() error {
+	return nil
+}
+
+//TODO: deprecate
+func (s *session) SetAuth(transport.AuthMethod) error {
+	return nil
 }
 
 func (s *session) checkSupportedCapabilities(cl *capability.List) error {
 	for _, c := range cl.All() {
-		if !s.advRefs.Capabilities.Supports(c) {
+		if !s.caps.Supports(c) {
 			return fmt.Errorf("unsupported capability: %s", c)
 		}
 	}
@@ -94,6 +98,8 @@ func (s *upSession) AdvertisedReferences() (*packp.AdvRefs, error) {
 		return nil, err
 	}
 
+	s.caps = ar.Capabilities
+
 	if err := setReferences(s.storer, ar); err != nil {
 		return nil, err
 	}
@@ -101,8 +107,6 @@ func (s *upSession) AdvertisedReferences() (*packp.AdvRefs, error) {
 	if err := setHEAD(s.storer, ar); err != nil {
 		return nil, err
 	}
-
-	s.advRefs = ar
 
 	return ar, nil
 }
@@ -116,9 +120,18 @@ func (s *upSession) UploadPack(req *packp.UploadPackRequest) (*packp.UploadPackR
 		return nil, err
 	}
 
+	if s.caps == nil {
+		s.caps = capability.NewList()
+		if err := s.setSupportedCapabilities(s.caps); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := s.checkSupportedCapabilities(req.Capabilities); err != nil {
 		return nil, err
 	}
+
+	s.caps = req.Capabilities
 
 	if len(req.Shallows) > 0 {
 		return nil, fmt.Errorf("shallow not supported")
@@ -179,7 +192,6 @@ type rpSession struct {
 	cmdStatus map[plumbing.ReferenceName]error
 	firstErr  error
 	unpackErr error
-	cap       *capability.List
 }
 
 func (s *rpSession) AdvertisedReferences() (*packp.AdvRefs, error) {
@@ -189,6 +201,8 @@ func (s *rpSession) AdvertisedReferences() (*packp.AdvRefs, error) {
 		return nil, err
 	}
 
+	s.caps = ar.Capabilities
+
 	if err := setReferences(s.storer, ar); err != nil {
 		return nil, err
 	}
@@ -197,22 +211,26 @@ func (s *rpSession) AdvertisedReferences() (*packp.AdvRefs, error) {
 		return nil, err
 	}
 
-	s.advRefs = ar
-
 	return ar, nil
 }
 
 var (
-	ErrReferenceAlreadyExists = errors.New("reference already exists")
-	ErrReferenceDidNotExist   = errors.New("reference did not exist")
+	ErrUpdateReference = errors.New("failed to update ref")
 )
 
 func (s *rpSession) ReceivePack(req *packp.ReferenceUpdateRequest) (*packp.ReportStatus, error) {
+	if s.caps == nil {
+		s.caps = capability.NewList()
+		if err := s.setSupportedCapabilities(s.caps); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := s.checkSupportedCapabilities(req.Capabilities); err != nil {
 		return nil, err
 	}
 
-	s.cap = req.Capabilities
+	s.caps = req.Capabilities
 
 	//TODO: Implement 'atomic' update of references.
 
@@ -224,7 +242,7 @@ func (s *rpSession) ReceivePack(req *packp.ReferenceUpdateRequest) (*packp.Repor
 
 	updatedRefs := s.updatedReferences(req)
 
-	if s.cap.Supports(capability.Atomic) && s.firstErr != nil {
+	if s.caps.Supports(capability.Atomic) && s.firstErr != nil {
 		//TODO: add support for 'atomic' once we have reference
 		//      transactions, currently we do not announce it.
 		rs := s.reportStatus()
@@ -257,7 +275,7 @@ func (s *rpSession) updatedReferences(req *packp.ReferenceUpdateRequest) map[plu
 		switch cmd.Action() {
 		case packp.Create:
 			if exists {
-				s.setStatus(cmd.Name, ErrReferenceAlreadyExists)
+				s.setStatus(cmd.Name, ErrUpdateReference)
 				continue
 			}
 
@@ -265,11 +283,11 @@ func (s *rpSession) updatedReferences(req *packp.ReferenceUpdateRequest) map[plu
 			refs[ref.Name()] = ref
 		case packp.Delete:
 			if !exists {
-				s.setStatus(cmd.Name, ErrReferenceDidNotExist)
+				s.setStatus(cmd.Name, ErrUpdateReference)
 				continue
 			}
 
-			if !s.cap.Supports(capability.DeleteRefs) {
+			if !s.caps.Supports(capability.DeleteRefs) {
 				s.setStatus(cmd.Name, fmt.Errorf("delete not supported"))
 				continue
 			}
@@ -277,7 +295,7 @@ func (s *rpSession) updatedReferences(req *packp.ReferenceUpdateRequest) map[plu
 			refs[cmd.Name] = nil
 		case packp.Update:
 			if !exists {
-				s.setStatus(cmd.Name, ErrReferenceDidNotExist)
+				s.setStatus(cmd.Name, ErrUpdateReference)
 				continue
 			}
 
@@ -320,13 +338,13 @@ func (s *rpSession) writePackfile(r io.ReadCloser) error {
 
 func (s *rpSession) setStatus(ref plumbing.ReferenceName, err error) {
 	s.cmdStatus[ref] = err
-	if s.firstErr != nil && err != nil {
+	if s.firstErr == nil && err != nil {
 		s.firstErr = err
 	}
 }
 
 func (s *rpSession) reportStatus() *packp.ReportStatus {
-	if !s.cap.Supports(capability.ReportStatus) {
+	if !s.caps.Supports(capability.ReportStatus) {
 		return nil
 	}
 

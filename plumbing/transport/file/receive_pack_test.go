@@ -1,53 +1,75 @@
 package file
 
 import (
-	"fmt"
 	"os"
-	"os/exec"
 
 	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/test"
 
 	. "gopkg.in/check.v1"
 )
 
 type ReceivePackSuite struct {
 	CommonSuite
-	Server     *Server
-	RemoteName string
-	SrcPath    string
-	DstPath    string
-	DstURL     string
+	test.ReceivePackSuite
 }
 
 var _ = Suite(&ReceivePackSuite{})
 
 func (s *ReceivePackSuite) SetUpSuite(c *C) {
 	s.CommonSuite.SetUpSuite(c)
-
-	s.Server = DefaultServer
-	s.RemoteName = "test"
-
-	fixture := fixtures.Basic().One()
-	s.SrcPath = fixture.DotGit().Base()
-
-	fixture = fixtures.ByTag("empty").One()
-	s.DstPath = fixture.DotGit().Base()
-	s.DstURL = fmt.Sprintf("file://%s", s.DstPath)
-
-	cmd := exec.Command("git", "remote", "add", s.RemoteName, s.DstURL)
-	cmd.Dir = s.SrcPath
-	c.Assert(cmd.Run(), IsNil)
+	s.ReceivePackSuite.Client = DefaultClient
 }
 
-func (s *ReceivePackSuite) TestPush(c *C) {
-	// git <2.0 cannot push to an empty repository without a refspec.
-	cmd := exec.Command("git", "push",
-		"--receive-pack", s.ReceivePackBin,
-		s.RemoteName, "refs/heads/*:refs/heads/*",
-	)
-	cmd.Dir = s.SrcPath
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "GIT_TRACE=true", "GIT_TRACE_PACKET=true")
-	stdout, stderr, err := execAndGetOutput(c, cmd)
-	c.Assert(err, IsNil, Commentf("STDOUT:\n%s\nSTDERR:\n%s\n", stdout, stderr))
+func (s *ReceivePackSuite) SetUpTest(c *C) {
+	fixture := fixtures.Basic().One()
+	path := fixture.DotGit().Base()
+	s.Endpoint = prepareRepo(c, path)
+
+	fixture = fixtures.ByTag("empty").One()
+	path = fixture.DotGit().Base()
+	s.EmptyEndpoint = prepareRepo(c, path)
+
+	s.NonExistentEndpoint = prepareRepo(c, "/non-existent")
+}
+
+func (s *ReceivePackSuite) TearDownTest(c *C) {
+	s.Suite.TearDownSuite(c)
+}
+
+// TODO: fix test
+func (s *ReceivePackSuite) TestCommandNoOutput(c *C) {
+	c.Skip("failing test")
+
+	if _, err := os.Stat("/bin/true"); os.IsNotExist(err) {
+		c.Skip("/bin/true not found")
+	}
+
+	client := NewClient("true", "true")
+	session, err := client.NewReceivePackSession(s.Endpoint)
+	c.Assert(err, IsNil)
+	ar, err := session.AdvertisedReferences()
+	c.Assert(err, IsNil)
+	c.Assert(ar, IsNil)
+}
+
+func (s *ReceivePackSuite) TestMalformedInputNoErrors(c *C) {
+	if _, err := os.Stat("/usr/bin/yes"); os.IsNotExist(err) {
+		c.Skip("/usr/bin/yes not found")
+	}
+
+	client := NewClient("yes", "yes")
+	session, err := client.NewReceivePackSession(s.Endpoint)
+	c.Assert(err, IsNil)
+	ar, err := session.AdvertisedReferences()
+	c.Assert(err, NotNil)
+	c.Assert(ar, IsNil)
+}
+
+func (s *ReceivePackSuite) TestNonExistentCommand(c *C) {
+	cmd := "/non-existent-git"
+	client := NewClient(cmd, cmd)
+	session, err := client.NewReceivePackSession(s.Endpoint)
+	c.Assert(err, ErrorMatches, ".*no such file or directory.*")
+	c.Assert(session, IsNil)
 }

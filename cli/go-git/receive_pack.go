@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/file"
 )
 
@@ -27,9 +26,7 @@ func (c *CmdReceivePack) Execute(args []string) error {
 		return err
 	}
 
-	if err := file.DefaultServer.Serve(
-		transport.ReceivePackServiceName, gitDir, "",
-	); err != nil {
+	if err := file.ServeReceivePack(gitDir); err != nil {
 		fmt.Fprintln(os.Stderr, "ERR:", err)
 		os.Exit(128)
 	}

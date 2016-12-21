@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"os/exec"
 	"path/filepath"
 
@@ -25,26 +26,32 @@ func (s *LoaderSuite) SetUpSuite(c *C) {
 	c.Assert(exec.Command("git", "init", "--bare", s.RepoPath).Run(), IsNil)
 }
 
+func (s *LoaderSuite) endpoint(c *C, url string) transport.Endpoint {
+	ep, err := transport.NewEndpoint(url)
+	c.Assert(err, IsNil)
+	return ep
+}
+
 func (s *LoaderSuite) TestLoadNonExistent(c *C) {
-	sto, err := DefaultLoader.Load("", "/does-not-exist")
+	sto, err := DefaultLoader.Load(s.endpoint(c, "file:///does-not-exist"))
 	c.Assert(err, Equals, transport.ErrRepositoryNotFound)
 	c.Assert(sto, IsNil)
 }
 
 func (s *LoaderSuite) TestLoadNonExistentIgnoreHost(c *C) {
-	sto, err := DefaultLoader.Load("example.com", "/does-not-exist")
+	sto, err := DefaultLoader.Load(s.endpoint(c, "https://github.com/does-not-exist"))
 	c.Assert(err, Equals, transport.ErrRepositoryNotFound)
 	c.Assert(sto, IsNil)
 }
 
 func (s *LoaderSuite) TestLoad(c *C) {
-	sto, err := DefaultLoader.Load("", s.RepoPath)
+	sto, err := DefaultLoader.Load(s.endpoint(c, fmt.Sprintf("file://%s", s.RepoPath)))
 	c.Assert(err, IsNil)
 	c.Assert(sto, NotNil)
 }
 
 func (s *LoaderSuite) TestLoadIgnoreHost(c *C) {
-	sto, err := DefaultLoader.Load("example.com", s.RepoPath)
+	sto, err := DefaultLoader.Load(s.endpoint(c, fmt.Sprintf("file://%s", s.RepoPath)))
 	c.Assert(err, IsNil)
 	c.Assert(sto, NotNil)
 }
