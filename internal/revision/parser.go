@@ -3,6 +3,7 @@
 package revision
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"regexp"
@@ -99,6 +100,11 @@ type Parser struct {
 		lit string
 		n   int
 	}
+}
+
+// NewParserFromString returns a new instance of parser from a string.
+func NewParserFromString(s string) *Parser {
+	return NewParser(bytes.NewBufferString(s))
 }
 
 // NewParser returns a new instance of parser.

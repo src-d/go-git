@@ -18,6 +18,12 @@ func (s *ParserSuite) TestErrInvalidRevision(c *C) {
 	c.Assert(e.Error(), Equals, "Revision invalid : test")
 }
 
+func (s *ParserSuite) TestNewParserFromString(c *C) {
+	p := NewParserFromString("test")
+
+	c.Assert(p, FitsTypeOf, &Parser{})
+}
+
 func (s *ParserSuite) TestScan(c *C) {
 	parser := NewParser(bytes.NewBufferString("Hello world !"))
 
