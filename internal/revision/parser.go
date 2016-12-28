@@ -358,6 +358,10 @@ func (p *Parser) parseCaret() (Revisioner, error) {
 	case tok == number:
 		n, _ := strconv.Atoi(lit)
 
+		if n > 2 {
+			return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be 0, 1 or 2 after "^"`, lit)}
+		}
+
 		return CaretPath{n}, nil
 	default:
 		p.unscan()

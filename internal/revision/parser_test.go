@@ -246,7 +246,7 @@ func (s *ParserSuite) TestParseAtWithUnValidExpression(c *C) {
 func (s *ParserSuite) TestParseCaretWithValidExpression(c *C) {
 	datas := map[string]Revisioner{
 		"^":                    CaretPath{1},
-		"^3":                   CaretPath{3},
+		"^2":                   CaretPath{2},
 		"^{}":                  CaretType{"tag"},
 		"^{commit}":            CaretType{"commit"},
 		"^{tree}":              CaretType{"tree"},
@@ -271,6 +271,7 @@ func (s *ParserSuite) TestParseCaretWithValidExpression(c *C) {
 func (s *ParserSuite) TestParseCaretWithUnValidExpression(c *C) {
 	datas := map[string]error{
 		"a":          &ErrInvalidRevision{`"a" found must be "^"`},
+		"^3":         &ErrInvalidRevision{`"3" found must be 0, 1 or 2 after "^"`},
 		"^{test}":    &ErrInvalidRevision{`"test" is not a valid revision suffix brace component`},
 		"^{/!test}":  &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
 		"^{/test**}": &ErrInvalidRevision{"revision suffix brace component, error parsing regexp: invalid nested repetition operator: `**`"},
