@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"srcd.works/go-git.v4/config"
+	"srcd.works/go-git.v4/internal/revision"
 	"srcd.works/go-git.v4/plumbing"
 	"srcd.works/go-git.v4/plumbing/object"
 	"srcd.works/go-git.v4/plumbing/storer"
@@ -627,4 +628,76 @@ func (r *Repository) Worktree() (*Worktree, error) {
 	}
 
 	return &Worktree{r: r, fs: r.wt}, nil
+}
+
+// ResolveRevision resolves revision to corresponding hash
+func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, error) {
+	p := revision.NewParserFromString(string(rev))
+
+	items, err := p.Parse()
+
+	if err != nil {
+		return nil, err
+	}
+
+	var commit *object.Commit
+
+	for _, item := range items {
+		switch item.(type) {
+		case revision.Ref:
+			ref, err := storer.ResolveReference(r.s, plumbing.ReferenceName(item.(revision.Ref)))
+
+			if err != nil {
+				return &plumbing.ZeroHash, err
+			}
+
+			h := ref.Hash()
+
+			commit, err = r.Commit(h)
+
+			if err != nil {
+				return &plumbing.ZeroHash, err
+			}
+		case revision.CaretPath:
+			depth := item.(revision.CaretPath).Depth
+
+			if depth == 0 {
+				break
+			}
+
+			iter := commit.Parents()
+
+			c, err := iter.Next()
+
+			if err != nil {
+				return &plumbing.ZeroHash, err
+			}
+
+			if depth == 1 {
+				commit = c
+
+				break
+			}
+
+			c, err = iter.Next()
+
+			if err != nil {
+				return &plumbing.ZeroHash, err
+			}
+
+			commit = c
+		case revision.TildePath:
+			for i := 0; i < item.(revision.TildePath).Depth; i++ {
+				c, err := commit.Parents().Next()
+
+				if err != nil {
+					return &plumbing.ZeroHash, err
+				}
+
+				commit = c
+			}
+		}
+	}
+
+	return &commit.Hash, nil
 }

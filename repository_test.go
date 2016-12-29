@@ -780,6 +780,52 @@ func (s *RepositorySuite) TestWorktreeBare(c *C) {
 	c.Assert(w, IsNil)
 }
 
+func (s *RepositorySuite) TestResolveRevision(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/basic.git").One(),
+	)
+
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	datas := map[string]string{
+		"HEAD": "6ecf0ef2c2dffb796033e5a02219af86ec6584e5",
+		"refs/heads/master~2^^~": "b029517f6300c2da0f4b651b8642506cd6aaf45d",
+		"HEAD~2^^~":              "b029517f6300c2da0f4b651b8642506cd6aaf45d",
+		"HEAD~3^2":               "a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69",
+		"HEAD~3^2^0":             "a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69",
+	}
+
+	for rev, hash := range datas {
+		h, err := r.ResolveRevision(plumbing.Revision(rev))
+
+		c.Assert(err, IsNil)
+		c.Assert(h.String(), Equals, hash)
+	}
+}
+
+func (s *RepositorySuite) TestResolveRevisionWithErrors(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/basic.git").One(),
+	)
+
+	r := NewMemoryRepository()
+	err := r.Clone(&CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	datas := map[string]string{
+		"efs/heads/master~": "reference not found",
+		"HEAD^3":            `Revision invalid : "3" found must be 0, 1 or 2 after "^"`,
+	}
+
+	for rev, rerr := range datas {
+		_, err := r.ResolveRevision(plumbing.Revision(rev))
+
+		c.Assert(err.Error(), Equals, rerr)
+	}
+}
+
 func ExecuteOnPath(c *C, path string, cmds ...string) error {
 	for _, cmd := range cmds {
 		err := executeOnPath(path, cmd)
