@@ -250,7 +250,7 @@ func (p *Parser) parseAt() (Revisioner, error) {
 	tok, lit = p.scan()
 
 	if tok != at {
-		return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "@"`, lit)}
+		return nil, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "@"`, lit)}
 	}
 
 	tok, lit = p.scan()
@@ -296,7 +296,7 @@ func (p *Parser) parseAt() (Revisioner, error) {
 				t, err := time.Parse("2006-01-02T15:04:05Z", date)
 
 				if err != nil {
-					return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`wrong date "%s" must fit ISO-8601 format : 2006-01-02T15:04:05Z`, date)}
+					return nil, &ErrInvalidRevision{fmt.Sprintf(`wrong date "%s" must fit ISO-8601 format : 2006-01-02T15:04:05Z`, date)}
 				}
 
 				return AtDate{t}, nil
@@ -315,7 +315,7 @@ func (p *Parser) parseTilde() (Revisioner, error) {
 	tok, lit = p.scan()
 
 	if tok != tilde {
-		return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "~"`, lit)}
+		return nil, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "~"`, lit)}
 	}
 
 	tok, lit = p.scan()
@@ -339,7 +339,7 @@ func (p *Parser) parseCaret() (Revisioner, error) {
 	tok, lit = p.scan()
 
 	if tok != caret {
-		return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "^"`, lit)}
+		return nil, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "^"`, lit)}
 	}
 
 	tok, lit = p.scan()
@@ -351,7 +351,7 @@ func (p *Parser) parseCaret() (Revisioner, error) {
 		r, err := p.parseCaretBraces()
 
 		if err != nil {
-			return (Revisioner)(struct{}{}), err
+			return nil, err
 		}
 
 		return r, nil
@@ -359,7 +359,7 @@ func (p *Parser) parseCaret() (Revisioner, error) {
 		n, _ := strconv.Atoi(lit)
 
 		if n > 2 {
-			return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be 0, 1 or 2 after "^"`, lit)}
+			return nil, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be 0, 1 or 2 after "^"`, lit)}
 		}
 
 		return CaretPath{n}, nil
@@ -397,11 +397,11 @@ func (p *Parser) parseCaretBraces() (Revisioner, error) {
 		case re == "" && tok == emark && nextTok == minus:
 			negate = true
 		case re == "" && tok == emark:
-			return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
+			return nil, &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
 		case re == "" && tok == slash:
 			p.unscan()
 		case tok != slash && start:
-			return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix brace component`, lit)}
+			return nil, &ErrInvalidRevision{fmt.Sprintf(`"%s" is not a valid revision suffix brace component`, lit)}
 		case tok != cbrace:
 			p.unscan()
 			re += lit
@@ -467,7 +467,7 @@ func (p *Parser) parseColonSlash() (Revisioner, error) {
 		case re == "" && tok == emark && nextTok == minus:
 			negate = true
 		case re == "" && tok == emark:
-			return (Revisioner)(struct{}{}), &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
+			return nil, &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
 		case tok == eof:
 			p.unscan()
 
