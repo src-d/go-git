@@ -30,6 +30,9 @@ func NewFilesystemLoader(base billy.Filesystem) Loader {
 	return &fsLoader{base}
 }
 
+// Load looks up the endpoint's path in the base file system and returns a
+// storer for it. Returns transport.ErrRepositoryNotFound if a repository does
+// not exist in the given path.
 func (l *fsLoader) Load(ep transport.Endpoint) (storer.Storer, error) {
 	fs := l.base.Dir(ep.Path)
 	if _, err := fs.Stat("config"); err != nil {
@@ -39,8 +42,13 @@ func (l *fsLoader) Load(ep transport.Endpoint) (storer.Storer, error) {
 	return filesystem.NewStorage(fs)
 }
 
+// MapLoader is a Loader that uses a lookup map of storer.Storer by
+// transport.Endpoint.
 type MapLoader map[transport.Endpoint]storer.Storer
 
+// Load returns a storer.Storer for given a transport.Endpoint by looking it up
+// in the map. Returns transport.ErrRepositoryNotFound if the endpoint does not
+// exist.
 func (l MapLoader) Load(ep transport.Endpoint) (storer.Storer, error) {
 	s, ok := l[ep]
 	if !ok {

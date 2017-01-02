@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -39,25 +38,4 @@ func main() {
 
 type cmd struct {
 	Verbose bool `short:"v" description:"Activates the verbose mode"`
-}
-
-func (c *cmd) print(format string, a ...interface{}) {
-	if !c.Verbose {
-		return
-	}
-
-	fmt.Printf(format, a...)
-}
-
-func resolvePath(path string) (string, error) {
-	if filepath.IsAbs(path) {
-		return path, nil
-	}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return path, err
-	}
-
-	return filepath.Join(wd, path), nil
 }

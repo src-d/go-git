@@ -2,6 +2,7 @@ package file
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -70,40 +71,35 @@ func execAndGetOutput(c *C, cmd *exec.Cmd) (stdout, stderr string, err error) {
 	serr, err := cmd.StderrPipe()
 	c.Assert(err, IsNil)
 
-	outChan := make(chan string, 1)
-	outDoneChan := make(chan error, 1)
-	errChan := make(chan string, 1)
-	errDoneChan := make(chan error, 1)
+	outChan, outErr := readAllAsync(sout)
+	errChan, errErr := readAllAsync(serr)
 
 	c.Assert(cmd.Start(), IsNil)
-
-	go func() {
-		b, err := ioutil.ReadAll(sout)
-		if err != nil {
-			outDoneChan <- err
-		}
-
-		outChan <- string(b)
-		outDoneChan <- nil
-	}()
-
-	go func() {
-		b, err := ioutil.ReadAll(serr)
-		if err != nil {
-			errDoneChan <- err
-		}
-
-		errChan <- string(b)
-		errDoneChan <- nil
-	}()
 
 	if err = cmd.Wait(); err != nil {
 		return <-outChan, <-errChan, err
 	}
 
-	if err := <-outDoneChan; err != nil {
+	if err := <-outErr; err != nil {
 		return <-outChan, <-errChan, err
 	}
 
-	return <-outChan, <-errChan, <-errDoneChan
+	return <-outChan, <-errChan, <-errErr
+}
+
+func readAllAsync(r io.Reader) (out chan string, err chan error) {
+	out = make(chan string, 1)
+	err = make(chan error, 1)
+	go func() {
+		b, e := ioutil.ReadAll(r)
+		if e != nil {
+			err <- e
+		} else {
+			err <- nil
+		}
+
+		out <- string(b)
+	}()
+
+	return out, err
 }

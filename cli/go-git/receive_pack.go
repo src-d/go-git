@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/file"
 )
@@ -21,7 +22,7 @@ func (CmdReceivePack) Usage() string {
 }
 
 func (c *CmdReceivePack) Execute(args []string) error {
-	gitDir, err := resolvePath(c.Args.GitDir)
+	gitDir, err := filepath.Abs(c.Args.GitDir)
 	if err != nil {
 		return err
 	}
