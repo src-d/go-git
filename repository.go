@@ -696,6 +696,29 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 
 				commit = c
 			}
+		case revision.CaretReg:
+			history, err := commit.History()
+
+			if err != nil {
+				return &plumbing.ZeroHash, err
+			}
+
+			re := item.(revision.CaretReg).Regexp
+			var c *object.Commit
+
+			for i := 0; i < len(history); i++ {
+				if re.MatchString(history[i].Message) {
+					c = history[i]
+
+					break
+				}
+			}
+
+			if c == nil {
+				return &plumbing.ZeroHash, fmt.Errorf(`No commit message match regexp : "%s"`, re.String())
+			}
+
+			commit = c
 		}
 	}
 

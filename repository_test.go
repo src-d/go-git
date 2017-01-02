@@ -795,6 +795,7 @@ func (s *RepositorySuite) TestResolveRevision(c *C) {
 		"HEAD~2^^~":              "b029517f6300c2da0f4b651b8642506cd6aaf45d",
 		"HEAD~3^2":               "a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69",
 		"HEAD~3^2^0":             "a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69",
+		"HEAD~2^{/binary file}":  "35e85108805c84807bc66a02d91535e1e24b38b9",
 	}
 
 	for rev, hash := range datas {
@@ -817,6 +818,7 @@ func (s *RepositorySuite) TestResolveRevisionWithErrors(c *C) {
 	datas := map[string]string{
 		"efs/heads/master~": "reference not found",
 		"HEAD^3":            `Revision invalid : "3" found must be 0, 1 or 2 after "^"`,
+		"HEAD^{/whatever}":  `No commit message match regexp : "whatever"`,
 	}
 
 	for rev, rerr := range datas {
