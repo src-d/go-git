@@ -719,6 +719,29 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 			}
 
 			commit = c
+		case revision.AtDate:
+			history, err := commit.History()
+
+			if err != nil {
+				return &plumbing.ZeroHash, err
+			}
+
+			date := item.(revision.AtDate).Date
+			var c *object.Commit
+
+			for i := 0; i < len(history); i++ {
+				if date.Equal(history[i].Committer.When.UTC()) || history[i].Committer.When.UTC().Before(date) {
+					c = history[i]
+
+					break
+				}
+			}
+
+			if c == nil {
+				return &plumbing.ZeroHash, fmt.Errorf(`No commit exists prior to date "%s"`, date.String())
+			}
+
+			commit = c
 		}
 	}
 
