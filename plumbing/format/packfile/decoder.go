@@ -59,6 +59,9 @@ type Decoder struct {
 	offsetToHash map[int64]plumbing.Hash
 	hashToOffset map[plumbing.Hash]int64
 	crcs         map[plumbing.Hash]uint32
+
+	offsetToType map[int64]plumbing.ObjectType
+	decoderType  plumbing.ObjectType
 }
 
 // NewDecoder returns a new Decoder that decodes a Packfile using the given
@@ -72,6 +75,11 @@ type Decoder struct {
 // If the ObjectStorer implements storer.Transactioner, a transaction is created
 // during the Decode execution, if something fails the Rollback is called
 func NewDecoder(s *Scanner, o storer.EncodedObjectStorer) (*Decoder, error) {
+	return NewDecoderForType(s, o, plumbing.AnyObject)
+}
+
+func NewDecoderForType(s *Scanner, o storer.EncodedObjectStorer,
+	t plumbing.ObjectType) (*Decoder, error) {
 	if !canResolveDeltas(s, o) {
 		return nil, ErrResolveDeltasNotSupported
 	}
@@ -83,6 +91,9 @@ func NewDecoder(s *Scanner, o storer.EncodedObjectStorer) (*Decoder, error) {
 		offsetToHash: make(map[int64]plumbing.Hash, 0),
 		hashToOffset: make(map[plumbing.Hash]int64, 0),
 		crcs:         make(map[plumbing.Hash]uint32, 0),
+
+		offsetToType: make(map[int64]plumbing.ObjectType, 0),
+		decoderType:  t,
 	}, nil
 }
 
@@ -174,24 +185,54 @@ func (d *Decoder) decodeObjectsWithObjectStorerTx(count int) error {
 
 // DecodeObject reads the next object from the scanner and returns it. This
 // method can be used in replacement of the Decode method, to work in a
-// interative way
+// interactive way. If you created a new decoder instance using NewDecoderForType
+// constructor, if the object decoded is not equals to the specified one, null will
+// be returned
 func (d *Decoder) DecodeObject() (plumbing.EncodedObject, error) {
-	h, err := d.s.NextObjectHeader()
+	h, err := d.nextHeader()
 	if err != nil {
 		return nil, err
 	}
 
+	var realType plumbing.ObjectType
+	switch {
+	case h.Type == plumbing.OFSDeltaObject:
+		realType = d.offsetToType[h.OffsetReference]
+	case h.Type == plumbing.REFDeltaObject:
+		ofs := d.hashToOffset[h.Reference]
+		realType = d.offsetToType[ofs]
+	case h.Type == d.decoderType:
+		realType = h.Type
+	}
+
+	if d.decoderType == plumbing.AnyObject || realType != plumbing.InvalidObject {
+		return d.decodeByHeader(h)
+	}
+
+	return nil, nil
+}
+
+func (d *Decoder) nextHeader() (*ObjectHeader, error) {
+	h, err := d.s.NextObjectHeader()
+	if err != nil {
+		return nil, err
+	}
+	return h, nil
+}
+
+func (d *Decoder) decodeByHeader(h *ObjectHeader) (plumbing.EncodedObject, error) {
 	obj := d.newObject()
 	obj.SetSize(h.Length)
 	obj.SetType(h.Type)
 	var crc uint32
+	var err error
 	switch h.Type {
-	case plumbing.CommitObject, plumbing.TreeObject, plumbing.BlobObject, plumbing.TagObject:
-		crc, err = d.fillRegularObjectContent(obj)
 	case plumbing.REFDeltaObject:
 		crc, err = d.fillREFDeltaObjectContent(obj, h.Reference)
 	case plumbing.OFSDeltaObject:
 		crc, err = d.fillOFSDeltaObjectContent(obj, h.OffsetReference)
+	case plumbing.CommitObject, plumbing.TreeObject, plumbing.BlobObject, plumbing.TagObject:
+		crc, err = d.fillRegularObjectContent(obj)
 	default:
 		err = ErrInvalidObject.AddDetails("type %q", h.Type)
 	}
@@ -201,7 +242,7 @@ func (d *Decoder) DecodeObject() (plumbing.EncodedObject, error) {
 	}
 
 	hash := obj.Hash()
-	d.setOffset(hash, h.Offset)
+	d.setOffsetAndType(hash, h.Offset, obj.Type())
 	d.setCRC(hash, crc)
 
 	return obj, nil
@@ -279,9 +320,10 @@ func (d *Decoder) fillOFSDeltaObjectContent(obj plumbing.EncodedObject, offset i
 	return crc, ApplyDelta(obj, base, buf.Bytes())
 }
 
-func (d *Decoder) setOffset(h plumbing.Hash, offset int64) {
+func (d *Decoder) setOffsetAndType(h plumbing.Hash, offset int64, t plumbing.ObjectType) {
 	d.offsetToHash[offset] = h
 	d.hashToOffset[h] = offset
+	d.offsetToType[offset] = t
 }
 
 func (d *Decoder) setCRC(h plumbing.Hash, crc uint32) {

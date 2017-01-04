@@ -91,3 +91,24 @@ func (s *FsSuite) TestIterWithType(c *C) {
 		c.Assert(err, IsNil)
 	})
 }
+
+func (s *FsSuite) TestPackFileIterator(c *C) {
+	fixtures.ByTag(".git").ByTag("packfile").Test(c, func(f *fixtures.Fixture) {
+		fs := f.DotGit()
+
+		dg := dotgit.New(fs)
+		ph, err := dg.ObjectPacks()
+		c.Assert(err, IsNil)
+
+		for _, h := range ph {
+			f, err := dg.ObjectPack(h)
+			c.Assert(err, IsNil)
+			iter, err := NewPackfileIter(f, plumbing.CommitObject)
+			c.Assert(err, IsNil)
+			o, err := iter.Next()
+			c.Assert(err, IsNil)
+			c.Assert(o.Type(), Equals, plumbing.CommitObject)
+		}
+	})
+
+}

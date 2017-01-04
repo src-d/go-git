@@ -47,6 +47,34 @@ func (s *ReaderSuite) TestDecode(c *C) {
 	})
 }
 
+func (s *ReaderSuite) TestDecodeByType(c *C) {
+	fixtures.Basic().ByTag("packfile").Test(c, func(f *fixtures.Fixture) {
+		scanner := packfile.NewScanner(f.Packfile())
+		storage := memory.NewStorage()
+
+		d, err := packfile.NewDecoderForType(scanner, storage, plumbing.CommitObject)
+		c.Assert(err, IsNil)
+		defer d.Close()
+
+		_, count, err := scanner.Header()
+		c.Assert(err, IsNil)
+
+		var i uint32
+		var atLeastOnce bool
+		for i = 0; i <= count; i++ {
+			obj, err := d.DecodeObject()
+			c.Assert(err, IsNil)
+
+			if obj != nil {
+				c.Assert(obj.Type(), Equals, plumbing.CommitObject)
+				atLeastOnce = true
+			}
+		}
+
+		c.Assert(atLeastOnce, Equals, true)
+	})
+}
+
 func (s *ReaderSuite) TestDecodeMultipleTimes(c *C) {
 	f := fixtures.Basic().ByTag("packfile").One()
 	scanner := packfile.NewScanner(f.Packfile())
