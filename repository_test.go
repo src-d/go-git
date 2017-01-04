@@ -796,6 +796,7 @@ func (s *RepositorySuite) TestResolveRevision(c *C) {
 		"HEAD~3^2":                    "a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69",
 		"HEAD~3^2^0":                  "a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69",
 		"HEAD~2^{/binary file}":       "35e85108805c84807bc66a02d91535e1e24b38b9",
+		"HEAD~^{!-some}":              "1669dce138d9b841a518c64b10914d88f5e488ea",
 		"HEAD@{2015-03-31T11:56:18Z}": "918c48b83bd081e863dbe1b80f8998f058cd8294",
 		"HEAD@{2015-03-31T11:49:00Z}": "1669dce138d9b841a518c64b10914d88f5e488ea",
 	}

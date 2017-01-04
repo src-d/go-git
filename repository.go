@@ -704,10 +704,18 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 			}
 
 			re := item.(revision.CaretReg).Regexp
+			negate := item.(revision.CaretReg).Negate
+
 			var c *object.Commit
 
 			for i := 0; i < len(history); i++ {
-				if re.MatchString(history[i].Message) {
+				if !negate && re.MatchString(history[i].Message) {
+					c = history[i]
+
+					break
+				}
+
+				if negate && !re.MatchString(history[i].Message) {
 					c = history[i]
 
 					break
