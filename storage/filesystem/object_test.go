@@ -103,7 +103,7 @@ func (s *FsSuite) TestIterWithType(c *C) {
 	})
 }
 
-func (s *FsSuite) TestPackFileIter(c *C) {
+func (s *FsSuite) TestPackfileIter(c *C) {
 	fixtures.ByTag(".git").Test(c, func(f *fixtures.Fixture) {
 		fs := f.DotGit()
 		dg := dotgit.New(fs)
