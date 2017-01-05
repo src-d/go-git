@@ -309,17 +309,15 @@ func (iter *packfileIter) Next() (plumbing.EncodedObject, error) {
 		}
 
 		iter.position++
-		if obj != nil {
-			if iter.seen[obj.Hash()] {
-				return iter.Next()
-			}
-
-			if iter.t != plumbing.AnyObject && iter.t != obj.Type() {
-				return iter.Next()
-			}
-
-			return obj, nil
+		if obj == nil {
+			continue
 		}
+
+		if iter.seen[obj.Hash()] {
+			return iter.Next()
+		}
+
+		return obj, nil
 	}
 }
 
