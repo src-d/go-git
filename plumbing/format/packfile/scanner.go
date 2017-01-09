@@ -280,13 +280,13 @@ func (s *Scanner) copyObject(w io.Writer) (int64, error) {
 	if s.zr == nil {
 		zr, err := zlib.NewReader(s.r)
 		if err != nil {
-			return -1, fmt.Errorf("zlib initialization error: %s", err)
+			return 0, fmt.Errorf("zlib initialization error: %s", err)
 		}
 
 		s.zr = zr.(readerResetter)
 	} else {
 		if err := s.zr.Reset(s.r, nil); err != nil {
-			return -1, fmt.Errorf("zlib reset error: %s", err)
+			return 0, fmt.Errorf("zlib reset error: %s", err)
 		}
 	}
 
