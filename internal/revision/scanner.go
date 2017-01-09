@@ -78,13 +78,11 @@ func (s *scanner) scan() (token, string) {
 
 	if unicode.IsLetter(ch) {
 		s.unread()
-
 		return s.scanWord()
 	}
 
 	if unicode.IsNumber(ch) {
 		s.unread()
-
 		return s.scanNumber()
 	}
 
