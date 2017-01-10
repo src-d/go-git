@@ -20,11 +20,15 @@ func (e *ErrInvalidRevision) Error() string {
 	return "Revision invalid : " + e.s
 }
 
-// Revisioner represents a revision component
+// Revisioner represents a revision component.
+// A revision is made of multiple revision components
+// obtained after parsing a revision string,
+// for instance revision "master~" will be converted in
+// two revision components Ref and TildePath
 type Revisioner interface {
 }
 
-// Ref represents a reference name
+// Ref represents a reference name : HEAD, master
 type Ref string
 
 // TildePath represents ~, ~{n}
@@ -112,8 +116,8 @@ func NewParser(r io.Reader) *Parser {
 	return &Parser{s: newScanner(r)}
 }
 
-// scan returns the next token from the underlying scanner.
-// If a token has been unscanned then read that instead.
+// scan returns the next token from the underlying scanner
+// or the last scanned token if an unscan was requested
 func (p *Parser) scan() (tok token, lit string) {
 	if p.buf.n != 0 {
 		p.buf.n = 0
