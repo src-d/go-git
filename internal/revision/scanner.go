@@ -91,32 +91,32 @@ func (s *scanner) scan() (token, string) {
 
 // scanNumber return number token
 func (s *scanner) scanNumber() (token, string) {
-	var data string
+	var data []rune
 
 	for c := s.read(); c != zeroRune; c = s.read() {
 		if unicode.IsNumber(c) {
-			data += string(c)
+			data = append(data, c)
 		} else {
 			s.unread()
-			return number, data
+			return number, string(data)
 		}
 	}
 
-	return number, data
+	return number, string(data)
 }
 
 // scanWord return a word token
 func (s *scanner) scanWord() (token, string) {
-	var data string
+	var data []rune
 
 	for c := s.read(); c != zeroRune; c = s.read() {
 		if unicode.IsLetter(c) {
-			data += string(c)
+			data = append(data, c)
 		} else {
 			s.unread()
-			return word, data
+			return word, string(data)
 		}
 	}
 
-	return word, data
+	return word, string(data)
 }
