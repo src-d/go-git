@@ -31,7 +31,8 @@ func (s *scanner) read() rune {
 // unread places the previously read rune back on the reader.
 func (s *scanner) unread() { _ = s.r.UnreadRune() }
 
-// Scan extract tokens from an input
+// Scan extracts tokens and their strings counterpart
+// from the reader
 func (s *scanner) scan() (token, string) {
 	ch := s.read()
 
