@@ -98,12 +98,12 @@ type ColonStagePath struct {
 // use to tokenize and transform to revisioner chunks
 // a given string
 type Parser struct {
-	s   *scanner
-	buf struct {
+	s                 *scanner
+	currentParsedChar struct {
 		tok token
 		lit string
-		n   int
 	}
+	unreadLastChar bool
 }
 
 // NewParserFromString returns a new instance of parser from a string.
@@ -118,20 +118,21 @@ func NewParser(r io.Reader) *Parser {
 
 // scan returns the next token from the underlying scanner
 // or the last scanned token if an unscan was requested
-func (p *Parser) scan() (tok token, lit string) {
-	if p.buf.n != 0 {
-		p.buf.n = 0
-		return p.buf.tok, p.buf.lit
+func (p *Parser) scan() (token, string) {
+	if p.unreadLastChar {
+		p.unreadLastChar = false
+		return p.currentParsedChar.tok, p.currentParsedChar.lit
 	}
 
-	tok, lit = p.s.scan()
+	tok, lit := p.s.scan()
 
-	p.buf.tok, p.buf.lit = tok, lit
-	return
+	p.currentParsedChar.tok, p.currentParsedChar.lit = tok, lit
+
+	return tok, lit
 }
 
 // unscan pushes the previously read token back onto the buffer.
-func (p *Parser) unscan() { p.buf.n = 1 }
+func (p *Parser) unscan() { p.unreadLastChar = true }
 
 // Parse explode a revision string into revisioner chunks
 func (p *Parser) Parse() ([]Revisioner, error) {
