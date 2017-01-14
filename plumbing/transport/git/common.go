@@ -1,7 +1,6 @@
 package git
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -13,10 +12,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
-var (
-	errAlreadyConnected = errors.New("tcp connection already connected")
-)
-
 // DefaultClient is the default git client.
 var DefaultClient = common.NewClient(&runner{})
 
@@ -24,12 +19,7 @@ type runner struct{}
 
 // Command returns a new Command for the given cmd in the given Endpoint
 func (r *runner) Command(cmd string, ep transport.Endpoint) (common.Command, error) {
-	c := &command{command: cmd, endpoint: ep}
-	if err := c.connect(); err != nil {
-		return nil, err
-	}
-
-	return c, nil
+	return &command{command: cmd, endpoint: ep}, nil
 }
 
 type command struct {
@@ -52,9 +42,9 @@ func (c *command) Start() error {
 	return e.Encode([]byte(cmd))
 }
 
-func (c *command) connect() error {
+func (c *command) Connect() error {
 	if c.connected {
-		return errAlreadyConnected
+		return transport.ErrAlreadyConnected
 	}
 
 	var err error

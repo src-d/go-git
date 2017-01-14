@@ -137,6 +137,10 @@ func (r *Remote) fetch(o *FetchOptions) (refs storer.ReferenceStorer, err error)
 		return nil, err
 	}
 
+	if o.Auth != nil {
+		s.SetAuth(o.Auth)
+	}
+
 	defer ioutil.CheckClose(s, &err)
 
 	ar, err := s.AdvertisedReferences()

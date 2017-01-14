@@ -1,7 +1,6 @@
 package ssh
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -11,22 +10,13 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-var (
-	errAlreadyConnected = errors.New("ssh session already created")
-)
-
 // DefaultClient is the default SSH client.
 var DefaultClient = common.NewClient(&runner{})
 
 type runner struct{}
 
 func (r *runner) Command(cmd string, ep transport.Endpoint) (common.Command, error) {
-	c := &command{command: cmd, endpoint: ep}
-	if err := c.connect(); err != nil {
-		return nil, err
-	}
-
-	return c, nil
+	return &command{command: cmd, endpoint: ep}, nil
 }
 
 type command struct {
@@ -71,13 +61,15 @@ func (c *command) Close() error {
 // SetAuth method, by default uses an auth method based on PublicKeysCallback,
 // it connects to a SSH agent, using the address stored in the SSH_AUTH_SOCK
 // environment var.
-func (c *command) connect() error {
+func (c *command) Connect() error {
 	if c.connected {
-		return errAlreadyConnected
+		return transport.ErrAlreadyConnected
 	}
 
-	if err := c.setAuthFromEndpoint(); err != nil {
-		return err
+	if c.auth == nil {
+		if err := c.setAuthFromEndpoint(); err != nil {
+			return err
+		}
 	}
 
 	var err error

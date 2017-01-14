@@ -35,6 +35,11 @@ func (r *runner) Command(cmd string, ep transport.Endpoint) (common.Command, err
 	case transport.ReceivePackServiceName:
 		cmd = r.ReceivePackBin
 	}
+
+	if _, err := exec.LookPath(cmd); err != nil {
+		return nil, err
+	}
+
 	return &command{cmd: exec.Command(cmd, ep.Path)}, nil
 }
 
@@ -48,6 +53,11 @@ func (c *command) SetAuth(auth transport.AuthMethod) error {
 		return transport.ErrInvalidAuthMethod
 	}
 
+	return nil
+}
+
+func (c *command) Connect() error {
+	// the file transport requires no network connectivity
 	return nil
 }
 
