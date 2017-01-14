@@ -145,16 +145,12 @@ func (p *Parser) Parse() ([]Revisioner, error) {
 
 		switch tok {
 		case at:
-			p.unscan()
 			rev, err = p.parseAt()
 		case tilde:
-			p.unscan()
 			rev, err = p.parseTilde()
 		case caret:
-			p.unscan()
 			rev, err = p.parseCaret()
 		case colon:
-			p.unscan()
 			rev, err = p.parseColon()
 		case eof:
 			err = p.validateFullRevision(&revs)
@@ -254,12 +250,6 @@ func (p *Parser) parseAt() (Revisioner, error) {
 
 	tok, lit = p.scan()
 
-	if tok != at {
-		return nil, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "@"`, lit)}
-	}
-
-	tok, lit = p.scan()
-
 	if tok != obrace {
 		p.unscan()
 
@@ -319,12 +309,6 @@ func (p *Parser) parseTilde() (Revisioner, error) {
 
 	tok, lit = p.scan()
 
-	if tok != tilde {
-		return nil, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "~"`, lit)}
-	}
-
-	tok, lit = p.scan()
-
 	switch {
 	case tok == number:
 		n, _ := strconv.Atoi(lit)
@@ -343,16 +327,8 @@ func (p *Parser) parseCaret() (Revisioner, error) {
 
 	tok, lit = p.scan()
 
-	if tok != caret {
-		return nil, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "^"`, lit)}
-	}
-
-	tok, lit = p.scan()
-
 	switch {
 	case tok == obrace:
-		p.unscan()
-
 		r, err := p.parseCaretBraces()
 
 		if err != nil {
@@ -381,12 +357,6 @@ func (p *Parser) parseCaretBraces() (Revisioner, error) {
 	start := true
 	var re string
 	var negate bool
-
-	tok, lit = p.scan()
-
-	if tok != obrace {
-		return []Revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "{" after ^`, lit)}
-	}
 
 	for {
 		tok, lit = p.scan()
@@ -429,19 +399,11 @@ func (p *Parser) parseCaretBraces() (Revisioner, error) {
 // parseColon extract : statements
 func (p *Parser) parseColon() (Revisioner, error) {
 	var tok token
-	var lit string
 
-	tok, lit = p.scan()
-
-	if tok != colon {
-		return []Revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be ":"`, lit)}
-	}
-
-	tok, lit = p.scan()
+	tok, _ = p.scan()
 
 	switch tok {
 	case slash:
-		p.unscan()
 		return p.parseColonSlash()
 	default:
 		p.unscan()
@@ -456,12 +418,6 @@ func (p *Parser) parseColonSlash() (Revisioner, error) {
 	var re string
 	var negate bool
 
-	tok, lit = p.scan()
-
-	if tok != slash {
-		return []Revisioner{}, &ErrInvalidRevision{fmt.Sprintf(`"%s" found must be "/"`, lit)}
-	}
-
 	for {
 		tok, lit = p.scan()
 		nextTok, _ = p.scan()
@@ -475,7 +431,6 @@ func (p *Parser) parseColonSlash() (Revisioner, error) {
 			return nil, &ErrInvalidRevision{fmt.Sprintf(`revision suffix brace component sequences starting with "/!" others than those defined are reserved`)}
 		case tok == eof:
 			p.unscan()
-
 			reg, err := regexp.Compile(re)
 
 			if err != nil {

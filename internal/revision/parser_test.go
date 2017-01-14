@@ -208,13 +208,13 @@ func (s *ParserSuite) TestParseAtWithValidExpression(c *C) {
 	tim, _ := time.Parse("2006-01-02T15:04:05Z", "2016-12-16T21:42:47Z")
 
 	datas := map[string]Revisioner{
-		"@":           Ref("HEAD"),
-		"@{1}":        AtReflog{1},
-		"@{-1}":       AtCheckout{1},
-		"@{push}":     AtPush{},
-		"@{upstream}": AtUpstream{},
-		"@{u}":        AtUpstream{},
-		"@{2016-12-16T21:42:47Z}": AtDate{tim},
+		"":           Ref("HEAD"),
+		"{1}":        AtReflog{1},
+		"{-1}":       AtCheckout{1},
+		"{push}":     AtPush{},
+		"{upstream}": AtUpstream{},
+		"{u}":        AtUpstream{},
+		"{2016-12-16T21:42:47Z}": AtDate{tim},
 	}
 
 	for d, expected := range datas {
@@ -229,9 +229,8 @@ func (s *ParserSuite) TestParseAtWithValidExpression(c *C) {
 
 func (s *ParserSuite) TestParseAtWithUnValidExpression(c *C) {
 	datas := map[string]error{
-		"a":       &ErrInvalidRevision{`"a" found must be "@"`},
-		"@{test}": &ErrInvalidRevision{`wrong date "test" must fit ISO-8601 format : 2006-01-02T15:04:05Z`},
-		"@{-1":    &ErrInvalidRevision{`missing "}" in @{-n} structure`},
+		"{test}": &ErrInvalidRevision{`wrong date "test" must fit ISO-8601 format : 2006-01-02T15:04:05Z`},
+		"{-1":    &ErrInvalidRevision{`missing "}" in @{-n} structure`},
 	}
 
 	for s, e := range datas {
@@ -245,17 +244,17 @@ func (s *ParserSuite) TestParseAtWithUnValidExpression(c *C) {
 
 func (s *ParserSuite) TestParseCaretWithValidExpression(c *C) {
 	datas := map[string]Revisioner{
-		"^":                    CaretPath{1},
-		"^2":                   CaretPath{2},
-		"^{}":                  CaretType{"tag"},
-		"^{commit}":            CaretType{"commit"},
-		"^{tree}":              CaretType{"tree"},
-		"^{blob}":              CaretType{"blob"},
-		"^{tag}":               CaretType{"tag"},
-		"^{object}":            CaretType{"object"},
-		"^{/hello world !}":    CaretReg{regexp.MustCompile("hello world !"), false},
-		"^{/!-hello world !}":  CaretReg{regexp.MustCompile("hello world !"), true},
-		"^{/!! hello world !}": CaretReg{regexp.MustCompile("! hello world !"), false},
+		"":                    CaretPath{1},
+		"2":                   CaretPath{2},
+		"{}":                  CaretType{"tag"},
+		"{commit}":            CaretType{"commit"},
+		"{tree}":              CaretType{"tree"},
+		"{blob}":              CaretType{"blob"},
+		"{tag}":               CaretType{"tag"},
+		"{object}":            CaretType{"object"},
+		"{/hello world !}":    CaretReg{regexp.MustCompile("hello world !"), false},
+		"{/!-hello world !}":  CaretReg{regexp.MustCompile("hello world !"), true},
+		"{/!! hello world !}": CaretReg{regexp.MustCompile("! hello world !"), false},
 	}
 
 	for d, expected := range datas {
@@ -270,11 +269,10 @@ func (s *ParserSuite) TestParseCaretWithValidExpression(c *C) {
 
 func (s *ParserSuite) TestParseCaretWithUnValidExpression(c *C) {
 	datas := map[string]error{
-		"a":          &ErrInvalidRevision{`"a" found must be "^"`},
-		"^3":         &ErrInvalidRevision{`"3" found must be 0, 1 or 2 after "^"`},
-		"^{test}":    &ErrInvalidRevision{`"test" is not a valid revision suffix brace component`},
-		"^{/!test}":  &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
-		"^{/test**}": &ErrInvalidRevision{"revision suffix brace component, error parsing regexp: invalid nested repetition operator: `**`"},
+		"3":         &ErrInvalidRevision{`"3" found must be 0, 1 or 2 after "^"`},
+		"{test}":    &ErrInvalidRevision{`"test" is not a valid revision suffix brace component`},
+		"{/!test}":  &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
+		"{/test**}": &ErrInvalidRevision{"revision suffix brace component, error parsing regexp: invalid nested repetition operator: `**`"},
 	}
 
 	for s, e := range datas {
@@ -288,9 +286,9 @@ func (s *ParserSuite) TestParseCaretWithUnValidExpression(c *C) {
 
 func (s *ParserSuite) TestParseTildeWithValidExpression(c *C) {
 	datas := map[string]Revisioner{
-		"~3": TildePath{3},
-		"~1": TildePath{1},
-		"~":  TildePath{1},
+		"3": TildePath{3},
+		"1": TildePath{1},
+		"":  TildePath{1},
 	}
 
 	for d, expected := range datas {
@@ -303,32 +301,18 @@ func (s *ParserSuite) TestParseTildeWithValidExpression(c *C) {
 	}
 }
 
-func (s *ParserSuite) TestParseTildeWithUnValidExpression(c *C) {
-	datas := map[string]error{
-		"a": &ErrInvalidRevision{`"a" found must be "~"`},
-	}
-
-	for s, e := range datas {
-		parser := NewParser(bytes.NewBufferString(s))
-
-		_, err := parser.parseTilde()
-
-		c.Assert(err, DeepEquals, e)
-	}
-}
-
 func (s *ParserSuite) TestParseColonWithValidExpression(c *C) {
 	datas := map[string]Revisioner{
-		":/hello world !":    ColonReg{regexp.MustCompile("hello world !"), false},
-		":/!-hello world !":  ColonReg{regexp.MustCompile("hello world !"), true},
-		":/!! hello world !": ColonReg{regexp.MustCompile("! hello world !"), false},
-		":../parser.go":      ColonPath{"../parser.go"},
-		":./parser.go":       ColonPath{"./parser.go"},
-		":parser.go":         ColonPath{"parser.go"},
-		":0:parser.go":       ColonStagePath{"parser.go", 0},
-		":1:parser.go":       ColonStagePath{"parser.go", 1},
-		":2:parser.go":       ColonStagePath{"parser.go", 2},
-		":3:parser.go":       ColonStagePath{"parser.go", 3},
+		"/hello world !":    ColonReg{regexp.MustCompile("hello world !"), false},
+		"/!-hello world !":  ColonReg{regexp.MustCompile("hello world !"), true},
+		"/!! hello world !": ColonReg{regexp.MustCompile("! hello world !"), false},
+		"../parser.go":      ColonPath{"../parser.go"},
+		"./parser.go":       ColonPath{"./parser.go"},
+		"parser.go":         ColonPath{"parser.go"},
+		"0:parser.go":       ColonStagePath{"parser.go", 0},
+		"1:parser.go":       ColonStagePath{"parser.go", 1},
+		"2:parser.go":       ColonStagePath{"parser.go", 2},
+		"3:parser.go":       ColonStagePath{"parser.go", 3},
 	}
 
 	for d, expected := range datas {
@@ -343,9 +327,8 @@ func (s *ParserSuite) TestParseColonWithValidExpression(c *C) {
 
 func (s *ParserSuite) TestParseColonWithUnValidExpression(c *C) {
 	datas := map[string]error{
-		"a":       &ErrInvalidRevision{`"a" found must be ":"`},
-		":/!test": &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
-		":/*":     &ErrInvalidRevision{"revision suffix brace component, error parsing regexp: missing argument to repetition operator: `*`"},
+		"/!test": &ErrInvalidRevision{`revision suffix brace component sequences starting with "/!" others than those defined are reserved`},
+		"/*":     &ErrInvalidRevision{"revision suffix brace component, error parsing regexp: missing argument to repetition operator: `*`"},
 	}
 
 	for s, e := range datas {
