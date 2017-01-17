@@ -112,6 +112,8 @@ type PushOptions struct {
 	// RefSpecs specify what destination ref to update with what source
 	// object. A refspec with empty src can be used to delete a reference.
 	RefSpecs []config.RefSpec
+	// Auth credentials, if required, to use with the remote repository
+	Auth transport.AuthMethod
 }
 
 // Validate validate the fields and set the default values

@@ -37,17 +37,13 @@ type Commander interface {
 	// error should be returned if the endpoint is not supported or the
 	// command cannot be created (e.g. binary does not exist, connection
 	// cannot be established).
-	Command(cmd string, ep transport.Endpoint) (Command, error)
+	Command(cmd string, ep transport.Endpoint, auth transport.AuthMethod) (Command, error)
 }
 
 // Command is used for a single command execution.
 // This interface is modeled after exec.Cmd and ssh.Session in the standard
 // library.
 type Command interface {
-	// SetAuth sets the authentication method.
-	SetAuth(transport.AuthMethod) error
-	// Perform the actual network connection.
-	Connect() error
 	// StderrPipe returns a pipe that will be connected to the command's
 	// standard error when the command starts. It should not be called after
 	// Start.
@@ -84,17 +80,17 @@ func NewClient(runner Commander) transport.Transport {
 }
 
 // NewUploadPackSession creates a new UploadPackSession.
-func (c *client) NewUploadPackSession(ep transport.Endpoint) (
+func (c *client) NewUploadPackSession(ep transport.Endpoint, auth transport.AuthMethod) (
 	transport.UploadPackSession, error) {
 
-	return c.newSession(transport.UploadPackServiceName, ep)
+	return c.newSession(transport.UploadPackServiceName, ep, auth)
 }
 
 // NewReceivePackSession creates a new ReceivePackSession.
-func (c *client) NewReceivePackSession(ep transport.Endpoint) (
+func (c *client) NewReceivePackSession(ep transport.Endpoint, auth transport.AuthMethod) (
 	transport.ReceivePackSession, error) {
 
-	return c.newSession(transport.ReceivePackServiceName, ep)
+	return c.newSession(transport.ReceivePackServiceName, ep, auth)
 }
 
 type session struct {
@@ -102,7 +98,6 @@ type session struct {
 	Stdout  io.Reader
 	Command Command
 
-	connected     bool
 	isReceivePack bool
 	advRefs       *packp.AdvRefs
 	packRun       bool
@@ -110,19 +105,41 @@ type session struct {
 	errLines      chan string
 }
 
-func (c *client) newSession(s string, ep transport.Endpoint) (*session, error) {
-	cmd, err := c.cmdr.Command(s, ep)
+func (c *client) newSession(s string, ep transport.Endpoint, auth transport.AuthMethod) (*session, error) {
+	cmd, err := c.cmdr.Command(s, ep, auth)
 	if err != nil {
 		return nil, err
 	}
 
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+
 	return &session{
+		Stdin:         stdin,
+		Stdout:        stdout,
 		Command:       cmd,
+		errLines:      c.listenErrors(stderr),
 		isReceivePack: s == transport.ReceivePackServiceName,
 	}, nil
 }
 
-func (s *session) listenErrors(r io.Reader) chan string {
+func (c *client) listenErrors(r io.Reader) chan string {
 	if r == nil {
 		return nil
 	}
@@ -139,55 +156,8 @@ func (s *session) listenErrors(r io.Reader) chan string {
 	return errLines
 }
 
-func (s *session) connect() error {
-	if s.connected {
-		return nil
-	}
-
-	err := s.Command.Connect()
-	if err != nil {
-		return err
-	}
-
-	stdin, err := s.Command.StdinPipe()
-	if err != nil {
-		return err
-	}
-
-	stdout, err := s.Command.StdoutPipe()
-	if err != nil {
-		return err
-	}
-
-	stderr, err := s.Command.StderrPipe()
-	if err != nil {
-		return err
-	}
-
-	if err := s.Command.Start(); err != nil {
-		return err
-	}
-
-	s.Stdin = stdin
-	s.Stdout = stdout
-	s.errLines = s.listenErrors(stderr)
-	s.connected = true
-
-	return nil
-}
-
-// SetAuth delegates to the command's SetAuth.
-func (s *session) SetAuth(auth transport.AuthMethod) error {
-	return s.Command.SetAuth(auth)
-}
-
 // AdvertisedReferences retrieves the advertised references from the server.
 func (s *session) AdvertisedReferences() (*packp.AdvRefs, error) {
-	// connect to the remote, allow ErrAlreadyConnected as we might re-use connections
-	if err := s.connect(); err != nil {
-		return nil, err
-	}
-
 	if s.advRefs != nil {
 		return s.advRefs, nil
 	}
@@ -245,11 +215,6 @@ func (s *session) handleAdvRefDecodeError(err error) error {
 // UploadPack performs a request to the server to fetch a packfile. A reader is
 // returned with the packfile content. The reader must be closed after reading.
 func (s *session) UploadPack(req *packp.UploadPackRequest) (*packp.UploadPackResponse, error) {
-	// connect to the remote, allow ErrAlreadyConnected as we might re-use connections
-	if err := s.connect(); err != nil {
-		return nil, err
-	}
-
 	if req.IsEmpty() {
 		return nil, transport.ErrEmptyUploadPackRequest
 	}
@@ -288,11 +253,6 @@ func (s *session) UploadPack(req *packp.UploadPackRequest) (*packp.UploadPackRes
 }
 
 func (s *session) ReceivePack(req *packp.ReferenceUpdateRequest) (*packp.ReportStatus, error) {
-	// connect to the remote, allow ErrAlreadyConnected as we might re-use connections
-	if err := s.connect(); err != nil {
-		return nil, err
-	}
-
 	if _, err := s.AdvertisedReferences(); err != nil {
 		return nil, err
 	}
@@ -340,10 +300,6 @@ func (s *session) finish() error {
 }
 
 func (s *session) Close() error {
-	if !s.connected {
-		return nil
-	}
-
 	if err := s.finish(); err != nil {
 		_ = s.Command.Close()
 		return nil

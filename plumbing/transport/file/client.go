@@ -28,7 +28,7 @@ func NewClient(uploadPackBin, receivePackBin string) transport.Transport {
 	})
 }
 
-func (r *runner) Command(cmd string, ep transport.Endpoint) (common.Command, error) {
+func (r *runner) Command(cmd string, ep transport.Endpoint, auth transport.AuthMethod) (common.Command, error) {
 	switch cmd {
 	case transport.UploadPackServiceName:
 		cmd = r.UploadPackBin
@@ -46,19 +46,6 @@ func (r *runner) Command(cmd string, ep transport.Endpoint) (common.Command, err
 type command struct {
 	cmd    *exec.Cmd
 	closed bool
-}
-
-func (c *command) SetAuth(auth transport.AuthMethod) error {
-	if auth != nil {
-		return transport.ErrInvalidAuthMethod
-	}
-
-	return nil
-}
-
-func (c *command) Connect() error {
-	// the file transport requires no network connectivity
-	return nil
 }
 
 func (c *command) Start() error {

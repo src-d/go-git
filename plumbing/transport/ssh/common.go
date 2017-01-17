@@ -15,8 +15,16 @@ var DefaultClient = common.NewClient(&runner{})
 
 type runner struct{}
 
-func (r *runner) Command(cmd string, ep transport.Endpoint) (common.Command, error) {
-	return &command{command: cmd, endpoint: ep}, nil
+func (r *runner) Command(cmd string, ep transport.Endpoint, auth transport.AuthMethod) (common.Command, error) {
+	c := &command{command: cmd, endpoint: ep}
+	if auth != nil {
+		c.setAuth(auth)
+	}
+
+	if err := c.connect(); err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 type command struct {
@@ -28,7 +36,7 @@ type command struct {
 	auth      AuthMethod
 }
 
-func (c *command) SetAuth(auth transport.AuthMethod) error {
+func (c *command) setAuth(auth transport.AuthMethod) error {
 	a, ok := auth.(AuthMethod)
 	if !ok {
 		return transport.ErrInvalidAuthMethod
@@ -61,7 +69,7 @@ func (c *command) Close() error {
 // SetAuth method, by default uses an auth method based on PublicKeysCallback,
 // it connects to a SSH agent, using the address stored in the SSH_AUTH_SOCK
 // environment var.
-func (c *command) Connect() error {
+func (c *command) connect() error {
 	if c.connected {
 		return transport.ErrAlreadyConnected
 	}
