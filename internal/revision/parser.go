@@ -118,17 +118,17 @@ func NewParser(r io.Reader) *Parser {
 
 // scan returns the next token from the underlying scanner
 // or the last scanned token if an unscan was requested
-func (p *Parser) scan() (token, string) {
+func (p *Parser) scan() (token, string, error) {
 	if p.unreadLastChar {
 		p.unreadLastChar = false
-		return p.currentParsedChar.tok, p.currentParsedChar.lit
+		return p.currentParsedChar.tok, p.currentParsedChar.lit, nil
 	}
 
-	tok, lit := p.s.scan()
+	tok, lit, err := p.s.scan()
 
 	p.currentParsedChar.tok, p.currentParsedChar.lit = tok, lit
 
-	return tok, lit
+	return tok, lit, err
 }
 
 // unscan pushes the previously read token back onto the buffer.
@@ -138,10 +138,15 @@ func (p *Parser) unscan() { p.unreadLastChar = true }
 func (p *Parser) Parse() ([]Revisioner, error) {
 	var rev Revisioner
 	var revs []Revisioner
+	var tok token
 	var err error
 
 	for {
-		tok, _ := p.scan()
+		tok, _, err = p.scan()
+
+		if err != nil {
+			return nil, err
+		}
 
 		switch tok {
 		case at:
@@ -247,8 +252,13 @@ func (p *Parser) validateFullRevision(chunks *[]Revisioner) error {
 func (p *Parser) parseAt() (Revisioner, error) {
 	var tok, nextTok token
 	var lit, nextLit string
+	var err error
 
-	tok, lit = p.scan()
+	tok, lit, err = p.scan()
+
+	if err != nil {
+		return nil, err
+	}
 
 	if tok != obrace {
 		p.unscan()
@@ -256,8 +266,17 @@ func (p *Parser) parseAt() (Revisioner, error) {
 		return Ref("HEAD"), nil
 	}
 
-	tok, lit = p.scan()
-	nextTok, nextLit = p.scan()
+	tok, lit, err = p.scan()
+
+	if err != nil {
+		return nil, err
+	}
+
+	nextTok, nextLit, err = p.scan()
+
+	if err != nil {
+		return nil, err
+	}
 
 	switch {
 	case tok == word && (lit == "u" || lit == "upstream") && nextTok == cbrace:
@@ -271,7 +290,11 @@ func (p *Parser) parseAt() (Revisioner, error) {
 	case tok == minus && nextTok == number:
 		n, _ := strconv.Atoi(nextLit)
 
-		t, _ := p.scan()
+		t, _, err := p.scan()
+
+		if err != nil {
+			return nil, err
+		}
 
 		if t != cbrace {
 			return nil, &ErrInvalidRevision{fmt.Sprintf(`missing "}" in @{-n} structure`)}
@@ -284,7 +307,11 @@ func (p *Parser) parseAt() (Revisioner, error) {
 		date := lit
 
 		for {
-			tok, lit = p.scan()
+			tok, lit, err = p.scan()
+
+			if err != nil {
+				return nil, err
+			}
 
 			switch {
 			case tok == cbrace:
@@ -306,8 +333,13 @@ func (p *Parser) parseAt() (Revisioner, error) {
 func (p *Parser) parseTilde() (Revisioner, error) {
 	var tok token
 	var lit string
+	var err error
 
-	tok, lit = p.scan()
+	tok, lit, err = p.scan()
+
+	if err != nil {
+		return nil, err
+	}
 
 	switch {
 	case tok == number:
@@ -324,8 +356,13 @@ func (p *Parser) parseTilde() (Revisioner, error) {
 func (p *Parser) parseCaret() (Revisioner, error) {
 	var tok token
 	var lit string
+	var err error
 
-	tok, lit = p.scan()
+	tok, lit, err = p.scan()
+
+	if err != nil {
+		return nil, err
+	}
 
 	switch {
 	case tok == obrace:
@@ -357,10 +394,20 @@ func (p *Parser) parseCaretBraces() (Revisioner, error) {
 	start := true
 	var re string
 	var negate bool
+	var err error
 
 	for {
-		tok, lit = p.scan()
-		nextTok, _ = p.scan()
+		tok, lit, err = p.scan()
+
+		if err != nil {
+			return nil, err
+		}
+
+		nextTok, _, err = p.scan()
+
+		if err != nil {
+			return nil, err
+		}
 
 		switch {
 		case tok == word && nextTok == cbrace && (lit == "commit" || lit == "tree" || lit == "blob" || lit == "tag" || lit == "object"):
@@ -399,8 +446,13 @@ func (p *Parser) parseCaretBraces() (Revisioner, error) {
 // parseColon extract : statements
 func (p *Parser) parseColon() (Revisioner, error) {
 	var tok token
+	var err error
 
-	tok, _ = p.scan()
+	tok, _, err = p.scan()
+
+	if err != nil {
+		return nil, err
+	}
 
 	switch tok {
 	case slash:
@@ -417,10 +469,20 @@ func (p *Parser) parseColonSlash() (Revisioner, error) {
 	var lit string
 	var re string
 	var negate bool
+	var err error
 
 	for {
-		tok, lit = p.scan()
-		nextTok, _ = p.scan()
+		tok, lit, err = p.scan()
+
+		if err != nil {
+			return nil, err
+		}
+
+		nextTok, _, err = p.scan()
+
+		if err != nil {
+			return nil, err
+		}
 
 		switch {
 		case tok == emark && nextTok == emark:
@@ -451,10 +513,20 @@ func (p *Parser) parseColonDefault() (Revisioner, error) {
 	var lit string
 	var path string
 	var stage int
+	var err error
 	var n = -1
 
-	tok, lit = p.scan()
-	nextTok, _ := p.scan()
+	tok, lit, err = p.scan()
+
+	if err != nil {
+		return nil, err
+	}
+
+	nextTok, _, err := p.scan()
+
+	if err != nil {
+		return nil, err
+	}
 
 	if tok == number && nextTok == colon {
 		n, _ = strconv.Atoi(lit)
@@ -469,7 +541,11 @@ func (p *Parser) parseColonDefault() (Revisioner, error) {
 	}
 
 	for {
-		tok, lit = p.scan()
+		tok, lit, err = p.scan()
+
+		if err != nil {
+			return nil, err
+		}
 
 		switch {
 		case tok == eof && n == -1:
@@ -487,9 +563,14 @@ func (p *Parser) parseRef() (Revisioner, error) {
 	var tok, prevTok token
 	var lit, buf string
 	var endOfRef bool
+	var err error
 
 	for {
-		tok, lit = p.scan()
+		tok, lit, err = p.scan()
+
+		if err != nil {
+			return nil, err
+		}
 
 		switch tok {
 		case eof, at, colon, tilde, caret:

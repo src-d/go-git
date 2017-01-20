@@ -54,12 +54,13 @@ func (s *ParserSuite) TestScan(c *C) {
 	}
 
 	for i := 0; ; {
-		tok, str := parser.scan()
+		tok, str, err := parser.scan()
 
 		if tok == eof {
 			return
 		}
 
+		c.Assert(err, Equals, nil)
 		c.Assert(str, Equals, expected[i].s)
 		c.Assert(tok, Equals, expected[i].t)
 
@@ -70,15 +71,17 @@ func (s *ParserSuite) TestScan(c *C) {
 func (s *ParserSuite) TestUnscan(c *C) {
 	parser := NewParser(bytes.NewBufferString("Hello world !"))
 
-	tok, str := parser.scan()
+	tok, str, err := parser.scan()
 
+	c.Assert(err, Equals, nil)
 	c.Assert(str, Equals, "Hello")
 	c.Assert(tok, Equals, word)
 
 	parser.unscan()
 
-	tok, str = parser.scan()
+	tok, str, err = parser.scan()
 
+	c.Assert(err, Equals, nil)
 	c.Assert(str, Equals, "Hello")
 	c.Assert(tok, Equals, word)
 }

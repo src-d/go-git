@@ -11,7 +11,6 @@ const (
 	at
 	caret
 	cbrace
-	char
 	colon
 	control
 	dot
@@ -24,5 +23,6 @@ const (
 	slash
 	space
 	tilde
+	tokenError
 	word
 )

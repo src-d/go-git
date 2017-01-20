@@ -18,106 +18,117 @@ func newScanner(r io.Reader) *scanner {
 	return &scanner{r: bufio.NewReader(r)}
 }
 
-// read reads the next rune from the bufferred reader.
-// Returns the rune(0) if an error occurs (or io.EOF is returned).
-func (s *scanner) read() rune {
-	ch, _, err := s.r.ReadRune()
-	if err != nil {
-		return zeroRune
-	}
-	return ch
-}
-
-// unread places the previously read rune back on the reader.
-func (s *scanner) unread() { _ = s.r.UnreadRune() }
-
 // Scan extracts tokens and their strings counterpart
 // from the reader
-func (s *scanner) scan() (token, string) {
-	ch := s.read()
+func (s *scanner) scan() (token, string, error) {
+	ch, _, err := s.r.ReadRune()
+
+	if err != nil && err != io.EOF {
+		return tokenError, "", err
+	}
 
 	switch ch {
 	case zeroRune:
-		return eof, ""
+		return eof, "", nil
 	case ':':
-		return colon, string(ch)
+		return colon, string(ch), nil
 	case '~':
-		return tilde, string(ch)
+		return tilde, string(ch), nil
 	case '^':
-		return caret, string(ch)
+		return caret, string(ch), nil
 	case '.':
-		return dot, string(ch)
+		return dot, string(ch), nil
 	case '/':
-		return slash, string(ch)
+		return slash, string(ch), nil
 	case '{':
-		return obrace, string(ch)
+		return obrace, string(ch), nil
 	case '}':
-		return cbrace, string(ch)
+		return cbrace, string(ch), nil
 	case '-':
-		return minus, string(ch)
+		return minus, string(ch), nil
 	case '@':
-		return at, string(ch)
+		return at, string(ch), nil
 	case '\\':
-		return aslash, string(ch)
+		return aslash, string(ch), nil
 	case '?':
-		return qmark, string(ch)
+		return qmark, string(ch), nil
 	case '*':
-		return asterisk, string(ch)
+		return asterisk, string(ch), nil
 	case '[':
-		return obracket, string(ch)
+		return obracket, string(ch), nil
 	case '!':
-		return emark, string(ch)
+		return emark, string(ch), nil
 	}
 
 	if unicode.IsSpace(ch) {
-		return space, string(ch)
+		return space, string(ch), nil
 	}
 
 	if unicode.IsControl(ch) {
-		return control, string(ch)
+		return control, string(ch), nil
 	}
 
 	if unicode.IsLetter(ch) {
-		s.unread()
-		return s.scanWord()
+		var data []rune
+		data = append(data, ch)
+
+		for {
+			c, _, err := s.r.ReadRune()
+
+			if c == zeroRune {
+				break
+			}
+
+			if err != nil {
+				return tokenError, "", err
+			}
+
+			if unicode.IsLetter(c) {
+				data = append(data, c)
+			} else {
+				err := s.r.UnreadRune()
+
+				if err != nil {
+					return tokenError, "", err
+				}
+
+				return word, string(data), nil
+			}
+		}
+
+		return word, string(data), nil
 	}
 
 	if unicode.IsNumber(ch) {
-		s.unread()
-		return s.scanNumber()
-	}
+		var data []rune
+		data = append(data, ch)
 
-	return char, string(ch)
-}
+		for {
+			c, _, err := s.r.ReadRune()
 
-// scanNumber return number token
-func (s *scanner) scanNumber() (token, string) {
-	var data []rune
+			if c == zeroRune {
+				break
+			}
 
-	for c := s.read(); c != zeroRune; c = s.read() {
-		if unicode.IsNumber(c) {
-			data = append(data, c)
-		} else {
-			s.unread()
-			return number, string(data)
+			if err != nil {
+				return tokenError, "", err
+			}
+
+			if unicode.IsNumber(c) {
+				data = append(data, c)
+			} else {
+				err := s.r.UnreadRune()
+
+				if err != nil {
+					return tokenError, "", err
+				}
+
+				return number, string(data), nil
+			}
 		}
+
+		return number, string(data), nil
 	}
 
-	return number, string(data)
-}
-
-// scanWord return a word token
-func (s *scanner) scanWord() (token, string) {
-	var data []rune
-
-	for c := s.read(); c != zeroRune; c = s.read() {
-		if unicode.IsLetter(c) {
-			data = append(data, c)
-		} else {
-			s.unread()
-			return word, string(data)
-		}
-	}
-
-	return word, string(data)
+	return tokenError, string(ch), nil
 }
