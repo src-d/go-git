@@ -1,6 +1,7 @@
 package fixtures
 
 import (
+	"errors"
 	"fmt"
 	"go/build"
 	"io/ioutil"
@@ -11,7 +12,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	"github.com/alcortesm/tgz"
-	"github.com/pkg/errors"
 	"srcd.works/go-billy.v1"
 	osfs "srcd.works/go-billy.v1/os"
 )
@@ -274,8 +274,7 @@ func Init() error {
 			src, "gopkg.in/src-d/go-git.v4", "fixtures",
 		)
 
-		_, err := os.Stat(rf)
-		if err == nil {
+		if _, err := os.Stat(rf); err == nil {
 			RootFolder = rf
 			return nil
 		}
