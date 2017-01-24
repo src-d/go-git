@@ -68,7 +68,8 @@ type UploadHaves struct {
 	Haves []plumbing.Hash
 }
 
-// Encode encodes the UploadHaves into the Writer.
+// Encode encodes the UploadHaves into the Writer. If flush is true, a flush
+// command will be encoded at the end of the writer content.
 func (u *UploadHaves) Encode(w io.Writer, flush bool) error {
 	e := pktline.NewEncoder(w)
 
