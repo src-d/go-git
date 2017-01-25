@@ -24,8 +24,9 @@ const (
 
 // New errors defined by this package.
 var (
-	ErrMaxTreeDepth = errors.New("maximum tree depth exceeded")
-	ErrFileNotFound = errors.New("file not found")
+	ErrMaxTreeDepth      = errors.New("maximum tree depth exceeded")
+	ErrFileNotFound      = errors.New("file not found")
+	ErrDirectoryNotFound = errors.New("directory not found")
 )
 
 // Tree is basically like a directory - it references a bunch of other trees
@@ -80,6 +81,17 @@ func (t *Tree) File(path string) (*File, error) {
 	}
 
 	return NewFile(path, e.Mode, blob), nil
+}
+
+// Tree returns the tree identified by the `path` argument.
+// The path is interpreted as relative to the tree receiver.
+func (t *Tree) Tree(path string) (*Tree, error) {
+	e, err := t.findEntry(path)
+	if err != nil {
+		return nil, ErrDirectoryNotFound
+	}
+
+	return GetTree(t.s, e.Hash)
 }
 
 // TreeEntryFile returns the *File for a given *TreeEntry.
