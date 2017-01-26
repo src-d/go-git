@@ -77,7 +77,10 @@ func (t *Tree) File(path string) (*File, error) {
 
 	blob, err := GetBlob(t.s, e.Hash)
 	if err != nil {
-		return nil, ErrFileNotFound
+		if err == plumbing.ErrObjectNotFound {
+			return nil, ErrFileNotFound
+		}
+		return nil, err
 	}
 
 	return NewFile(path, e.Mode, blob), nil
@@ -91,12 +94,12 @@ func (t *Tree) Tree(path string) (*Tree, error) {
 		return nil, ErrDirectoryNotFound
 	}
 
-	ret, err := GetTree(t.s, e.Hash)
-	if err != nil {
+	tree, err := GetTree(t.s, e.Hash)
+	if err == plumbing.ErrObjectNotFound {
 		return nil, ErrDirectoryNotFound
 	}
 
-	return ret, nil
+	return tree, err
 }
 
 // TreeEntryFile returns the *File for a given *TreeEntry.
@@ -123,12 +126,10 @@ func (t *Tree) findEntry(path string) (*TreeEntry, error) {
 	return tree.entry(pathParts[0])
 }
 
-var errDirNotFound = errors.New("directory not found")
-
 func (t *Tree) dir(baseName string) (*Tree, error) {
 	entry, err := t.entry(baseName)
 	if err != nil {
-		return nil, errDirNotFound
+		return nil, ErrDirectoryNotFound
 	}
 
 	obj, err := t.s.EncodedObject(plumbing.TreeObject, entry.Hash)
