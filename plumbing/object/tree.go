@@ -77,7 +77,7 @@ func (t *Tree) File(path string) (*File, error) {
 
 	blob, err := GetBlob(t.s, e.Hash)
 	if err != nil {
-		return nil, err
+		return nil, ErrFileNotFound
 	}
 
 	return NewFile(path, e.Mode, blob), nil
@@ -91,7 +91,12 @@ func (t *Tree) Tree(path string) (*Tree, error) {
 		return nil, ErrDirectoryNotFound
 	}
 
-	return GetTree(t.s, e.Hash)
+	ret, err := GetTree(t.s, e.Hash)
+	if err != nil {
+		return nil, ErrDirectoryNotFound
+	}
+
+	return ret, nil
 }
 
 // TreeEntryFile returns the *File for a given *TreeEntry.
