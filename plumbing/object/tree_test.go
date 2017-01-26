@@ -64,7 +64,10 @@ func (s *TreeSuite) TestTreeNotFound(c *C) {
 	c.Assert(err, Equals, ErrDirectoryNotFound)
 }
 
-func (s *TreeSuite) TestTreeFailsWithFiles(c *C) {
+func (s *TreeSuite) TestTreeFailsWithExistingFiles(c *C) {
+	_, err := s.Tree.File("LICENSE")
+	c.Assert(err, IsNil)
+
 	d, err := s.Tree.Tree("LICENSE")
 	c.Assert(d, IsNil)
 	c.Assert(err, Equals, ErrDirectoryNotFound)
@@ -82,9 +85,12 @@ func (s *TreeSuite) TestFileNotFound(c *C) {
 	c.Assert(err, Equals, ErrFileNotFound)
 }
 
-func (s *TreeSuite) TestFileFailsWithTrees(c *C) {
-	d, err := s.Tree.File("vendor")
-	c.Assert(d, IsNil)
+func (s *TreeSuite) TestFileFailsWithExistingTrees(c *C) {
+	_, err := s.Tree.Tree("vendor")
+	c.Assert(err, IsNil)
+
+	f, err := s.Tree.File("vendor")
+	c.Assert(f, IsNil)
 	c.Assert(err, Equals, ErrFileNotFound)
 }
 
