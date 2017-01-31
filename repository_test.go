@@ -785,8 +785,8 @@ func (s *RepositorySuite) TestResolveRevision(c *C) {
 		fixtures.ByURL("https://github.com/git-fixtures/basic.git").One(),
 	)
 
-	r := NewMemoryRepository()
-	err := r.Clone(&CloneOptions{URL: url})
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(&CloneOptions{URL: url})
 	c.Assert(err, IsNil)
 
 	datas := map[string]string{
@@ -814,8 +814,8 @@ func (s *RepositorySuite) TestResolveRevisionWithErrors(c *C) {
 		fixtures.ByURL("https://github.com/git-fixtures/basic.git").One(),
 	)
 
-	r := NewMemoryRepository()
-	err := r.Clone(&CloneOptions{URL: url})
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(&CloneOptions{URL: url})
 	c.Assert(err, IsNil)
 
 	datas := map[string]string{
