@@ -1,5 +1,5 @@
-// Package revlist implements functions to walk the objects referenced by a
-// commit history. Roughly equivalent to git-rev-list command.
+// Package revlist implementation to walk the objects referenced by a commit
+// history. Roughly equivalent to git-rev-list command.
 package revlist
 
 import (

@@ -1,3 +1,4 @@
+// Package file implements the SSH transport protocol
 package ssh
 
 import (

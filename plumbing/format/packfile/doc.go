@@ -1,4 +1,4 @@
-// Package packfile implements encoding and decoding of  packfile format
+// Package packfile implements encoding and decoding of packfile format.
 //
 //  == pack-*.pack files have the following format:
 //

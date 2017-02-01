@@ -1,3 +1,4 @@
+// Package capability defines the server and client capabilities
 package capability
 
 // Capability describes a server or client capability
