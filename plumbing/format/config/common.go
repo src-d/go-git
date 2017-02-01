@@ -5,26 +5,32 @@ func New() *Config {
 	return &Config{}
 }
 
+// Config contains all the sections, comments and includes from a config file
 type Config struct {
 	Comment  *Comment
 	Sections Sections
 	Includes Includes
 }
 
+// Includes is a list of Includes in a config file
 type Includes []*Include
 
-// A reference to an included configuration.
+// Include is reference to an included config file
 type Include struct {
 	Path   string
 	Config *Config
 }
 
+// Comment string with out the prefix '#' or ';'
 type Comment string
 
 const (
+	// NoSubsection token used to avoid provide a section to the Config.Section
+	// and Config.SetSection methods
 	NoSubsection = ""
 )
 
+// Section returns a existing section with the given name or creates a new one
 func (c *Config) Section(name string) *Section {
 	for i := len(c.Sections) - 1; i >= 0; i-- {
 		s := c.Sections[i]
@@ -38,36 +44,31 @@ func (c *Config) Section(name string) *Section {
 	return s
 }
 
-// AddOption is a convenience method to add an option to a given
-// section and subsection.
-//
-// Use the NoSubsection constant for the subsection argument
-// if no subsection is wanted.
-func (s *Config) AddOption(section string, subsection string, key string, value string) *Config {
+// AddOption add an option to a given section and subsection. Use the
+// NoSubsection constant for the subsection argument if no subsection is wanted.
+func (c *Config) AddOption(section string, subsection string, key string, value string) *Config {
 	if subsection == "" {
-		s.Section(section).AddOption(key, value)
+		c.Section(section).AddOption(key, value)
 	} else {
-		s.Section(section).Subsection(subsection).AddOption(key, value)
+		c.Section(section).Subsection(subsection).AddOption(key, value)
 	}
 
-	return s
+	return c
 }
 
-// SetOption is a convenience method to set an option to a given
-// section and subsection.
-//
-// Use the NoSubsection constant for the subsection argument
-// if no subsection is wanted.
-func (s *Config) SetOption(section string, subsection string, key string, value string) *Config {
+// SetOption set an option to a given section and subsection. Use the
+// NoSubsection constant for the subsection argument if no subsection is wanted.
+func (c *Config) SetOption(section string, subsection string, key string, value string) *Config {
 	if subsection == "" {
-		s.Section(section).SetOption(key, value)
+		c.Section(section).SetOption(key, value)
 	} else {
-		s.Section(section).Subsection(subsection).SetOption(key, value)
+		c.Section(section).Subsection(subsection).SetOption(key, value)
 	}
 
-	return s
+	return c
 }
 
+// RemoveSection remove a section from a config file
 func (c *Config) RemoveSection(name string) *Config {
 	result := Sections{}
 	for _, s := range c.Sections {
@@ -80,6 +81,7 @@ func (c *Config) RemoveSection(name string) *Config {
 	return c
 }
 
+// RemoveSubsection remove a subsection from a config file
 func (c *Config) RemoveSubsection(section string, subsection string) *Config {
 	for _, s := range c.Sections {
 		if s.IsName(section) {

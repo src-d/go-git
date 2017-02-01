@@ -1,4 +1,5 @@
-// Package idxfile implements an encoder and a decoder of packfile idx files
+// Package idxfile implements encoding and decoding of packfile idx files.
+//
 //  == Original (version 1) pack-*.idx files have the following format:
 //
 //    - The header consists of 256 4-byte network byte order

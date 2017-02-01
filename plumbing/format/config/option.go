@@ -4,6 +4,7 @@ import (
 	"strings"
 )
 
+// Option defines a key/ value entity in a config file
 type Option struct {
 	// Key preserving original caseness.
 	// Use IsKey instead to compare key regardless of caseness.
@@ -12,6 +13,7 @@ type Option struct {
 	Value string
 }
 
+// Options is a list of Options with helper functions
 type Options []*Option
 
 // IsKey returns true if the given key matches
@@ -20,19 +22,14 @@ func (o *Option) IsKey(key string) bool {
 	return strings.ToLower(o.Key) == strings.ToLower(key)
 }
 
-// Get gets the value for the given key if set,
-// otherwise it returns the empty string.
+// Get gets the value for the given key if set, otherwise it returns the empty
+// string.
 //
-// Note that there is no difference
-//
-// This matches git behaviour since git v1.8.1-rc1,
-// if there are multiple definitions of a key, the
-// last one wins.
-//
+// This matches git behaviour since git v1.8.1-rc1, if there are multiple
+// definitions of a key, the last one wins.
 // See: http://article.gmane.org/gmane.linux.kernel/1407184
 //
-// In order to get all possible values for the same key,
-// use GetAll.
+// In order to get all possible values for the same key, use GetAll.
 func (opts Options) Get(key string) string {
 	for i := len(opts) - 1; i >= 0; i-- {
 		o := opts[i]

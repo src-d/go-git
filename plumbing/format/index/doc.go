@@ -1,4 +1,4 @@
-// Package index implements an encoder and a decoder of index format files
+// Package index implements encoding and decoding of index format files.
 //
 //    Git index format
 //    ================
