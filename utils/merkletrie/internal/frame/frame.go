@@ -37,7 +37,7 @@ func New(n noder.Noder) (*Frame, error) {
 	}, nil
 }
 
-// String returns the qouted names of the noders in the frame sorted in
+// String returns the quoted names of the noders in the frame sorted in
 // alphabeticall order by name, surrounded by square brackets and
 // separated by comas.
 //
