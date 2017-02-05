@@ -6,6 +6,43 @@ import (
 	"unicode"
 )
 
+// runeCategoryValidator takes a rune as input and
+// validates it belongs to a rune category
+type runeCategoryValidator func(r rune) bool
+
+// tokenizeExpression aggegates a series of runes matching check predicate into a single
+// string and provides given tokenType as token type
+func tokenizeExpression(ch rune, tokenType token, check runeCategoryValidator, r *bufio.Reader) (token, string, error) {
+	var data []rune
+	data = append(data, ch)
+
+	for {
+		c, _, err := r.ReadRune()
+
+		if c == zeroRune {
+			break
+		}
+
+		if err != nil {
+			return tokenError, "", err
+		}
+
+		if check(c) {
+			data = append(data, c)
+		} else {
+			err := r.UnreadRune()
+
+			if err != nil {
+				return tokenError, "", err
+			}
+
+			return tokenType, string(data), nil
+		}
+	}
+
+	return tokenType, string(data), nil
+}
+
 var zeroRune = rune(0)
 
 // scanner represents a lexical scanner.
@@ -69,65 +106,11 @@ func (s *scanner) scan() (token, string, error) {
 	}
 
 	if unicode.IsLetter(ch) {
-		var data []rune
-		data = append(data, ch)
-
-		for {
-			c, _, err := s.r.ReadRune()
-
-			if c == zeroRune {
-				break
-			}
-
-			if err != nil {
-				return tokenError, "", err
-			}
-
-			if unicode.IsLetter(c) {
-				data = append(data, c)
-			} else {
-				err := s.r.UnreadRune()
-
-				if err != nil {
-					return tokenError, "", err
-				}
-
-				return word, string(data), nil
-			}
-		}
-
-		return word, string(data), nil
+		return tokenizeExpression(ch, word, unicode.IsLetter, s.r)
 	}
 
 	if unicode.IsNumber(ch) {
-		var data []rune
-		data = append(data, ch)
-
-		for {
-			c, _, err := s.r.ReadRune()
-
-			if c == zeroRune {
-				break
-			}
-
-			if err != nil {
-				return tokenError, "", err
-			}
-
-			if unicode.IsNumber(c) {
-				data = append(data, c)
-			} else {
-				err := s.r.UnreadRune()
-
-				if err != nil {
-					return tokenError, "", err
-				}
-
-				return number, string(data), nil
-			}
-		}
-
-		return number, string(data), nil
+		return tokenizeExpression(ch, number, unicode.IsNumber, s.r)
 	}
 
 	return tokenError, string(ch), nil
