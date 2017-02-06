@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	. "gopkg.in/check.v1"
-
 	"srcd.works/go-git.v4/utils/merkletrie"
 	"srcd.works/go-git.v4/utils/merkletrie/internal/fsnoder"
 	"srcd.works/go-git.v4/utils/merkletrie/noder"
+
+	. "gopkg.in/check.v1"
 )
 
 func Test(t *testing.T) { TestingT(t) }
