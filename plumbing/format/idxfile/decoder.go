@@ -17,17 +17,17 @@ var (
 	ErrMalformedIdxFile = errors.New("Malformed IDX file")
 )
 
-// Decoder reads and decodes idx files from an input stream
+// Decoder reads and decodes idx files from an input stream.
 type Decoder struct {
 	io.Reader
 }
 
-// NewDecoder construct a new idx stream decoder
+// NewDecoder builds a new idx stream decoder, that reads from r.
 func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{r}
 }
 
-// Decode reads from the stream and decode the content into the Idxfile struct
+// Decode reads from the stream and decode the content into the Idxfile struct.
 func (d *Decoder) Decode(idx *Idxfile) error {
 	if err := validateHeader(d); err != nil {
 		return err

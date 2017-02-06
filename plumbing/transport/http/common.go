@@ -1,4 +1,4 @@
-// Package http implements the HTTP transport protocol
+// Package http implements the HTTP transport protocol.
 package http
 
 import (

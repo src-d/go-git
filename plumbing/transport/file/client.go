@@ -1,4 +1,4 @@
-// Package file implements the file transport protocol
+// Package file implements the file transport protocol.
 package file
 
 import (

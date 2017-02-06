@@ -1,5 +1,5 @@
 // Package client contains helper function to deal with the different client
-// protocols
+// protocols.
 package client
 
 import (

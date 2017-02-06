@@ -15,14 +15,14 @@ type Encoder struct {
 	hash hash.Hash
 }
 
-// NewEncoder returns a new stream encoder that writes to w
+// NewEncoder returns a new stream encoder that writes to w.
 func NewEncoder(w io.Writer) *Encoder {
 	h := sha1.New()
 	mw := io.MultiWriter(w, h)
 	return &Encoder{mw, h}
 }
 
-// Encode encodes a Idxfile struct into a stream
+// Encode encodes an Idxfile to the encoder writer.
 func (e *Encoder) Encode(idx *Idxfile) (int, error) {
 	idx.Entries.Sort()
 
@@ -123,7 +123,7 @@ func (e *Encoder) encodeChecksums(idx *Idxfile) (int, error) {
 	return 40, nil
 }
 
-// EntryList implements sort.Interface allowing sorting in increasing order
+// EntryList implements sort.Interface allowing sorting in increasing order.
 type EntryList []Entry
 
 func (p EntryList) Len() int           { return len(p) }

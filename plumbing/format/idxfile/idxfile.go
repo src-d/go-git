@@ -11,7 +11,7 @@ var (
 	idxHeader = []byte{255, 't', 'O', 'c'}
 )
 
-// Idxfile in memory representation of a idx file
+// Idxfile is the in memory representation of an idx file.
 type Idxfile struct {
 	Version          uint32
 	Fanout           [255]uint32
@@ -21,14 +21,14 @@ type Idxfile struct {
 	IdxChecksum      [20]byte
 }
 
-// Entry in memory representation of a object entry in the idx file
+// Entry is the in memory representation of an object entry in the idx file.
 type Entry struct {
 	Hash   plumbing.Hash
 	CRC32  uint32
 	Offset uint64
 }
 
-// Add adds a new Entry with the given values to the Idxfile
+// Add adds a new Entry with the given values to the Idxfile.
 func (idx *Idxfile) Add(h plumbing.Hash, offset uint64, crc32 uint32) {
 	idx.Entries = append(idx.Entries, Entry{
 		Hash:   h,
