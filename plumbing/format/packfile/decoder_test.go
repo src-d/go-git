@@ -59,7 +59,14 @@ func (s *ReaderSuite) TestDecodeByType(c *C) {
 		for _, t := range ts {
 			storage := memory.NewStorage()
 			scanner := packfile.NewScanner(f.Packfile())
-			d, err := packfile.NewDecoderForType(scanner, storage, t, nil)
+
+			var offsets map[plumbing.Hash]int64
+			// when the packfile is ref-delta based, the offsets are required
+			if f.Is("ref-delta") {
+				offsets = getOffsetsFromIdx(f.Idx())
+			}
+
+			d, err := packfile.NewDecoderForType(scanner, storage, t, offsets)
 			c.Assert(err, IsNil)
 			defer d.Close()
 
