@@ -42,7 +42,7 @@ func (s *IdxfileSuite) TestDecodeCRCs(c *C) {
 	scanner := packfile.NewScanner(f.Packfile())
 	storage := memory.NewStorage()
 
-	pd, err := packfile.NewDecoder(scanner, storage)
+	pd, err := packfile.NewDecoder(scanner, storage, nil)
 	c.Assert(err, IsNil)
 	_, err = pd.Decode()
 	c.Assert(err, IsNil)

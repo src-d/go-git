@@ -204,7 +204,7 @@ func (s *UploadPackSuite) checkObjectNumber(c *C, r io.Reader, n int) {
 	buf := bytes.NewBuffer(b)
 	scanner := packfile.NewScanner(buf)
 	storage := memory.NewStorage()
-	d, err := packfile.NewDecoder(scanner, storage)
+	d, err := packfile.NewDecoder(scanner, storage, nil)
 	c.Assert(err, IsNil)
 	_, err = d.Decode()
 	c.Assert(err, IsNil)

@@ -60,7 +60,7 @@ func (s *DiffTreeSuite) storageFromPackfile(f *fixtures.Fixture) storer.EncodedO
 	defer pf.Close()
 
 	n := packfile.NewScanner(pf)
-	d, err := packfile.NewDecoder(n, sto)
+	d, err := packfile.NewDecoder(n, sto, nil)
 	if err != nil {
 		panic(err)
 	}

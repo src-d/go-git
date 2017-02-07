@@ -74,7 +74,7 @@ func (s *BaseSuite) NewRepositoryFromPackfile(f *fixtures.Fixture) *Repository {
 	defer p.Close()
 
 	n := packfile.NewScanner(p)
-	d, err := packfile.NewDecoder(n, storer)
+	d, err := packfile.NewDecoder(n, storer, nil)
 	if err != nil {
 		panic(err)
 	}
