@@ -24,7 +24,7 @@ var _ = Suite(&ReaderSuite{})
 
 func (s *ReaderSuite) TestNewDecodeNonSeekable(c *C) {
 	scanner := packfile.NewScanner(nil)
-	d, err := packfile.NewDecoder(scanner, nil)
+	d, err := packfile.NewDecoder(scanner, nil, nil)
 
 	c.Assert(d, IsNil)
 	c.Assert(err, NotNil)
@@ -35,7 +35,7 @@ func (s *ReaderSuite) TestDecode(c *C) {
 		scanner := packfile.NewScanner(f.Packfile())
 		storage := memory.NewStorage()
 
-		d, err := packfile.NewDecoder(scanner, storage)
+		d, err := packfile.NewDecoder(scanner, storage, nil)
 		c.Assert(err, IsNil)
 		defer d.Close()
 
@@ -59,7 +59,7 @@ func (s *ReaderSuite) TestDecodeByType(c *C) {
 		for _, t := range ts {
 			storage := memory.NewStorage()
 			scanner := packfile.NewScanner(f.Packfile())
-			d, err := packfile.NewDecoderForType(scanner, storage, t)
+			d, err := packfile.NewDecoderForType(scanner, storage, t, nil)
 			c.Assert(err, IsNil)
 			defer d.Close()
 
@@ -83,13 +83,13 @@ func (s *ReaderSuite) TestDecodeByTypeConstructor(c *C) {
 	storage := memory.NewStorage()
 	scanner := packfile.NewScanner(f.Packfile())
 
-	_, err := packfile.NewDecoderForType(scanner, storage, plumbing.OFSDeltaObject)
+	_, err := packfile.NewDecoderForType(scanner, storage, plumbing.OFSDeltaObject, nil)
 	c.Assert(err, Equals, plumbing.ErrInvalidType)
 
-	_, err = packfile.NewDecoderForType(scanner, storage, plumbing.REFDeltaObject)
+	_, err = packfile.NewDecoderForType(scanner, storage, plumbing.REFDeltaObject, nil)
 	c.Assert(err, Equals, plumbing.ErrInvalidType)
 
-	_, err = packfile.NewDecoderForType(scanner, storage, plumbing.InvalidObject)
+	_, err = packfile.NewDecoderForType(scanner, storage, plumbing.InvalidObject, nil)
 	c.Assert(err, Equals, plumbing.ErrInvalidType)
 }
 
@@ -98,7 +98,7 @@ func (s *ReaderSuite) TestDecodeMultipleTimes(c *C) {
 	scanner := packfile.NewScanner(f.Packfile())
 	storage := memory.NewStorage()
 
-	d, err := packfile.NewDecoder(scanner, storage)
+	d, err := packfile.NewDecoder(scanner, storage, nil)
 	c.Assert(err, IsNil)
 	defer d.Close()
 
@@ -114,7 +114,7 @@ func (s *ReaderSuite) TestDecodeMultipleTimes(c *C) {
 func (s *ReaderSuite) TestDecodeInMemory(c *C) {
 	fixtures.Basic().ByTag("packfile").Test(c, func(f *fixtures.Fixture) {
 		scanner := packfile.NewScanner(f.Packfile())
-		d, err := packfile.NewDecoder(scanner, nil)
+		d, err := packfile.NewDecoder(scanner, nil, nil)
 		c.Assert(err, IsNil)
 
 		ch, err := d.Decode()
@@ -143,7 +143,7 @@ func (s *ReaderSuite) TestDecodeNoSeekableWithTxStorer(c *C) {
 		_, isTxStorer := storage.(storer.Transactioner)
 		c.Assert(isTxStorer, Equals, true)
 
-		d, err := packfile.NewDecoder(scanner, storage)
+		d, err := packfile.NewDecoder(scanner, storage, nil)
 		c.Assert(err, IsNil)
 		defer d.Close()
 
@@ -168,7 +168,7 @@ func (s *ReaderSuite) TestDecodeNoSeekableWithoutTxStorer(c *C) {
 		_, isTxStorer := storage.(storer.Transactioner)
 		c.Assert(isTxStorer, Equals, false)
 
-		d, err := packfile.NewDecoder(scanner, storage)
+		d, err := packfile.NewDecoder(scanner, storage, nil)
 		c.Assert(err, IsNil)
 		defer d.Close()
 
@@ -220,7 +220,7 @@ func (s *ReaderSuite) TestDecodeCRCs(c *C) {
 	scanner := packfile.NewScanner(f.Packfile())
 	storage := memory.NewStorage()
 
-	d, err := packfile.NewDecoder(scanner, storage)
+	d, err := packfile.NewDecoder(scanner, storage, nil)
 	c.Assert(err, IsNil)
 	_, err = d.Decode()
 	c.Assert(err, IsNil)
@@ -236,14 +236,15 @@ func (s *ReaderSuite) TestDecodeCRCs(c *C) {
 func (s *ReaderSuite) TestReadObjectAt(c *C) {
 	f := fixtures.Basic().One()
 	scanner := packfile.NewScanner(f.Packfile())
-	d, err := packfile.NewDecoder(scanner, nil)
-	c.Assert(err, IsNil)
 
+	var offsets map[plumbing.Hash]int64
 	// when the packfile is ref-delta based, the offsets are required
 	if f.Is("ref-delta") {
-		offsets := getOffsetsFromIdx(f.Idx())
-		d.SetOffsets(offsets)
+		offsets = getOffsetsFromIdx(f.Idx())
 	}
+
+	d, err := packfile.NewDecoder(scanner, nil, offsets)
+	c.Assert(err, IsNil)
 
 	// the objects at reference 186, is a delta, so should be recall,
 	// without being read before.
@@ -255,7 +256,7 @@ func (s *ReaderSuite) TestReadObjectAt(c *C) {
 func (s *ReaderSuite) TestOffsets(c *C) {
 	f := fixtures.Basic().One()
 	scanner := packfile.NewScanner(f.Packfile())
-	d, err := packfile.NewDecoder(scanner, nil)
+	d, err := packfile.NewDecoder(scanner, nil, nil)
 	c.Assert(err, IsNil)
 
 	c.Assert(d.Offsets(), HasLen, 0)
@@ -269,11 +270,10 @@ func (s *ReaderSuite) TestOffsets(c *C) {
 func (s *ReaderSuite) TestSetOffsets(c *C) {
 	f := fixtures.Basic().One()
 	scanner := packfile.NewScanner(f.Packfile())
-	d, err := packfile.NewDecoder(scanner, nil)
-	c.Assert(err, IsNil)
 
 	h := plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
-	d.SetOffsets(map[plumbing.Hash]int64{h: 42})
+	d, err := packfile.NewDecoder(scanner, nil, map[plumbing.Hash]int64{h: 42})
+	c.Assert(err, IsNil)
 
 	o := d.Offsets()
 	c.Assert(o, HasLen, 1)

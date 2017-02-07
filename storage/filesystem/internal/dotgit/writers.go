@@ -55,7 +55,7 @@ func newPackWrite(fs billy.Filesystem) (*PackWriter, error) {
 
 func (w *PackWriter) buildIndex() {
 	s := packfile.NewScanner(w.synced)
-	d, err := packfile.NewDecoder(s, nil)
+	d, err := packfile.NewDecoder(s, nil, nil)
 	if err != nil {
 		w.result <- err
 		return

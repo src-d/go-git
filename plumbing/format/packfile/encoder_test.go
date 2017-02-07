@@ -91,7 +91,7 @@ func (s *EncoderSuite) TestDecodeEncodeDecode(c *C) {
 		scanner := NewScanner(f.Packfile())
 		storage := memory.NewStorage()
 
-		d, err := NewDecoder(scanner, storage)
+		d, err := NewDecoder(scanner, storage, nil)
 		c.Assert(err, IsNil)
 
 		ch, err := d.Decode()
@@ -119,7 +119,7 @@ func (s *EncoderSuite) TestDecodeEncodeDecode(c *C) {
 
 		scanner = NewScanner(s.buf)
 		storage = memory.NewStorage()
-		d, err = NewDecoder(scanner, storage)
+		d, err = NewDecoder(scanner, storage, nil)
 		c.Assert(err, IsNil)
 		_, err = d.Decode()
 		c.Assert(err, IsNil)
@@ -185,7 +185,7 @@ func (s *EncoderSuite) simpleDeltaTest(c *C) {
 	scanner := NewScanner(s.buf)
 
 	storage := memory.NewStorage()
-	d, err := NewDecoder(scanner, storage)
+	d, err := NewDecoder(scanner, storage, nil)
 	c.Assert(err, IsNil)
 
 	_, err = d.Decode()
@@ -224,7 +224,7 @@ func (s *EncoderSuite) deltaOverDeltaTest(c *C) {
 
 	scanner := NewScanner(s.buf)
 	storage := memory.NewStorage()
-	d, err := NewDecoder(scanner, storage)
+	d, err := NewDecoder(scanner, storage, nil)
 	c.Assert(err, IsNil)
 
 	_, err = d.Decode()

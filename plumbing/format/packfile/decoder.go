@@ -57,6 +57,7 @@ type Decoder struct {
 	tx storer.Transaction
 
 	isDecoded    bool
+	withIndex    bool
 	offsetToHash map[int64]plumbing.Hash
 	hashToOffset map[plumbing.Hash]int64
 	crcs         map[plumbing.Hash]uint32
@@ -77,8 +78,13 @@ type Decoder struct {
 //
 // If the ObjectStorer implements storer.Transactioner, a transaction is created
 // during the Decode execution. If anything fails, Rollback is called
-func NewDecoder(s *Scanner, o storer.EncodedObjectStorer) (*Decoder, error) {
-	return NewDecoderForType(s, o, plumbing.AnyObject)
+//
+// offsets sets where are the files into the packfile. If this value is nil, the packfile will be
+// readed sequentially and generating this index. If this value is set, no more values will be
+// added to the index
+func NewDecoder(s *Scanner, o storer.EncodedObjectStorer,
+	offsets map[plumbing.Hash]int64) (*Decoder, error) {
+	return NewDecoderForType(s, o, plumbing.AnyObject, offsets)
 }
 
 // NewDecoderForType returns a new Decoder but in this case for a specific object type.
@@ -86,7 +92,7 @@ func NewDecoder(s *Scanner, o storer.EncodedObjectStorer) (*Decoder, error) {
 // the specified one, nil will be returned. This is intended to avoid the content
 // deserialization of all the objects
 func NewDecoderForType(s *Scanner, o storer.EncodedObjectStorer,
-	t plumbing.ObjectType) (*Decoder, error) {
+	t plumbing.ObjectType, offsets map[plumbing.Hash]int64) (*Decoder, error) {
 
 	if t == plumbing.OFSDeltaObject ||
 		t == plumbing.REFDeltaObject ||
@@ -98,19 +104,32 @@ func NewDecoderForType(s *Scanner, o storer.EncodedObjectStorer,
 		return nil, ErrResolveDeltasNotSupported
 	}
 
-	return &Decoder{
+	lenOffsets := len(offsets)
+	withIndex := true
+	if lenOffsets == 0 {
+		withIndex = false
+	}
+
+	decoder := &Decoder{
 		s: s,
 		o: o,
 
-		offsetToHash: make(map[int64]plumbing.Hash, 0),
-		hashToOffset: make(map[plumbing.Hash]int64, 0),
-		crcs:         make(map[plumbing.Hash]uint32, 0),
+		withIndex:    withIndex,
+		offsetToHash: make(map[int64]plumbing.Hash, lenOffsets),
+		hashToOffset: make(map[plumbing.Hash]int64, lenOffsets),
+		crcs:         make(map[plumbing.Hash]uint32, lenOffsets),
 
-		offsetToType: make(map[int64]plumbing.ObjectType, 0),
+		offsetToType: make(map[int64]plumbing.ObjectType, lenOffsets),
 		decoderType:  t,
 
 		cache: cache.NewObjectFIFO(cache.MaxSize),
-	}, nil
+	}
+
+	for h, o := range offsets {
+		decoder.setOffset(h, o)
+	}
+
+	return decoder, nil
 }
 
 func canResolveDeltas(s *Scanner, o storer.EncodedObjectStorer) bool {
@@ -293,7 +312,9 @@ func (d *Decoder) decodeByHeader(h *ObjectHeader) (plumbing.EncodedObject, error
 	}
 
 	hash := obj.Hash()
-	d.setOffset(hash, h.Offset)
+	if !d.withIndex {
+		d.setOffset(hash, h.Offset)
+	}
 	d.setCRC(hash, crc)
 
 	return obj, nil
@@ -434,12 +455,6 @@ func (d *Decoder) recallByHashNonSeekable(h plumbing.Hash) (obj plumbing.Encoded
 	}
 
 	return nil, plumbing.ErrObjectNotFound
-}
-
-// SetOffsets sets the offsets, required when using the method DecodeObjectAt,
-// without decoding the full packfile
-func (d *Decoder) SetOffsets(offsets map[plumbing.Hash]int64) {
-	d.hashToOffset = offsets
 }
 
 // Offsets returns the objects read offset, Decode method should be called

@@ -35,7 +35,7 @@ func UpdateObjectStorage(s storer.EncodedObjectStorer, packfile io.Reader) error
 	}
 
 	stream := NewScanner(packfile)
-	d, err := NewDecoder(stream, s)
+	d, err := NewDecoder(stream, s, nil)
 	if err != nil {
 		return err
 	}
