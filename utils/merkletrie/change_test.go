@@ -59,13 +59,7 @@ func (s ChangeSuite) TestNewModify(c *C) {
 	c.Assert(change.String(), Equals, "<Modify z>")
 }
 
-func (s ChangeSuite) TestUnsupportedChange(c *C) {
-	tree, err := fsnoder.New("(a(b(z<>)))")
-	c.Assert(err, IsNil)
-	path := find(c, tree, "z")
-	change := merkletrie.Change{
-		Action: merkletrie.Action(42),
-		To:     path,
-	}
-	c.Assert(change.String, PanicMatches, "unsupported action.*")
+func (s ChangeSuite) TestMalformedChange(c *C) {
+	change := merkletrie.Change{}
+	c.Assert(change.String, PanicMatches, "malformed change.*")
 }

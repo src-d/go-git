@@ -72,15 +72,7 @@ type change struct {
 }
 
 func (c change) String() string {
-	var buf bytes.Buffer
-
-	_, _ = buf.WriteRune('<')
-	_, _ = buf.WriteString(c.Action.String())
-	_, _ = buf.WriteRune(' ')
-	_, _ = buf.WriteString(c.path)
-	_, _ = buf.WriteRune('>')
-
-	return buf.String()
+	return fmt.Sprintf("<%s %s>", c.Action, c.path)
 }
 
 func (c change) reverse() change {
@@ -107,7 +99,11 @@ type changes []change
 func newChanges(original merkletrie.Changes) (changes, error) {
 	ret := make(changes, len(original))
 	for i, c := range original {
-		switch c.Action {
+		action, err := c.Action()
+		if err != nil {
+			return nil, err
+		}
+		switch action {
 		case merkletrie.Insert:
 			ret[i] = change{
 				Action: merkletrie.Insert,

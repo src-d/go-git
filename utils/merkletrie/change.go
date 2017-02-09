@@ -1,7 +1,6 @@
 package merkletrie
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 
@@ -14,7 +13,8 @@ type Action int
 
 // The set of possible actions in a change.
 const (
-	Insert Action = iota
+	_ = iota
+	Insert
 	Delete
 	Modify
 )
@@ -35,37 +35,39 @@ func (a Action) String() string {
 
 // A Change value represent how a noder has change between to merkletries.
 type Change struct {
-	// The kind of the change.
-	Action Action
 	// The noder before the change or nil if it was inserted.
 	From noder.Path
 	// The noder after the change or nil if it was deleted.
 	To noder.Path
 }
 
-// NewInsert returns a new Change representing the insertion of n.
-func NewInsert(n noder.Path) Change {
-	return Change{
-		Action: Insert,
-		To:     n,
+// Action is convenience method that returns what Action c represents.
+func (c *Change) Action() (Action, error) {
+	if c.From == nil && c.To == nil {
+		return Action(0), fmt.Errorf("malformed change: nil from and to")
 	}
+	if c.From == nil {
+		return Insert, nil
+	}
+	if c.To == nil {
+		return Delete, nil
+	}
+
+	return Modify, nil
 }
 
+// NewInsert returns a new Change representing the insertion of n.
+func NewInsert(n noder.Path) Change { return Change{To: n} }
+
 // NewDelete returns a new Change representing the deletion of n.
-func NewDelete(n noder.Path) Change {
-	return Change{
-		Action: Delete,
-		From:   n,
-	}
-}
+func NewDelete(n noder.Path) Change { return Change{From: n} }
 
 // NewModify returns a new Change representing that a has been modified and
 // it is now b.
 func NewModify(a, b noder.Path) Change {
 	return Change{
-		Action: Modify,
-		From:   a,
-		To:     b,
+		From: a,
+		To:   b,
 	}
 }
 
@@ -76,22 +78,19 @@ func NewModify(a, b noder.Path) Change {
 // Example: inserting a file at the path a/b/c.txt will return "<Insert
 // a/b/c.txt>".
 func (c Change) String() string {
-	var buf bytes.Buffer
-
-	_, _ = buf.WriteRune('<')
-	_, _ = buf.WriteString(c.Action.String())
-	_, _ = buf.WriteRune(' ')
-	switch c.Action {
-	case Insert:
-		_, _ = buf.WriteString(c.To.String())
-	case Delete:
-		_, _ = buf.WriteString(c.From.String())
-	case Modify:
-		_, _ = buf.WriteString(c.To.String())
+	action, err := c.Action()
+	if err != nil {
+		panic(err)
 	}
-	_, _ = buf.WriteRune('>')
 
-	return buf.String()
+	var path string
+	if action == Delete {
+		path = c.From.String()
+	} else {
+		path = c.To.String()
+	}
+
+	return fmt.Sprintf("<%s %s>", action, path)
 }
 
 // Changes is a list of changes between to merkletries.
