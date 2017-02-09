@@ -35,9 +35,12 @@ func (a Action) String() string {
 
 // A Change value represent how a noder has change between to merkletries.
 type Change struct {
-	Action Action     // the kind of the change.
-	From   noder.Path // the noder before the change or nil if it was inserted.
-	To     noder.Path // the noder after the change or nil if it was deleted.
+	// The kind of the change.
+	Action Action
+	// The noder before the change or nil if it was inserted.
+	From noder.Path
+	// The noder after the change or nil if it was deleted.
+	To noder.Path
 }
 
 // NewInsert returns a new Change representing the insertion of n.
@@ -100,27 +103,27 @@ func NewChanges() Changes {
 }
 
 // Add adds the change c to the list of changes.
-func (list *Changes) Add(c Change) {
-	*list = append(*list, c)
+func (l *Changes) Add(c Change) {
+	*l = append(*l, c)
 }
 
 // AddRecursiveInsert adds the required changes to insert all the
 // file-like noders found in root, recursively.
-func (list *Changes) AddRecursiveInsert(root noder.Path) error {
-	return list.addRecursive(root, NewInsert)
+func (l *Changes) AddRecursiveInsert(root noder.Path) error {
+	return l.addRecursive(root, NewInsert)
 }
 
 // AddRecursiveDelete adds the required changes to delete all the
 // file-like noders found in root, recursively.
-func (list *Changes) AddRecursiveDelete(root noder.Path) error {
-	return list.addRecursive(root, NewDelete)
+func (l *Changes) AddRecursiveDelete(root noder.Path) error {
+	return l.addRecursive(root, NewDelete)
 }
 
 type noderToChangeFn func(noder.Path) Change // NewInsert or NewDelete
 
-func (list *Changes) addRecursive(root noder.Path, ctor noderToChangeFn) error {
+func (l *Changes) addRecursive(root noder.Path, ctor noderToChangeFn) error {
 	if !root.IsDir() {
-		list.Add(ctor(root))
+		l.Add(ctor(root))
 		return nil
 	}
 
@@ -140,7 +143,7 @@ func (list *Changes) addRecursive(root noder.Path, ctor noderToChangeFn) error {
 		if current.IsDir() {
 			continue
 		}
-		list.Add(ctor(current))
+		l.Add(ctor(current))
 	}
 
 	return nil
