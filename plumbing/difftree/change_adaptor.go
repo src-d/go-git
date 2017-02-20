@@ -1,11 +1,7 @@
 package difftree
 
-// The folowing functions transforms changes types form the merkletrie
+// The folowing functions transform changes types form the merkletrie
 // package to changes types from this package.
-//
-// newChange      transforms a merkletrie.Change   into a Change.
-// newChangeEntry transforms a noder.Path          into a ChangeEntry.
-// newChanges     transforms a []merkletrie.Change into a Changes.
 
 import (
 	"fmt"

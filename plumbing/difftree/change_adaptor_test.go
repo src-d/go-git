@@ -11,7 +11,7 @@ import (
 	"srcd.works/go-git.v4/utils/merkletrie"
 	"srcd.works/go-git.v4/utils/merkletrie/noder"
 
-	fixtures "github.com/src-d/go-git-fixtures"
+	"github.com/src-d/go-git-fixtures"
 	. "gopkg.in/check.v1"
 )
 
