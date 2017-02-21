@@ -81,12 +81,17 @@ func (c *Change) name() string {
 
 // ChangeEntry values represent a node that has suffered a change.
 type ChangeEntry struct {
-	Name      string           // full path of the node using "/" as separator
-	Tree      *object.Tree     // parent tree of the node that has changed
-	TreeEntry object.TreeEntry // the entry of the node
+	// Full path of the node using "/" as separator.
+	Name string
+	// Parent tree of the node that has changed.
+	Tree *object.Tree
+	// The entry of the node.
+	TreeEntry object.TreeEntry
 }
 
 // Changes represents a collection of changes between two git trees.
+// Implements sort.Interface lexicographically over the path of the
+// changed files.
 type Changes []*Change
 
 func (c Changes) Len() int {
