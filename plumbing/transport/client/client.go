@@ -32,7 +32,8 @@ func InstallProtocol(scheme string, c transport.Transport) {
 func NewClient(endpoint transport.Endpoint) (transport.Transport, error) {
 
 	f, ok := Protocols[endpoint.Scheme]
-	fmt.Println("newclient", endpoint, f, ok)
+	fmt.Println("newclient", endpoint.String(), f, ok)
+	fmt.Printf("%T\n", f)
 	if !ok {
 		return nil, fmt.Errorf("unsupported scheme %q", endpoint.Scheme)
 	}
