@@ -299,6 +299,8 @@ func (s *RepositorySuite) TestPlainCloneWithRecurseSubmodules(c *C) {
 	defer os.RemoveAll(dir)
 
 	path := fixtures.ByTag("submodule").One().Worktree().Base()
+	fmt.Println(os.Stat(path))
+	fmt.Println(path, fmt.Sprintf("file://%s", path), fixtures.ByTag("submodule").One())
 	r, err := PlainClone(dir, false, &CloneOptions{
 		URL:               fmt.Sprintf("file://%s", path),
 		RecurseSubmodules: DefaultSubmoduleRecursionDepth,
