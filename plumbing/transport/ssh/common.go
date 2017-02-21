@@ -84,6 +84,7 @@ func (c *command) connect() error {
 	var err error
 	c.client, err = ssh.Dial("tcp", c.getHostWithPort(), c.auth.clientConfig())
 	if err != nil {
+		panic(err)
 		return err
 	}
 
@@ -103,6 +104,9 @@ func (c *command) getHostWithPort() string {
 		host += ":22"
 	}
 
+	if host == "" {
+		panic("ssh: empty host")
+	}
 	return host
 }
 
