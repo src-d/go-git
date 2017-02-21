@@ -47,8 +47,10 @@ func (s *upSession) AdvertisedReferences() (*packp.AdvRefs, error) {
 		s.endpoint.String(), transport.UploadPackServiceName,
 	)
 
+	fmt.Println("newRequest", url)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
+		fmt.Println("newRequest, err")
 		return nil, err
 	}
 
@@ -127,8 +129,12 @@ func (s *upSession) doRequest(method, url string, content *bytes.Buffer) (*http.
 		body = content
 	}
 
+	fmt.Println("newRequest do", url)
+
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
+		fmt.Println("newRequest do, err", err)
+
 		return nil, plumbing.NewPermanentError(err)
 	}
 
