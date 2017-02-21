@@ -52,8 +52,10 @@ func (c *command) connect() error {
 	}
 
 	var err error
+	fmt.Println("git-client", c.getHostWithPort(), c.endpoint.String())
 	c.conn, err = net.Dial("tcp", c.getHostWithPort())
 	if err != nil {
+		fmt.Println("git-client,err", err)
 		return err
 	}
 

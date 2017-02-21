@@ -30,7 +30,10 @@ func InstallProtocol(scheme string, c transport.Transport) {
 // http://, https://, ssh:// and file://.
 // See `InstallProtocol` to add or modify protocols.
 func NewClient(endpoint transport.Endpoint) (transport.Transport, error) {
+
 	f, ok := Protocols[endpoint.Scheme]
+	fmt.Println("newclient", endpoint.String(), f, ok)
+	fmt.Printf("%T\n", f)
 	if !ok {
 		return nil, fmt.Errorf("unsupported scheme %q", endpoint.Scheme)
 	}

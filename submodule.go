@@ -2,6 +2,7 @@ package git
 
 import (
 	"errors"
+	"fmt"
 
 	"srcd.works/go-git.v4/config"
 	"srcd.works/go-git.v4/plumbing"
@@ -71,6 +72,8 @@ func (s *Submodule) Repository() (*Repository, error) {
 		Name: DefaultRemoteName,
 		URL:  s.c.URL,
 	})
+
+	fmt.Println("remote", s.c.URL)
 
 	return r, err
 }

@@ -17,6 +17,8 @@ var DefaultClient = common.NewClient(&runner{})
 type runner struct{}
 
 func (r *runner) Command(cmd string, ep transport.Endpoint, auth transport.AuthMethod) (common.Command, error) {
+	fmt.Println("runner Command, SSHHHHHH", ep.String())
+
 	c := &command{command: cmd, endpoint: ep}
 	if auth != nil {
 		c.setAuth(auth)
@@ -82,8 +84,11 @@ func (c *command) connect() error {
 	}
 
 	var err error
+	panic(c.endpoint.String())
 	c.client, err = ssh.Dial("tcp", c.getHostWithPort(), c.auth.clientConfig())
+
 	if err != nil {
+		fmt.Println("ssh-dial error", err)
 		return err
 	}
 
