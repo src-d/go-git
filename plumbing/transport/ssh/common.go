@@ -90,6 +90,7 @@ func (c *command) connect() error {
 
 	c.Session, err = c.client.NewSession()
 	if err != nil {
+		panic(err)
 		_ = c.client.Close()
 		return err
 	}
