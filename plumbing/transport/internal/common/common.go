@@ -106,6 +106,7 @@ type session struct {
 }
 
 func (c *client) newSession(s string, ep transport.Endpoint, auth transport.AuthMethod) (*session, error) {
+	fmt.Println("new-session", s, ep.String())
 	cmd, err := c.cmdr.Command(s, ep, auth)
 	if err != nil {
 		return nil, err
