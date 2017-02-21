@@ -38,7 +38,7 @@ func (r *runner) Command(cmd string, ep transport.Endpoint, auth transport.AuthM
 		cmd = r.ReceivePackBin
 	}
 
-	fmt.Println("runner", eq)
+	fmt.Println("runner", ep.String(), cmd)
 	if _, err := exec.LookPath(cmd); err != nil {
 		return nil, err
 	}
