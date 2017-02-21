@@ -2,16 +2,11 @@ language: go
 
 go:
   - 1.8
-  - tip
+
 
 env:
   - GIT_VERSION=master
-  - GIT_VERSION=v1.9.3
-  - GIT_VERSION=v2.11.0
 
-matrix:
-  allow_failures:
-    - go: tip
 
 cache:
   directories:

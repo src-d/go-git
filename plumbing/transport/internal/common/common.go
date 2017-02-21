@@ -107,27 +107,33 @@ type session struct {
 
 func (c *client) newSession(s string, ep transport.Endpoint, auth transport.AuthMethod) (*session, error) {
 	fmt.Println("new-session", s, ep.String())
+	fmt.Printf("cmdr %T\n", c.cmdr)
 	cmd, err := c.cmdr.Command(s, ep, auth)
 	if err != nil {
+		fmt.Println("cmd", err)
 		return nil, err
 	}
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
+		fmt.Println("stdin", err)
 		return nil, err
 	}
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		fmt.Println("stdout", err)
 		return nil, err
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
+		fmt.Println("stderr", err)
 		return nil, err
 	}
 
 	if err := cmd.Start(); err != nil {
+		fmt.Println("start", err)
 		return nil, err
 	}
 
