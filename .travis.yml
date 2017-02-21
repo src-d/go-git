@@ -42,7 +42,7 @@ script:
   - export GIT_EXEC_PATH=$GIT_DIST_PATH
   - export PATH=$GIT_DIST_PATH:$PATH
   - git version
-  - make test-coverage
+  - go test -gocheck.v -gocheck.f RepositorySuite.TestPlainCloneWithRecurseSubmodules               
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

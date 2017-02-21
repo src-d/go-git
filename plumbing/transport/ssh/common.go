@@ -82,8 +82,8 @@ func (c *command) connect() error {
 	}
 
 	var err error
-	c.client, err = ssh.Dial("tcp", c.getHostWithPort(), c.auth.clientConfig())
 	fmt.Println("ssh-dial", c.getHostWithPort(), c.endpoint.String())
+	c.client, err = ssh.Dial("tcp", c.getHostWithPort(), c.auth.clientConfig())
 
 	if err != nil {
 		fmt.Println("ssh-dial error", err)
