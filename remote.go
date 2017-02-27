@@ -107,7 +107,7 @@ func (r *Remote) Push(o *PushOptions) (err error) {
 		return err
 	}
 
-	hashesToPush, err := revlist.Objects(r.s, commits, haves)
+	hashesToPush, err := revlist.Objects(commits, haves)
 	if err != nil {
 		return err
 	}

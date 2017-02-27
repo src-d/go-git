@@ -158,7 +158,7 @@ func (s *upSession) objectsToUpload(req *packp.UploadPackRequest) ([]plumbing.Ha
 		return nil, err
 	}
 
-	return revlist.Objects(s.storer, commits, req.Haves)
+	return revlist.Objects(commits, req.Haves)
 }
 
 func (s *upSession) commitsToUpload(wants []plumbing.Hash) ([]*object.Commit, error) {

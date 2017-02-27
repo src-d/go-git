@@ -7,7 +7,6 @@ import (
 
 	"srcd.works/go-git.v4/plumbing"
 	"srcd.works/go-git.v4/plumbing/object"
-	"srcd.works/go-git.v4/plumbing/storer"
 )
 
 // Objects applies a complementary set. It gets all the hashes from all
@@ -17,20 +16,17 @@ import (
 // converted to a map. All that objects must be accessible from the object
 // storer.
 func Objects(
-	s storer.EncodedObjectStorer,
 	commits []*object.Commit,
 	ignore []plumbing.Hash) ([]plumbing.Hash, error) {
 
 	seen := hashListToSet(ignore)
 	result := make(map[plumbing.Hash]bool)
 	for _, c := range commits {
-		err := reachableObjects(s, c, seen, func(h plumbing.Hash) error {
+		err := reachableObjects(c, seen, func(h plumbing.Hash) {
 			if !seen[h] {
 				result[h] = true
 				seen[h] = true
 			}
-
-			return nil
 		})
 
 		if err != nil {
@@ -46,50 +42,36 @@ func Objects(
 // if a commit hash is into the 'seen' set, we will not iterate all his trees
 // and blobs objects.
 func reachableObjects(
-	s storer.EncodedObjectStorer,
 	commit *object.Commit,
 	seen map[plumbing.Hash]bool,
-	cb func(h plumbing.Hash) error) error {
-
-	return iterateCommits(commit, func(commit *object.Commit) error {
+	cb func(h plumbing.Hash)) error {
+	return object.WalkCommitHistory(commit, func(commit *object.Commit) error {
 		if seen[commit.Hash] {
 			return nil
 		}
 
-		if err := cb(commit.Hash); err != nil {
-			return err
-		}
+		cb(commit.Hash)
 
-		return iterateCommitTrees(s, commit, func(h plumbing.Hash) error {
-			return cb(h)
-		})
-	})
-}
-
-// iterateCommits iterate all reachable commits from the given one
-func iterateCommits(commit *object.Commit, cb func(c *object.Commit) error) error {
-	if err := cb(commit); err != nil {
-		return err
-	}
-
-	return object.WalkCommitHistory(commit, func(c *object.Commit) error {
-		return cb(c)
+		return iterateCommitTrees(seen, commit, cb)
 	})
 }
 
 // iterateCommitTrees iterate all reachable trees from the given commit
 func iterateCommitTrees(
-	s storer.EncodedObjectStorer,
+	seen map[plumbing.Hash]bool,
 	commit *object.Commit,
-	cb func(h plumbing.Hash) error) error {
+	cb func(h plumbing.Hash)) error {
 
 	tree, err := commit.Tree()
 	if err != nil {
 		return err
 	}
-	if err := cb(tree.Hash); err != nil {
-		return err
+
+	if seen[tree.Hash] {
+		return nil
 	}
+
+	cb(tree.Hash)
 
 	treeWalker := object.NewTreeWalker(tree, true)
 
@@ -101,9 +83,12 @@ func iterateCommitTrees(
 		if err != nil {
 			return err
 		}
-		if err := cb(e.Hash); err != nil {
-			return err
+
+		if seen[e.Hash] {
+			continue
 		}
+
+		cb(e.Hash)
 	}
 
 	return nil
