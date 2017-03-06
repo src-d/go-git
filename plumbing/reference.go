@@ -38,7 +38,7 @@ func (r ReferenceName) String() string {
 // Short returns the short name of a ReferenceName
 func (r ReferenceName) Short() string {
 	parts := strings.Split(string(r), "/")
-	return parts[len(parts)-1]
+	return strings.Join(parts[2:], "/")
 }
 
 const (
