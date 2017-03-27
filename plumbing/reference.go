@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	prefixes = []string{
+	refPrefixes = []string{
 		refHeadPrefix,
 		refTagPrefix,
 		refRemotePrefix,
@@ -54,7 +54,7 @@ func (r ReferenceName) Short() string {
 // refHeadPrefix, refTagPrefix, refRemotePrefix, refNotePrefix and refPrefix
 func (r ReferenceName) short() string {
 	s := string(r)
-	for _, prefix := range prefixes {
+	for _, prefix := range refPrefixes {
 		s = strings.TrimPrefix(s, prefix)
 	}
 	return s
