@@ -16,6 +16,16 @@ const (
 )
 
 var (
+	prefixes = []string{
+		refHeadPrefix,
+		refTagPrefix,
+		refRemotePrefix,
+		refNotePrefix,
+		refPrefix,
+	}
+)
+
+var (
 	ErrReferenceNotFound = errors.New("reference not found")
 )
 
@@ -43,12 +53,6 @@ func (r ReferenceName) Short() string {
 		(constants defined in reference.go).
 	*/
 	s := string(r)
-	prefixes := []string{
-		refHeadPrefix,
-		refTagPrefix,
-		refRemotePrefix,
-		refNotePrefix,
-		refPrefix}
 	for _, prefix := range prefixes {
 		s = strings.TrimPrefix(s, prefix)
 	}
