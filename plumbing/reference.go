@@ -47,11 +47,12 @@ func (r ReferenceName) String() string {
 
 // Short returns the short name of a ReferenceName
 func (r ReferenceName) Short() string {
-	/*
-		Instead of hardcoding a number of components, we should remove the prefixes
-		refHeadPrefix, refTagPrefix, refRemotePrefix, refNotePrefix and refPrefix
-		(constants defined in reference.go).
-	*/
+	return r.short()
+}
+
+// Instead of hardcoding a number of components, we should remove the prefixes
+// refHeadPrefix, refTagPrefix, refRemotePrefix, refNotePrefix and refPrefix
+func (r ReferenceName) short() string {
 	s := string(r)
 	for _, prefix := range prefixes {
 		s = strings.TrimPrefix(s, prefix)
