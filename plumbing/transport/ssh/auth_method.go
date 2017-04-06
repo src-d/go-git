@@ -1,16 +1,20 @@
 package ssh
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
 
 var ErrEmptySSHAgentAddr = errors.New("SSH_AUTH_SOCK env variable is required")
+var certChecker = &ssh.CertChecker{}
 
 // AuthMethod is the interface all auth methods for the ssh client
 // must implement. The clientConfig method returns the ssh client
@@ -95,6 +99,37 @@ func (a *PasswordCallback) clientConfig() *ssh.ClientConfig {
 	}
 }
 
+// Implements ssh.HostKeyCallback which is now required due to CVE-2017-3204
+func hostKeyChecker(hostname string, remote net.Addr, key ssh.PublicKey) error {
+	file, err := os.Open(filepath.Join(os.Getenv("HOME"), ".ssh", "known_hosts"))
+	if err != nil {
+		return fmt.Errorf("Host key verification: %s", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	var hostKey ssh.PublicKey
+	for scanner.Scan() {
+		fields := strings.Split(scanner.Text(), " ")
+		if len(fields) != 3 {
+			continue
+		}
+		if strings.Contains(fields[0], hostname) {
+			var err error
+			hostKey, _, _, _, err = ssh.ParseAuthorizedKey(scanner.Bytes())
+			if err != nil {
+				return fmt.Errorf("Host key verification: error parsing %q: %v", fields[2], err)
+			}
+			break
+		}
+	}
+
+	if hostKey == nil {
+		return fmt.Errorf("Host key verification: no hostkey for %s", hostname)
+	}
+	return nil
+}
+
 // PublicKeys implements AuthMethod by using the given
 // key pairs.
 type PublicKeys struct {
@@ -112,8 +147,9 @@ func (a *PublicKeys) String() string {
 
 func (a *PublicKeys) clientConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
-		User: a.User,
-		Auth: []ssh.AuthMethod{ssh.PublicKeys(a.Signer)},
+		User:            a.User,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(a.Signer)},
+		HostKeyCallback: hostKeyChecker,
 	}
 }
 
@@ -134,8 +170,9 @@ func (a *PublicKeysCallback) String() string {
 
 func (a *PublicKeysCallback) clientConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
-		User: a.User,
-		Auth: []ssh.AuthMethod{ssh.PublicKeysCallback(a.Callback)},
+		User:            a.User,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeysCallback(a.Callback)},
+		HostKeyCallback: hostKeyChecker,
 	}
 }
 
