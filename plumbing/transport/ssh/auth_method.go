@@ -2,8 +2,13 @@ package ssh
 
 import (
 	"bufio"
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -17,10 +22,10 @@ var ErrEmptySSHAgentAddr = errors.New("SSH_AUTH_SOCK env variable is required")
 var certChecker = &ssh.CertChecker{}
 
 // AuthMethod is the interface all auth methods for the ssh client
-// must implement. The clientConfig method returns the ssh client
+// must implement. The ClientConfig method returns the ssh client
 // configuration needed to establish an ssh connection.
 type AuthMethod interface {
-	clientConfig() *ssh.ClientConfig
+	ClientConfig() *ssh.ClientConfig
 }
 
 // The names of the AuthMethod implementations. To be returned by the
@@ -49,7 +54,7 @@ func (a *KeyboardInteractive) String() string {
 	return fmt.Sprintf("user: %s, name: %s", a.User, a.Name())
 }
 
-func (a *KeyboardInteractive) clientConfig() *ssh.ClientConfig {
+func (a *KeyboardInteractive) ClientConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
 		User: a.User,
 		Auth: []ssh.AuthMethod{ssh.KeyboardInteractiveChallenge(a.Challenge)},
@@ -57,6 +62,7 @@ func (a *KeyboardInteractive) clientConfig() *ssh.ClientConfig {
 }
 
 // Password implements AuthMethod by using the given password.
+// Requires a valid host key in ~/.ssh/known_hosts
 type Password struct {
 	User string
 	Pass string
@@ -70,10 +76,11 @@ func (a *Password) String() string {
 	return fmt.Sprintf("user: %s, name: %s", a.User, a.Name())
 }
 
-func (a *Password) clientConfig() *ssh.ClientConfig {
+func (a *Password) ClientConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
-		User: a.User,
-		Auth: []ssh.AuthMethod{ssh.Password(a.Pass)},
+		User:            a.User,
+		Auth:            []ssh.AuthMethod{ssh.Password(a.Pass)},
+		HostKeyCallback: hostKeyChecker,
 	}
 }
 
@@ -92,46 +99,15 @@ func (a *PasswordCallback) String() string {
 	return fmt.Sprintf("user: %s, name: %s", a.User, a.Name())
 }
 
-func (a *PasswordCallback) clientConfig() *ssh.ClientConfig {
+func (a *PasswordCallback) ClientConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
 		User: a.User,
 		Auth: []ssh.AuthMethod{ssh.PasswordCallback(a.Callback)},
 	}
 }
 
-// Implements ssh.HostKeyCallback which is now required due to CVE-2017-3204
-func hostKeyChecker(hostname string, remote net.Addr, key ssh.PublicKey) error {
-	file, err := os.Open(filepath.Join(os.Getenv("HOME"), ".ssh", "known_hosts"))
-	if err != nil {
-		return fmt.Errorf("Host key verification: %s", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	var hostKey ssh.PublicKey
-	for scanner.Scan() {
-		fields := strings.Split(scanner.Text(), " ")
-		if len(fields) != 3 {
-			continue
-		}
-		if strings.Contains(fields[0], hostname) {
-			var err error
-			hostKey, _, _, _, err = ssh.ParseAuthorizedKey(scanner.Bytes())
-			if err != nil {
-				return fmt.Errorf("Host key verification: error parsing %q: %v", fields[2], err)
-			}
-			break
-		}
-	}
-
-	if hostKey == nil {
-		return fmt.Errorf("Host key verification: no hostkey for %s", hostname)
-	}
-	return nil
-}
-
 // PublicKeys implements AuthMethod by using the given
-// key pairs.
+// key pairs. Requires a valid host key in ~/.ssh/known_hosts
 type PublicKeys struct {
 	User   string
 	Signer ssh.Signer
@@ -145,7 +121,7 @@ func (a *PublicKeys) String() string {
 	return fmt.Sprintf("user: %s, name: %s", a.User, a.Name())
 }
 
-func (a *PublicKeys) clientConfig() *ssh.ClientConfig {
+func (a *PublicKeys) ClientConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
 		User:            a.User,
 		Auth:            []ssh.AuthMethod{ssh.PublicKeys(a.Signer)},
@@ -168,7 +144,7 @@ func (a *PublicKeysCallback) String() string {
 	return fmt.Sprintf("user: %s, name: %s", a.User, a.Name())
 }
 
-func (a *PublicKeysCallback) clientConfig() *ssh.ClientConfig {
+func (a *PublicKeysCallback) ClientConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
 		User:            a.User,
 		Auth:            []ssh.AuthMethod{ssh.PublicKeysCallback(a.Callback)},
@@ -199,4 +175,73 @@ func NewSSHAgentAuth(user string) (*PublicKeysCallback, error) {
 		User:     user,
 		Callback: agent.NewClient(pipe).Signers,
 	}, nil
+}
+
+func knownHostHash(hostname string, salt64 string) (hash string, err error) {
+	buffer, err := base64.StdEncoding.DecodeString(salt64)
+	if err != nil {
+		return hash, err
+	}
+	h := hmac.New(sha1.New, buffer)
+	h.Write([]byte(hostname))
+	hash = base64.StdEncoding.EncodeToString(h.Sum(nil))
+	return
+}
+
+// Implements ssh.HostKeyCallback which is now required due to CVE-2017-3204
+func hostKeyChecker(hostname string, remote net.Addr, key ssh.PublicKey) error {
+	file, err := os.Open(filepath.Join(os.Getenv("HOME"), ".ssh", "known_hosts"))
+	if err != nil {
+		return fmt.Errorf("Host key verification: %s", err)
+	}
+	defer file.Close()
+
+	// Remove standard port if given, add square brackets for non-standard ones
+	hp := strings.Split(hostname, ":")
+	if len(hp) == 2 {
+		if hp[1] == "22" {
+			hostname = hp[0]
+		} else {
+			hostname = "[" + hp[0] + "]:" + hp[1]
+		}
+	}
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		marker, hosts, hostKey, _, _, err := ssh.ParseKnownHosts(scanner.Bytes())
+		if err == io.EOF {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("Host key verification: known_hosts parse error: %s", err)
+		}
+		if marker != "" {
+			continue // @cert-authority or @revoked
+		}
+		if bytes.Compare(key.Marshal(), hostKey.Marshal()) == 0 {
+			for _, host := range hosts {
+				if len(host) > 1 && host[0:1] == "|" {
+					parts := strings.Split(host, "|")
+					if parts[1] != "1" {
+						continue
+					}
+					hash, err := knownHostHash(hostname, parts[2])
+					if err != nil {
+						// If knownHostHash fails then ignore and continue
+						continue
+					}
+					if hash == parts[3] {
+						// Found a matching hashed hostname
+						return nil
+					}
+				} else {
+					if host == hostname {
+						// Found a matching hostname
+						return nil
+					}
+				}
+			}
+		}
+	}
+	return fmt.Errorf("Host key verification: no hostkey found for %s", hostname)
 }

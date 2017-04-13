@@ -82,7 +82,7 @@ func (c *command) connect() error {
 	}
 
 	var err error
-	c.client, err = ssh.Dial("tcp", c.getHostWithPort(), c.auth.clientConfig())
+	c.client, err = ssh.Dial("tcp", c.getHostWithPort(), c.auth.ClientConfig())
 	if err != nil {
 		return err
 	}
