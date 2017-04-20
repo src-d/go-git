@@ -116,8 +116,11 @@ func (a *BasicAuth) setAuth(r *http.Request) {
 		return
 	}
 
-	u, p := a.CredentialsProvider()
-	r.SetBasicAuth(u, p)
+	if len(a.username) < 1 || len(a.password) < 1 {
+		a.username, a.password = a.CredentialsProvider()
+	}
+
+	r.SetBasicAuth(a.username, a.password)
 }
 
 // Name is name of the auth
