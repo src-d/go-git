@@ -66,6 +66,9 @@ func (s *session) applyAuthToRequest(req *http.Request) {
 	s.auth.setAuth(req)
 }
 
+// CredentialsProvider is a function that returns a username and password
+type CredentialsProvider func() (string, string)
+
 // AuthMethod is concrete implementation of common.AuthMethod for HTTP services
 type AuthMethod interface {
 	transport.AuthMethod
@@ -89,12 +92,23 @@ func basicAuthFromEndpoint(ep transport.Endpoint) *BasicAuth {
 
 // BasicAuth represent a HTTP basic auth
 type BasicAuth struct {
-	username, password string
+	CredentialsProvider CredentialsProvider
+	username, password  string
 }
 
 // NewBasicAuth returns a basicAuth base on the given user and password
 func NewBasicAuth(username, password string) *BasicAuth {
-	return &BasicAuth{username, password}
+	ba := &BasicAuth{
+		username: username,
+		password: password,
+	}
+
+	ba.CredentialsProvider = ba.defaultCredentialsProvider
+	return ba
+}
+
+func (a *BasicAuth) defaultCredentialsProvider() (string, string) {
+	return a.username, a.password
 }
 
 func (a *BasicAuth) setAuth(r *http.Request) {
@@ -102,7 +116,8 @@ func (a *BasicAuth) setAuth(r *http.Request) {
 		return
 	}
 
-	r.SetBasicAuth(a.username, a.password)
+	u, p := a.CredentialsProvider()
+	r.SetBasicAuth(u, p)
 }
 
 // Name is name of the auth
