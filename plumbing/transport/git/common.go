@@ -54,6 +54,7 @@ func (c *command) connect() error {
 	var err error
 	c.conn, err = net.Dial("tcp", c.getHostWithPort())
 	if err != nil {
+		panic(err)
 		return err
 	}
 
@@ -67,6 +68,9 @@ func (c *command) getHostWithPort() string {
 		host += ":9418"
 	}
 
+	if host == "" {
+		panic("git: empty host")
+	}
 	return host
 }
 
