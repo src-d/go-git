@@ -9,12 +9,12 @@ import (
 )
 
 // ShallowStorage where the shallow commits are stored, an internal to
-// manipulate the shallow file
+// manipulate the shallow file.
 type ShallowStorage struct {
 	dir *dotgit.DotGit
 }
 
-// SetShallow save the shallows in the shallow file in the .git folder as one
+// SetShallow saves the shallows in a shallow file into the .git folder as one
 // commit per line represented by 40-byte hexadecimal object terminated by a
 // newline.
 func (s *ShallowStorage) SetShallow(commits []plumbing.Hash) error {
@@ -33,7 +33,7 @@ func (s *ShallowStorage) SetShallow(commits []plumbing.Hash) error {
 	return nil
 }
 
-// Shallow return the shallow commits reading from shallo file from .git
+// Shallow return the shallow commits reading from shallow file from .git
 func (s *ShallowStorage) Shallow() ([]plumbing.Hash, error) {
 	f, err := s.dir.Shallow()
 	if err != nil {
