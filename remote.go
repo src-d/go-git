@@ -377,7 +377,7 @@ func getWants(
 				return err
 			}
 		} else {
-			exists = tagInList(hash, tags)
+			exists = hashInList(hash, tags)
 		}
 
 		if !exists {
@@ -398,7 +398,7 @@ func getWants(
 	return result, nil
 }
 
-func tagInList(h plumbing.Hash, list []plumbing.Hash) bool {
+func hashInList(h plumbing.Hash, list []plumbing.Hash) bool {
 	for _, value := range list {
 		if value == h {
 			return true
