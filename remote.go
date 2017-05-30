@@ -329,6 +329,21 @@ func getWants(
 		}
 	}
 
+	tags := []plumbing.Hash{}
+	localIter, err := localStorer.IterReferences()
+	if err != nil {
+		return nil, err
+	}
+
+	localIter.ForEach(func(ref *plumbing.Reference) error {
+		if !ref.IsTag() {
+			return nil
+		}
+
+		tags = append(tags, ref.Hash())
+		return nil
+	})
+
 	iter, err := remoteRefs.IterReferences()
 	if err != nil {
 		return nil, err
@@ -354,10 +369,15 @@ func getWants(
 		}
 
 		hash := ref.Hash()
+		var exists bool
 
-		exists, err := objectExists(localStorer, hash)
-		if err != nil {
-			return err
+		if !ref.IsTag() {
+			exists, err = objectExists(localStorer, hash)
+			if err != nil {
+				return err
+			}
+		} else {
+			exists = tagInList(hash, tags)
 		}
 
 		if !exists {
@@ -376,6 +396,16 @@ func getWants(
 	}
 
 	return result, nil
+}
+
+func tagInList(h plumbing.Hash, list []plumbing.Hash) bool {
+	for _, value := range list {
+		if value == h {
+			return true
+		}
+	}
+
+	return false
 }
 
 func objectExists(s storer.EncodedObjectStorer, h plumbing.Hash) (bool, error) {
