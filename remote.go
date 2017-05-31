@@ -329,13 +329,13 @@ func getWants(
 		}
 	}
 
-	tags := []plumbing.Hash{}
+	var tags []plumbing.Hash
 	localIter, err := localStorer.IterReferences()
 	if err != nil {
 		return nil, err
 	}
 
-	localIter.ForEach(func(ref *plumbing.Reference) error {
+	err = localIter.ForEach(func(ref *plumbing.Reference) error {
 		if !ref.IsTag() {
 			return nil
 		}
@@ -343,6 +343,10 @@ func getWants(
 		tags = append(tags, ref.Hash())
 		return nil
 	})
+
+	if err != nil {
+		return nil, err
+	}
 
 	iter, err := remoteRefs.IterReferences()
 	if err != nil {
