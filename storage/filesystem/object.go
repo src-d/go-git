@@ -115,7 +115,8 @@ func (s *ObjectStorage) SetEncodedObject(o plumbing.EncodedObject) (plumbing.Has
 }
 
 // EncodedObject returns the object with the given hash, by searching for it in
-// the packfile and the git object directories.
+// the packfile and the git object directories. If the index is not generated,
+// the first time this method is called, it will be generated.
 func (s *ObjectStorage) EncodedObject(t plumbing.ObjectType, h plumbing.Hash) (plumbing.EncodedObject, error) {
 	obj, err := s.getFromUnpacked(h)
 	if err == plumbing.ErrObjectNotFound {
