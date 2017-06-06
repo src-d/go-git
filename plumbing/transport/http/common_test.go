@@ -86,6 +86,18 @@ func (s *ClientSuite) TestSetAuth(c *C) {
 	c.Assert(auth, Equals, r.(*upSession).auth)
 }
 
+func (s *ClientSuite) TestCredentialsProvider(c *C) {
+	auth := &BasicAuth{}
+	auth.CredentialsProvider = func() (string, string) { return "foo", "b4r" }
+	req, _ := http.NewRequest("GET", "foo", nil)
+	auth.setAuth(req)
+	u, p, ok := req.BasicAuth()
+
+	c.Assert(u, Equals, "foo")
+	c.Assert(p, Equals, "b4r")
+	c.Assert(ok, Equals, true)
+}
+
 type mockAuth struct{}
 
 func (*mockAuth) Name() string   { return "" }
