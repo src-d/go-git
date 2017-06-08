@@ -329,8 +329,9 @@ func getWants(
 		}
 	}
 
-	var tags []plumbing.Hash
+	tags := make(map[string]plumbing.Hash, 0)
 	localIter, err := localStorer.IterReferences()
+
 	if err != nil {
 		return nil, err
 	}
@@ -340,7 +341,7 @@ func getWants(
 			return nil
 		}
 
-		tags = append(tags, ref.Hash())
+		tags[ref.Name().String()] = ref.Hash()
 		return nil
 	})
 
@@ -381,7 +382,8 @@ func getWants(
 				return err
 			}
 		} else {
-			exists = hashInList(hash, tags)
+			value, inMap := tags[ref.Name().String()]
+			exists = inMap && value == ref.Hash()
 		}
 
 		if !exists {
@@ -400,16 +402,6 @@ func getWants(
 	}
 
 	return result, nil
-}
-
-func hashInList(h plumbing.Hash, list []plumbing.Hash) bool {
-	for _, value := range list {
-		if value == h {
-			return true
-		}
-	}
-
-	return false
 }
 
 func objectExists(s storer.EncodedObjectStorer, h plumbing.Hash) (bool, error) {
