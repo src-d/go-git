@@ -113,6 +113,34 @@ func (a *BasicAuth) String() string {
 	return fmt.Sprintf("%s - %s:%s", a.Name(), a.username, masked)
 }
 
+// BasicAuthCallback represent a HTTP basic auth with a password callback
+type BasicAuthCallback struct {
+	username string
+	callback func() (password string)
+}
+
+// NewBasicAuthCallback returns a basicAuthCallback based on the callback function
+func NewBasicAuthCallback(username string, callback func() (password string)) *BasicAuthCallback {
+	return &BasicAuthCallback{username, callback}
+}
+
+func (a *BasicAuthCallback) setAuth(r *http.Request) {
+	if a == nil || a.callback == nil {
+		return
+	}
+
+	r.SetBasicAuth(a.username, a.callback())
+}
+
+// Name is name of the auth
+func (a *BasicAuthCallback) Name() string {
+	return "http-basic-auth-callback"
+}
+
+func (a *BasicAuthCallback) String() string {
+	return fmt.Sprintf("%s - %s", a.Name(), a.username)
+}
+
 // Err is a dedicated error to return errors based on status code
 type Err struct {
 	Response *http.Response
