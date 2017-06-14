@@ -41,6 +41,29 @@ func (s *NoderSuite) TestDiff(c *C) {
 	c.Assert(ch, HasLen, 0)
 }
 
+func (s *NoderSuite) TestGitignore(c *C) {
+	fsA := memfs.New()
+	WriteFile(fsA, "foo", []byte("foo"), 0644)
+	WriteFile(fsA, ".gitignore", []byte("bar"), 0644)
+	WriteFile(fsA, "qux/bar", []byte("somevalue"), 0644)
+	WriteFile(fsA, "qux/qux", []byte("foo"), 0644)
+
+	fsB := memfs.New()
+	WriteFile(fsB, "foo", []byte("foo"), 0644)
+	WriteFile(fsB, ".gitignore", []byte("bar"), 0644)
+	WriteFile(fsB, "qux/bar", []byte("mismatch"), 0644)
+	WriteFile(fsB, "qux/qux", []byte("foo"), 0644)
+
+	ch, err := merkletrie.DiffTree(
+		NewRootNode(fsA, nil),
+		NewRootNode(fsB, nil),
+		IsEquals,
+	)
+
+	c.Assert(err, IsNil)
+	c.Assert(ch, HasLen, 0)
+}
+
 func (s *NoderSuite) TestDiffChangeContent(c *C) {
 	fsA := memfs.New()
 	WriteFile(fsA, "foo", []byte("foo"), 0644)
