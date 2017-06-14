@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/monochromegane/go-gitignore"
+
 	"gopkg.in/src-d/go-billy.v2"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
@@ -25,6 +27,7 @@ type node struct {
 	submodules map[string]plumbing.Hash
 
 	path     string
+	matcher  gitignore.IgnoreMatcher
 	hash     []byte
 	children []noder.Noder
 	isDir    bool
@@ -39,7 +42,11 @@ func NewRootNode(
 	fs billy.Filesystem,
 	submodules map[string]plumbing.Hash,
 ) noder.Noder {
-	return &node{fs: fs, submodules: submodules, isDir: true}
+	n := &node{fs: fs, submodules: submodules, isDir: true}
+	if f, err := n.fs.Open(filepath.Join(n.path, ".gitignore")); err == nil {
+		n.matcher = gitignore.NewGitIgnoreFromReader(n.path, f)
+	}
+	return n
 }
 
 // Hash the hash of a filesystem is the result of concatenating the computed
@@ -95,6 +102,10 @@ func (n *node) calculateChildren() error {
 			continue
 		}
 
+		if n.matcher != nil && n.matcher.Match(filepath.Join(n.path, file.Name()), file.IsDir()) {
+			continue
+		}
+
 		c, err := n.newChildNode(file)
 		if err != nil {
 			return err
@@ -119,6 +130,7 @@ func (n *node) newChildNode(file billy.FileInfo) (*node, error) {
 		submodules: n.submodules,
 
 		path:  path,
+		matcher: n.matcher,
 		hash:  hash,
 		isDir: file.IsDir(),
 	}
