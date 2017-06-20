@@ -546,10 +546,7 @@ func (s *WorktreeSuite) TestStatusForceIgnored(c *C) {
 	setForcedIgnored(true)
 	defer setForcedIgnored(false)
 
-	dir, _ := ioutil.TempDir("", "status")
-	defer os.RemoveAll(dir)
-
-	fs := osfs.New(filepath.Join(dir, "worktree"))
+	fs := memfs.New()
 	w := &Worktree{
 		r:  s.Repository,
 		fs: fs,
@@ -586,7 +583,7 @@ func (s *WorktreeSuite) TestStatusForceIgnored(c *C) {
 	c.Assert(err, Equals, nil)
 	status, _ = w.Status()
 	c.Assert(len(status), Equals, 5)
-	_, ok = status["vendor/gopkg.in/file"]
+	_, ok := status["vendor/gopkg.in/file"]
 	c.Assert(ok, Equals, true)
 
 	_, err = w.Commit("test", &CommitOptions{Author:&object.Signature{Name: "test", Email: "test@test.com", When: time.Now()}})
