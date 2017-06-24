@@ -12,6 +12,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/utils/merkletrie"
 	"gopkg.in/src-d/go-git.v4/utils/merkletrie/noder"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/gitignore"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -34,8 +35,8 @@ func (s *NoderSuite) TestDiff(c *C) {
 	fsB.Symlink("foo", "bar")
 
 	ch, err := merkletrie.DiffTree(
-		NewRootNode(fsA, nil),
-		NewRootNode(fsB, nil),
+		NewRootNode(fsA, nil, nil),
+		NewRootNode(fsB, nil, nil),
 		IsEquals,
 	)
 
@@ -51,8 +52,8 @@ func (s *NoderSuite) TestDiffChangeLink(c *C) {
 	fsB.Symlink("bar", "foo")
 
 	ch, err := merkletrie.DiffTree(
-		NewRootNode(fsA, nil),
-		NewRootNode(fsB, nil),
+		NewRootNode(fsA, nil, nil),
+		NewRootNode(fsB, nil, nil),
 		IsEquals,
 	)
 
@@ -72,8 +73,8 @@ func (s *NoderSuite) TestDiffChangeContent(c *C) {
 	WriteFile(fsB, "qux/qux", []byte("foo"), 0644)
 
 	ch, err := merkletrie.DiffTree(
-		NewRootNode(fsA, nil),
-		NewRootNode(fsB, nil),
+		NewRootNode(fsA, nil, nil),
+		NewRootNode(fsB, nil, nil),
 		IsEquals,
 	)
 
@@ -89,8 +90,8 @@ func (s *NoderSuite) TestDiffChangeMissing(c *C) {
 	WriteFile(fsB, "bar", []byte("bar"), 0644)
 
 	ch, err := merkletrie.DiffTree(
-		NewRootNode(fsA, nil),
-		NewRootNode(fsB, nil),
+		NewRootNode(fsA, nil, nil),
+		NewRootNode(fsB, nil, nil),
 		IsEquals,
 	)
 
@@ -106,8 +107,8 @@ func (s *NoderSuite) TestDiffChangeMode(c *C) {
 	WriteFile(fsB, "foo", []byte("foo"), 0755)
 
 	ch, err := merkletrie.DiffTree(
-		NewRootNode(fsA, nil),
-		NewRootNode(fsB, nil),
+		NewRootNode(fsA, nil, nil),
+		NewRootNode(fsB, nil, nil),
 		IsEquals,
 	)
 
@@ -123,8 +124,8 @@ func (s *NoderSuite) TestDiffChangeModeNotRelevant(c *C) {
 	WriteFile(fsB, "foo", []byte("foo"), 0655)
 
 	ch, err := merkletrie.DiffTree(
-		NewRootNode(fsA, nil),
-		NewRootNode(fsB, nil),
+		NewRootNode(fsA, nil, nil),
+		NewRootNode(fsB, nil, nil),
 		IsEquals,
 	)
 
@@ -142,10 +143,10 @@ func (s *NoderSuite) TestDiffDirectory(c *C) {
 	ch, err := merkletrie.DiffTree(
 		NewRootNode(fsA, map[string]plumbing.Hash{
 			"qux/bar": plumbing.NewHash("aa102815663d23f8b75a47e7a01965dcdc96468c"),
-		}),
+		}, nil),
 		NewRootNode(fsB, map[string]plumbing.Hash{
 			"qux/bar": plumbing.NewHash("19102815663d23f8b75a47e7a01965dcdc96468c"),
-		}),
+		}, nil),
 		IsEquals,
 	)
 
@@ -155,6 +156,30 @@ func (s *NoderSuite) TestDiffDirectory(c *C) {
 	a, err := ch[0].Action()
 	c.Assert(err, IsNil)
 	c.Assert(a, Equals, merkletrie.Modify)
+}
+
+func (s *NoderSuite) TestGitignore(c *C) {
+	fsA := memfs.New()
+	WriteFile(fsA, "foo", []byte("foo"), 0644)
+	WriteFile(fsA, ".gitignore", []byte("bar"), 0644)
+	WriteFile(fsA, "qux/bar", []byte("somevalue"), 0644)
+	WriteFile(fsA, "qux/qux", []byte("foo"), 0644)
+
+	fsB := memfs.New()
+	WriteFile(fsB, "foo", []byte("foo"), 0644)
+	WriteFile(fsB, ".gitignore", []byte("bar"), 0644)
+	WriteFile(fsB, "qux/bar", []byte("mismatch"), 0644)
+	WriteFile(fsB, "qux/qux", []byte("foo"), 0644)
+
+	psA, _ := gitignore.ReadPatterns(fsA, nil)
+
+	ch, err := merkletrie.DiffTree(
+		NewRootNode(fsA, nil, gitignore.NewMatcher(psA)),
+		NewRootNode(fsB, nil, nil),
+		IsEquals,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(ch, HasLen, 1)
 }
 
 func WriteFile(fs billy.Filesystem, filename string, data []byte, perm os.FileMode) error {

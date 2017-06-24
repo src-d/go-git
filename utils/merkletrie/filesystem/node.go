@@ -4,11 +4,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/src-d/go-billy.v3"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 	"gopkg.in/src-d/go-git.v4/utils/merkletrie/noder"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/gitignore"
 )
 
 var ignore = map[string]bool{
@@ -28,6 +30,7 @@ type node struct {
 	hash     []byte
 	children []noder.Noder
 	isDir    bool
+	skipper  gitignore.Matcher
 }
 
 // NewRootNode returns the root node based on a given billy.Filesystem.
@@ -38,8 +41,9 @@ type node struct {
 func NewRootNode(
 	fs billy.Filesystem,
 	submodules map[string]plumbing.Hash,
+	skipper gitignore.Matcher,
 ) noder.Noder {
-	return &node{fs: fs, submodules: submodules, isDir: true}
+	return &node{fs: fs, submodules: submodules, isDir: true, skipper: skipper}
 }
 
 // Hash the hash of a filesystem is the result of concatenating the computed
@@ -76,6 +80,10 @@ func (n *node) NumChildren() (int, error) {
 	return len(n.children), nil
 }
 
+func (n *node) fsSep() string {
+	return strings.Trim(n.fs.Join("-", "-"), "-")
+}
+
 func (n *node) calculateChildren() error {
 	if len(n.children) != 0 {
 		return nil
@@ -90,8 +98,16 @@ func (n *node) calculateChildren() error {
 		return nil
 	}
 
+	var path []string
+	if n.path != "" {
+		path = strings.Split(n.path, n.fsSep())
+	}
+
 	for _, file := range files {
 		if _, ok := ignore[file.Name()]; ok {
+			continue
+		}
+		if n.skipper != nil && n.skipper.Match(append(path, file.Name()), file.IsDir()) {
 			continue
 		}
 
@@ -121,6 +137,7 @@ func (n *node) newChildNode(file os.FileInfo) (*node, error) {
 		path:  path,
 		hash:  hash,
 		isDir: file.IsDir(),
+		skipper: n.skipper,
 	}
 
 	if hash, isSubmodule := n.submodules[path]; isSubmodule {

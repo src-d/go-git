@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
@@ -504,14 +505,18 @@ func (s *WorktreeSuite) TestStatusIgnored(c *C) {
 	fs.MkdirAll("vendor/gopkg.in", os.ModePerm)
 	f, _ = fs.Create("vendor/gopkg.in/file")
 	f.Close()
+	f, _ = fs.Create("vendor/gopkg.in/another")
+	f.Close()
 
 	status, _ := w.Status()
-	c.Assert(len(status), Equals, 3)
+	c.Assert(len(status), Equals, 4)
 	_, ok := status["another/file"]
 	c.Assert(ok, Equals, true)
 	_, ok = status["vendor/github.com/file"]
 	c.Assert(ok, Equals, true)
 	_, ok = status["vendor/gopkg.in/file"]
+	c.Assert(ok, Equals, true)
+	_, ok = status["vendor/gopkg.in/another"]
 	c.Assert(ok, Equals, true)
 
 	f, _ = fs.Create(".gitignore")
@@ -530,6 +535,69 @@ func (s *WorktreeSuite) TestStatusIgnored(c *C) {
 	_, ok = status["vendor/.gitignore"]
 	c.Assert(ok, Equals, true)
 	_, ok = status["vendor/github.com/file"]
+	c.Assert(ok, Equals, true)
+}
+
+func setForcedIgnored(v bool) {
+	forceIgnored = v
+}
+
+func (s *WorktreeSuite) TestStatusForceIgnored(c *C) {
+	setForcedIgnored(true)
+	defer setForcedIgnored(false)
+
+	fs := memfs.New()
+	w := &Worktree{
+		r:  s.Repository,
+		fs: fs,
+	}
+
+	w.Checkout(&CheckoutOptions{})
+
+	fs.MkdirAll("another", os.ModePerm)
+	f, _ := fs.Create("another/file")
+	f.Close()
+	fs.MkdirAll("vendor/github.com", os.ModePerm)
+	f, _ = fs.Create("vendor/github.com/file")
+	f.Close()
+	fs.MkdirAll("vendor/gopkg.in", os.ModePerm)
+	f, _ = fs.Create("vendor/gopkg.in/file")
+	f.Close()
+	f, _ = fs.Create("vendor/gopkg.in/another")
+	f.Close()
+
+	status, _ := w.Status()
+	c.Assert(len(status), Equals, 4)
+
+	f, _ = fs.Create(".gitignore")
+	f.Write([]byte("vendor/g*/"))
+	f.Close()
+	f, _ = fs.Create("vendor/.gitignore")
+	f.Write([]byte("!github.com/\n"))
+	f.Close()
+
+	status, _ = w.Status()
+	c.Assert(len(status), Equals, 4)
+
+	_, err := w.Add("vendor/gopkg.in/file")
+	c.Assert(err, Equals, nil)
+	status, _ = w.Status()
+	c.Assert(len(status), Equals, 5)
+	_, ok := status["vendor/gopkg.in/file"]
+	c.Assert(ok, Equals, true)
+
+	_, err = w.Commit("test", &CommitOptions{Author:&object.Signature{Name: "test", Email: "test@test.com", When: time.Now()}})
+	c.Assert(err, Equals, nil)
+
+	status, _ = w.Status()
+	c.Assert(len(status), Equals, 4)
+
+	_, err = w.Remove("vendor/gopkg.in/file")
+	c.Assert(err, Equals, nil)
+
+	status, _ = w.Status()
+	c.Assert(len(status), Equals, 5)
+	_, ok = status["vendor/gopkg.in/file"]
 	c.Assert(ok, Equals, true)
 }
 

@@ -22,6 +22,11 @@ import (
 // the worktree.
 var ErrDestinationExists = errors.New("destination exists")
 
+// TODO this flag should be introduces to Status and Commit instead
+// having it false prevents walking complete directories already at fs level, thus
+// making checks significantly faster
+var forceIgnored = false
+
 // Status returns the working tree status.
 func (w *Worktree) Status() (Status, error) {
 	ref, err := w.r.Head()
@@ -114,36 +119,47 @@ func (w *Worktree) diffStagingWithWorktree() (merkletrie.Changes, error) {
 		return nil, err
 	}
 
-	to := filesystem.NewRootNode(w.fs, submodules)
+	var m gitignore.Matcher
+	patterns, err := gitignore.ReadPatterns(w.fs, nil)
+	if err == nil && len(patterns) > 0 {
+		m = gitignore.NewMatcher(patterns)
+	}
+
+	if !forceIgnored {
+		to := filesystem.NewRootNode(w.fs, submodules, m)
+		return merkletrie.DiffTree(from, to, diffTreeIsEquals)
+	}
+
+	to := filesystem.NewRootNode(w.fs, submodules, nil)
 	res, err := merkletrie.DiffTree(from, to, diffTreeIsEquals)
 	if err == nil {
-		res = w.excludeIgnoredChanges(res)
+		res = w.excludeNonforcedIgnores(m, res)
 	}
 	return res, err
 }
 
-func (w *Worktree) excludeIgnoredChanges(changes merkletrie.Changes) merkletrie.Changes {
-	patterns, err := gitignore.ReadPatterns(w.fs, nil)
-	if err != nil || len(patterns) == 0 {
-		return changes
-	}
-	m := gitignore.NewMatcher(patterns)
-
+func (w *Worktree) excludeNonforcedIgnores(m gitignore.Matcher, changes merkletrie.Changes) merkletrie.Changes {
 	var res merkletrie.Changes
 	for _, ch := range changes {
-		var path []string
-		for _, n := range ch.To {
-			path = append(path, n.Name())
+		forced := false
+		if a, err := ch.Action(); err == nil {
+			forced = a == merkletrie.Modify || a == merkletrie.Delete
 		}
-		if len(path) == 0 {
-			for _, n := range ch.From {
+		if !forced {
+			var path []string
+			for _, n := range ch.To {
 				path = append(path, n.Name())
 			}
-		}
-		if len(path) != 0 {
-			isDir := (len(ch.To) > 0 && ch.To.IsDir()) || (len(ch.From) > 0 && ch.From.IsDir())
-			if m.Match(path, isDir) {
-				continue
+			if len(path) == 0 {
+				for _, n := range ch.From {
+					path = append(path, n.Name())
+				}
+			}
+			if len(path) != 0 {
+				isDir := (len(ch.To) > 0 && ch.To.IsDir()) || (len(ch.From) > 0 && ch.From.IsDir())
+				if m.Match(path, isDir) {
+					continue
+				}
 			}
 		}
 		res = append(res, ch)
