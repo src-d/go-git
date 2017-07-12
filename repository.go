@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	ErrObjectNotFound          = errors.New("object not found")
+	ErrObjectNotFound          = plumbing.ErrObjectNotFound
 	ErrInvalidReference        = errors.New("invalid reference, should be a tag or a branch")
 	ErrRepositoryNotExists     = errors.New("repository not exists")
 	ErrRepositoryAlreadyExists = errors.New("repository already exists")
@@ -733,8 +733,8 @@ func (r *Repository) Notes() (storer.ReferenceIter, error) {
 		}, refIter), nil
 }
 
-// TreeObject return a Tree with the given hash. If not found
-// plumbing.ErrObjectNotFound is returned
+// TreeObject return a Tree with the given hash. If not found ErrObjectNotFound
+// is returned.
 func (r *Repository) TreeObject(h plumbing.Hash) (*object.Tree, error) {
 	return object.GetTree(r.Storer, h)
 }
@@ -750,7 +750,7 @@ func (r *Repository) TreeObjects() (*object.TreeIter, error) {
 }
 
 // CommitObject return a Commit with the given hash. If not found
-// plumbing.ErrObjectNotFound is returned.
+// ErrObjectNotFound is returned.
 func (r *Repository) CommitObject(h plumbing.Hash) (*object.Commit, error) {
 	return object.GetCommit(r.Storer, h)
 }
@@ -766,7 +766,7 @@ func (r *Repository) CommitObjects() (object.CommitIter, error) {
 }
 
 // BlobObject returns a Blob with the given hash. If not found
-// plumbing.ErrObjectNotFound is returned.
+// ErrObjectNotFound is returned.
 func (r *Repository) BlobObject(h plumbing.Hash) (*object.Blob, error) {
 	return object.GetBlob(r.Storer, h)
 }
@@ -781,9 +781,8 @@ func (r *Repository) BlobObjects() (*object.BlobIter, error) {
 	return object.NewBlobIter(r.Storer, iter), nil
 }
 
-// TagObject returns a Tag with the given hash. If not found
-// plumbing.ErrObjectNotFound is returned. This method only returns
-// annotated Tags, no lightweight Tags.
+// TagObject returns a Tag with the given hash. If not found ErrObjectNotFound
+// is returned. This method only returns annotated Tags, not lightweight tags.
 func (r *Repository) TagObject(h plumbing.Hash) (*object.Tag, error) {
 	return object.GetTag(r.Storer, h)
 }
@@ -800,14 +799,10 @@ func (r *Repository) TagObjects() (*object.TagIter, error) {
 }
 
 // Object returns an Object with the given hash. If not found
-// plumbing.ErrObjectNotFound is returned.
+// ErrObjectNotFound is returned.
 func (r *Repository) Object(t plumbing.ObjectType, h plumbing.Hash) (object.Object, error) {
 	obj, err := r.Storer.EncodedObject(t, h)
 	if err != nil {
-		if err == plumbing.ErrObjectNotFound {
-			return nil, ErrObjectNotFound
-		}
-
 		return nil, err
 	}
 
