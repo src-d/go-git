@@ -81,7 +81,6 @@ func (s *RemoteSuite) TestFetchTags(c *C) {
 	refspec := config.RefSpec("+refs/tags/*:refs/remotes/origin/*")
 	err := r.Fetch(&FetchOptions{
 		RefSpecs: []config.RefSpec{refspec},
-		Depth:    1,
 	})
 
 	c.Assert(err, IsNil)
