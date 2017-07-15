@@ -73,6 +73,20 @@ func (s *RemoteSuite) TestFetch(c *C) {
 	}
 }
 
+func (s *RemoteSuite) TestFetchTags(c *C) {
+	url := s.GetBasicLocalRepositoryURL()
+	sto := memory.NewStorage()
+	r := newRemote(sto, &config.RemoteConfig{Name: "foo", URL: url})
+
+	refspec := config.RefSpec("+refs/tags/*:refs/remotes/origin/*")
+	err := r.Fetch(&FetchOptions{
+		RefSpecs: []config.RefSpec{refspec},
+		Depth:    1,
+	})
+
+	c.Assert(err, IsNil)
+}
+
 func (s *RemoteSuite) TestFetchDepth(c *C) {
 	url := s.GetBasicLocalRepositoryURL()
 	sto := memory.NewStorage()
