@@ -719,6 +719,16 @@ func (r *Repository) Branches() (storer.ReferenceIter, error) {
 		}, refIter), nil
 }
 
+// CreateBranch creates a new branch.
+func (r *Repository) CreateBranch(o *BranchOptions) (*plumbing.Reference, error) {
+	if err := o.Validate(r); err != nil {
+		return nil, err
+	}
+	n := plumbing.ReferenceName(o.Name)
+	b := plumbing.NewHashReference(n, o.StartPoint)
+	return b, r.Storer.SetReference(b)
+}
+
 // Notes returns all the References that are Branches.
 func (r *Repository) Notes() (storer.ReferenceIter, error) {
 	refIter, err := r.Storer.IterReferences()

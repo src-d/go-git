@@ -2,6 +2,7 @@ package git
 
 import (
 	"errors"
+	"strings"
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -308,5 +309,41 @@ func (o *CommitOptions) Validate(r *Repository) error {
 		}
 	}
 
+	return nil
+}
+
+const (
+	refPrefix     = "refs/"
+	refHeadPrefix = refPrefix + "heads/"
+)
+
+var (
+	ErrBranchNameNotProvided = errors.New("branch name should be provided")
+)
+
+// BranchOptions describes how a branch operation should be performed.
+type BranchOptions struct {
+	// Name of the branch.
+	Name string
+	// Start point of the branch, by default is repository HEAD
+	StartPoint plumbing.Hash
+}
+
+// Validate validates the fields and sets the default values.
+func (o *BranchOptions) Validate(r *Repository) error {
+	if o.Name == "" {
+		return ErrBranchNameNotProvided
+	}
+	if !strings.HasPrefix(o.Name, refHeadPrefix) {
+		o.Name = refHeadPrefix + o.Name
+	}
+
+	if o.StartPoint == plumbing.ZeroHash {
+		head, err := r.Reference(plumbing.HEAD, true)
+		if err != nil {
+			return err
+		}
+		o.StartPoint = head.Hash()
+	}
 	return nil
 }
