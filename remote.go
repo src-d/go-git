@@ -393,6 +393,26 @@ func getWants(
 		}
 	}
 
+	tags := make(map[string]plumbing.Hash, 0)
+	localIter, err := localStorer.IterReferences()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = localIter.ForEach(func(ref *plumbing.Reference) error {
+		if !ref.IsTag() {
+			return nil
+		}
+
+		tags[ref.Name().String()] = ref.Hash()
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
 	iter, err := remoteRefs.IterReferences()
 	if err != nil {
 		return nil, err
@@ -418,10 +438,16 @@ func getWants(
 		}
 
 		hash := ref.Hash()
+		var exists bool
 
-		exists, err := objectExists(localStorer, hash)
-		if err != nil {
-			return err
+		if !ref.IsTag() {
+			exists, err = objectExists(localStorer, hash)
+			if err != nil {
+				return err
+			}
+		} else {
+			value, inMap := tags[ref.Name().String()]
+			exists = inMap && value == ref.Hash()
 		}
 
 		if !exists {
