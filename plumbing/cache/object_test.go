@@ -12,7 +12,7 @@ import (
 func Test(t *testing.T) { TestingT(t) }
 
 type ObjectSuite struct {
-	c       *ObjectFIFO
+	c       *ObjectLRU
 	aObject plumbing.EncodedObject
 	bObject plumbing.EncodedObject
 	cObject plumbing.EncodedObject
@@ -27,7 +27,7 @@ func (s *ObjectSuite) SetUpTest(c *C) {
 	s.cObject = newObject("cccccccccccccccccccccccccccccccccccccccc", 1*Byte)
 	s.dObject = newObject("dddddddddddddddddddddddddddddddddddddddd", 1*Byte)
 
-	s.c = NewObjectFIFO(2 * Byte)
+	s.c = NewObjectLRU(2 * Byte)
 }
 
 func (s *ObjectSuite) TestAdd_SameObject(c *C) {
@@ -43,16 +43,16 @@ func (s *ObjectSuite) TestAdd_BigObject(c *C) {
 	c.Assert(s.c.actualSize, Equals, 0*KiByte)
 	c.Assert(s.c.actualSize, Equals, 0*MiByte)
 	c.Assert(s.c.actualSize, Equals, 0*GiByte)
-	c.Assert(len(s.c.objects), Equals, 0)
+	c.Assert(s.c.cache.Len(), Equals, 0)
 }
 
 func (s *ObjectSuite) TestAdd_CacheOverflow(c *C) {
 	s.c.Add(s.aObject)
 	c.Assert(s.c.actualSize, Equals, 1*Byte)
 	s.c.Add(s.cObject)
-	c.Assert(len(s.c.objects), Equals, 2)
+	c.Assert(s.c.cache.Len(), Equals, 2)
 	s.c.Add(s.dObject)
-	c.Assert(len(s.c.objects), Equals, 2)
+	c.Assert(s.c.cache.Len(), Equals, 2)
 
 	c.Assert(s.c.Get(s.aObject.Hash()), IsNil)
 	c.Assert(s.c.Get(s.cObject.Hash()), NotNil)
