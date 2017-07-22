@@ -45,6 +45,7 @@ func (w *Worktree) Pull(o *PullOptions) error {
 		Depth:      o.Depth,
 		Auth:       o.Auth,
 		Progress:   o.Progress,
+		Force:      o.Force,
 	}, o.ReferenceName)
 	if err != nil {
 		return err

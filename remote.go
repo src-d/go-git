@@ -24,6 +24,7 @@ import (
 var (
 	NoErrAlreadyUpToDate     = errors.New("already up-to-date")
 	ErrDeleteRefNotSupported = errors.New("server does not support delete-refs")
+	ErrForceNeeded           = errors.New("some refs were not updated")
 )
 
 // Remote represents a connection to a remote repository.
@@ -223,7 +224,7 @@ func (r *Remote) fetch(o *FetchOptions) (storer.ReferenceStorer, error) {
 		}
 	}
 
-	updated, err := r.updateLocalReferenceStorage(o.RefSpecs, refs, remoteRefs)
+	updated, err := r.updateLocalReferenceStorage(o.RefSpecs, refs, remoteRefs, o.Force)
 	if err != nil {
 		return nil, err
 	}
@@ -589,8 +590,11 @@ func buildSidebandIfSupported(l *capability.List, reader io.Reader, p sideband.P
 func (r *Remote) updateLocalReferenceStorage(
 	specs []config.RefSpec,
 	fetchedRefs, remoteRefs memory.ReferenceStorage,
+	force bool,
 ) (updated bool, err error) {
 	isWildcard := true
+	forceNeeded := false
+
 	for _, spec := range specs {
 		if !spec.IsWildcard() {
 			isWildcard = false
@@ -605,7 +609,23 @@ func (r *Remote) updateLocalReferenceStorage(
 				continue
 			}
 
-			new := plumbing.NewHashReference(spec.Dst(ref.Name()), ref.Hash())
+			localName := spec.Dst(ref.Name())
+			old, _ := storer.ResolveReference(r.s, localName)
+			new := plumbing.NewHashReference(localName, ref.Hash())
+
+			// If the ref exists locally as a branch and force is not specified,
+			// only update if the new ref is an ancestor of the old
+			if old != nil && old.IsBranch() && !force {
+				ff, err := isFastForward(r.s, old.Hash(), new.Hash())
+				if err != nil {
+					return updated, err
+				}
+
+				if !ff {
+					forceNeeded = true
+					continue
+				}
+			}
 
 			refUpdated, err := updateReferenceStorerIfNeeded(r.s, new)
 			if err != nil {
@@ -629,6 +649,10 @@ func (r *Remote) updateLocalReferenceStorage(
 
 	if tagUpdated {
 		updated = true
+	}
+
+	if err == nil && forceNeeded {
+		err = ErrForceNeeded
 	}
 
 	return
