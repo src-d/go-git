@@ -24,6 +24,14 @@ func Objects(
 	seen := hashListToSet(ignore)
 	result := make(map[plumbing.Hash]bool)
 
+	cleanerFunc := func(h plumbing.Hash) {
+		seen[h] = true
+	}
+
+	for _, h := range ignore {
+		processObject(s, h, hashListToSet([]plumbing.Hash{}), cleanerFunc)
+	}
+
 	walkerFunc := func(h plumbing.Hash) {
 		if !seen[h] {
 			result[h] = true
