@@ -108,7 +108,7 @@ func NewDecoderForType(s *Scanner, o storer.EncodedObjectStorer,
 		offsetToType: make(map[int64]plumbing.ObjectType, 0),
 		decoderType:  t,
 
-		cache: cache.NewObjectFIFO(cache.MaxSize),
+		cache: cache.NewObjectLRU(cache.MaxSize),
 	}, nil
 }
 
