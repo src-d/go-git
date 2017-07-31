@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"golang.org/x/text/unicode/norm"
 
@@ -430,10 +431,12 @@ func (s *WorktreeSuite) TestCheckoutIndexOS(c *C) {
 	c.Assert(idx.Entries[0].Size, Equals, uint32(189))
 
 	c.Assert(idx.Entries[0].CreatedAt.IsZero(), Equals, false)
-	c.Assert(idx.Entries[0].Dev, Not(Equals), uint32(0))
-	c.Assert(idx.Entries[0].Inode, Not(Equals), uint32(0))
-	c.Assert(idx.Entries[0].UID, Not(Equals), uint32(0))
-	c.Assert(idx.Entries[0].GID, Not(Equals), uint32(0))
+	if runtime.GOOS != "windows" {
+		c.Assert(idx.Entries[0].Dev, Not(Equals), uint32(0))
+		c.Assert(idx.Entries[0].Inode, Not(Equals), uint32(0))
+		c.Assert(idx.Entries[0].UID, Not(Equals), uint32(0))
+		c.Assert(idx.Entries[0].GID, Not(Equals), uint32(0))
+	}
 }
 
 func (s *WorktreeSuite) TestCheckoutBranch(c *C) {
