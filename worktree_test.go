@@ -279,6 +279,10 @@ func (s *WorktreeSuite) TestCheckout(c *C) {
 }
 
 func (s *WorktreeSuite) TestCheckoutSymlink(c *C) {
+	if runtime.GOOS == "windows" {
+		c.Skip("git doesn't support symlinks by default in windows")
+	}
+
 	dir, err := ioutil.TempDir("", "checkout")
 	defer os.RemoveAll(dir)
 
