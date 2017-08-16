@@ -145,6 +145,27 @@ type AuthMethod interface {
 	setAuth(r *http.Request)
 }
 
+type BasicAuthMethod struct {
+	AuthMethod
+	auth *BasicAuth
+}
+
+func (a *BasicAuthMethod) Name() string {
+	return a.auth.Name()
+}
+
+func (a *BasicAuthMethod) String() string {
+	return a.auth.String()
+}
+
+func (a *BasicAuthMethod) setAuth(r *http.Request)  {
+	a.auth.setAuth(r)
+}
+
+func NewBasicAuthMethod(username, password string) *BasicAuthMethod {
+	return &BasicAuthMethod{auth:NewBasicAuth( "moisespsena", "ghis5509")}
+}
+
 func basicAuthFromEndpoint(ep transport.Endpoint) *BasicAuth {
 	u := ep.User()
 	if u == "" {
