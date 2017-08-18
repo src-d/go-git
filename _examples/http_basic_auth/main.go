@@ -1,59 +1,57 @@
 package main
 
 import (
-	"crypto/tls"
 	"fmt"
-	"net/http"
-	"os"
-	"time"
-
 	"gopkg.in/src-d/go-git.v4"
 	. "gopkg.in/src-d/go-git.v4/_examples"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
 	githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
+	"gopkg.in/src-d/go-git.v4/_examples/http_basic_auth/server"
+	"os"
+	"time"
+	"github.com/pkg/errors"
 )
 
 // Here is an example to configure http client according to our own needs.
 func main() {
-	CheckArgs("<url>", "<username>", "<password>")
-	url := os.Args[1]
-	username := os.Args[2]
-	password := os.Args[3]
+	CheckArgs("<url>")
+	server.DefaultURL = os.Args[1]
 
-	// Create a custom http(s) client with your config
-	customClient := &http.Client{
-		// accept any certificate (might be useful for testing)
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+	Info("git clone %s", server.DefaultURL)
 
-		// 15 second timeout
-		Timeout: 15 * time.Second,
-
-		// don't follow redirect
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-
-	// Override http(s) default protocol to use our custom client
-	client.InstallProtocol("https", githttp.NewClient(customClient))
-
-	// Clone repository using the new client if the protocol is https://
-	Info("git clone %s", url)
-
-	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL: url,
-		Auth: githttp.NewBasicAuthMethod(username, password),
+	r0, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+		URL: server.DefaultURL,
 	})
 
 	CheckIfError(err)
 
-	// Retrieve the branch pointed by HEAD
 	Info("git rev-parse HEAD")
 
-	head, err := r.Head()
+	head0, err := r0.Head()
 	CheckIfError(err)
-	fmt.Println(head.Hash())
+	fmt.Println("Original head:", head0.Hash())
+
+	server.WithServer(func(s *server.HTTPBasicAuthServer) {
+		<-time.After(2*time.Second)
+		// Clone repository using the new client if the protocol is https://
+		Info("git clone %s", s.URL)
+
+		r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+			URL: s.URL,
+			Auth: githttp.NewBasicAuthMethod(s.Username, s.Password),
+		})
+
+		CheckIfError(err)
+
+		// Retrieve the branch pointed by HEAD
+		Info("git rev-parse HEAD")
+
+		head, err := r.Head()
+		CheckIfError(err)
+		fmt.Println("head:", head.Hash())
+
+		if head.Hash() != head0.Hash() {
+			CheckIfError(errors.New("Heads not match"))
+		}
+	})
 }
