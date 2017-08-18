@@ -112,22 +112,22 @@ func (w *Worktree) PullContext(ctx context.Context, o *PullOptions) error {
 	}
 
 	if o.RecurseSubmodules != NoRecurseSubmodules {
-		return w.updateSubmodules(o.RecurseSubmodules)
+		return w.updateSubmodules(&SubmoduleUpdateOptions{
+			RecurseSubmodules: o.RecurseSubmodules,
+			Auth:              o.Auth,
+		})
 	}
 
 	return nil
 }
 
-func (w *Worktree) updateSubmodules(recursion SubmoduleRescursivity) error {
+func (w *Worktree) updateSubmodules(o *SubmoduleUpdateOptions) error {
 	s, err := w.Submodules()
 	if err != nil {
 		return err
 	}
-
-	return s.Update(&SubmoduleUpdateOptions{
-		Init:              true,
-		RecurseSubmodules: recursion,
-	})
+	o.Init = true
+	return s.Update(o)
 }
 
 // Checkout switch branches or restore working tree files.
@@ -209,7 +209,7 @@ func (w *Worktree) getCommitFromCheckoutOptions(opts *CheckoutOptions) (plumbing
 		return plumbing.ZeroHash, err
 	}
 
-	if !b.IsTag() {
+	if !b.Name().IsTag() {
 		return b.Hash(), nil
 	}
 
@@ -244,7 +244,7 @@ func (w *Worktree) setHEADToBranch(branch plumbing.ReferenceName, commit plumbin
 	}
 
 	var head *plumbing.Reference
-	if target.IsBranch() {
+	if target.Name().IsBranch() {
 		head = plumbing.NewSymbolicReference(plumbing.HEAD, target.Name())
 	} else {
 		head = plumbing.NewHashReference(plumbing.HEAD, commit)
@@ -323,7 +323,7 @@ func (w *Worktree) setHEADCommit(commit plumbing.Hash) error {
 		return err
 	}
 
-	if !branch.IsBranch() {
+	if !branch.Name().IsBranch() {
 		return fmt.Errorf("invalid HEAD target should be a branch, found %s", branch.Type())
 	}
 

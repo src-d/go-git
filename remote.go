@@ -43,8 +43,11 @@ func (r *Remote) Config() *config.RemoteConfig {
 }
 
 func (r *Remote) String() string {
-	fetch := r.c.URL
-	push := r.c.URL
+	var fetch, push string
+	if len(r.c.URLs) > 0 {
+		fetch = r.c.URLs[0]
+		push = r.c.URLs[0]
+	}
 
 	return fmt.Sprintf("%s\t%s (fetch)\n%[1]s\t%[3]s (push)", r.c.Name, fetch, push)
 }
@@ -71,7 +74,7 @@ func (r *Remote) PushContext(ctx context.Context, o *PushOptions) error {
 		return fmt.Errorf("remote names don't match: %s != %s", o.RemoteName, r.c.Name)
 	}
 
-	s, err := newSendPackSession(r.c.URL, o.Auth)
+	s, err := newSendPackSession(r.c.URLs[0], o.Auth)
 	if err != nil {
 		return err
 	}
@@ -211,7 +214,7 @@ func (r *Remote) fetch(ctx context.Context, o *FetchOptions) (storer.ReferenceSt
 		o.RefSpecs = r.c.Fetch
 	}
 
-	s, err := newUploadPackSession(r.c.URL, o.Auth)
+	s, err := newUploadPackSession(r.c.URLs[0], o.Auth)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +467,7 @@ func calculateRefs(spec []config.RefSpec,
 	refs := make(memory.ReferenceStorage, 0)
 	return refs, iter.ForEach(func(ref *plumbing.Reference) error {
 		if !config.MatchAny(spec, ref.Name()) {
-			if !ref.IsTag() || tags != AllTags {
+			if !ref.Name().IsTag() || tags != AllTags {
 				return nil
 			}
 		}
@@ -663,7 +666,7 @@ func (r *Remote) updateLocalReferenceStorage(
 
 func (r *Remote) buildFetchedTags(refs memory.ReferenceStorage) (updated bool, err error) {
 	for _, ref := range refs {
-		if !ref.IsTag() {
+		if !ref.Name().IsTag() {
 			continue
 		}
 

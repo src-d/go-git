@@ -6,6 +6,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
+
+	"golang.org/x/text/unicode/norm"
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -37,7 +40,7 @@ func (s *WorktreeSuite) TestPullCheckout(c *C) {
 	r, _ := Init(memory.NewStorage(), fs)
 	r.CreateRemote(&config.RemoteConfig{
 		Name: DefaultRemoteName,
-		URL:  s.GetBasicLocalRepositoryURL(),
+		URLs: []string{s.GetBasicLocalRepositoryURL()},
 	})
 
 	w, err := r.Worktree()
@@ -115,7 +118,7 @@ func (s *WorktreeSuite) TestPullUpdateReferencesIfNeeded(c *C) {
 	r, _ := Init(memory.NewStorage(), memfs.New())
 	r.CreateRemote(&config.RemoteConfig{
 		Name: DefaultRemoteName,
-		URL:  s.GetBasicLocalRepositoryURL(),
+		URLs: []string{s.GetBasicLocalRepositoryURL()},
 	})
 
 	err := r.Fetch(&FetchOptions{})
@@ -173,7 +176,7 @@ func (s *WorktreeSuite) TestPullProgress(c *C) {
 
 	r.CreateRemote(&config.RemoteConfig{
 		Name: DefaultRemoteName,
-		URL:  s.GetBasicLocalRepositoryURL(),
+		URLs: []string{s.GetBasicLocalRepositoryURL()},
 	})
 
 	w, err := r.Worktree()
@@ -198,7 +201,7 @@ func (s *WorktreeSuite) TestPullProgressWithRecursion(c *C) {
 	r, _ := PlainInit(dir, false)
 	r.CreateRemote(&config.RemoteConfig{
 		Name: DefaultRemoteName,
-		URL:  path,
+		URLs: []string{path},
 	})
 
 	w, err := r.Worktree()
@@ -276,6 +279,10 @@ func (s *WorktreeSuite) TestCheckout(c *C) {
 }
 
 func (s *WorktreeSuite) TestCheckoutSymlink(c *C) {
+	if runtime.GOOS == "windows" {
+		c.Skip("git doesn't support symlinks by default in windows")
+	}
+
 	dir, err := ioutil.TempDir("", "checkout")
 	defer os.RemoveAll(dir)
 
@@ -302,6 +309,51 @@ func (s *WorktreeSuite) TestCheckoutSymlink(c *C) {
 	target, err := w.Filesystem.Readlink("bar")
 	c.Assert(target, Equals, "not-exists")
 	c.Assert(err, IsNil)
+}
+
+func (s *WorktreeSuite) TestFilenameNormalization(c *C) {
+	if runtime.GOOS == "windows" {
+		c.Skip("windows paths may contain non utf-8 sequences")
+	}
+
+	url := c.MkDir()
+	path := fixtures.Basic().ByTag("worktree").One().Worktree().Root()
+
+	server, err := PlainClone(url, false, &CloneOptions{
+		URL: path,
+	})
+
+	filename := "페"
+
+	w, err := server.Worktree()
+	c.Assert(err, IsNil)
+	util.WriteFile(w.Filesystem, filename, []byte("foo"), 0755)
+	_, err = w.Add(filename)
+	c.Assert(err, IsNil)
+	_, err = w.Commit("foo", &CommitOptions{Author: defaultSignature()})
+	c.Assert(err, IsNil)
+
+	r, err := Clone(memory.NewStorage(), memfs.New(), &CloneOptions{
+		URL: url,
+	})
+
+	w, err = r.Worktree()
+	c.Assert(err, IsNil)
+
+	status, err := w.Status()
+	c.Assert(err, IsNil)
+	c.Assert(status.IsClean(), Equals, true)
+
+	err = w.Filesystem.Remove(filename)
+	c.Assert(err, IsNil)
+
+	modFilename := norm.Form(norm.NFKD).String(filename)
+	util.WriteFile(w.Filesystem, modFilename, []byte("foo"), 0755)
+	_, err = w.Add(filename)
+
+	status, err = w.Status()
+	c.Assert(err, IsNil)
+	c.Assert(status.IsClean(), Equals, true)
 }
 
 func (s *WorktreeSuite) TestCheckoutSubmodule(c *C) {
@@ -387,10 +439,12 @@ func (s *WorktreeSuite) TestCheckoutIndexOS(c *C) {
 	c.Assert(idx.Entries[0].Size, Equals, uint32(189))
 
 	c.Assert(idx.Entries[0].CreatedAt.IsZero(), Equals, false)
-	c.Assert(idx.Entries[0].Dev, Not(Equals), uint32(0))
-	c.Assert(idx.Entries[0].Inode, Not(Equals), uint32(0))
-	c.Assert(idx.Entries[0].UID, Not(Equals), uint32(0))
-	c.Assert(idx.Entries[0].GID, Not(Equals), uint32(0))
+	if runtime.GOOS != "windows" {
+		c.Assert(idx.Entries[0].Dev, Not(Equals), uint32(0))
+		c.Assert(idx.Entries[0].Inode, Not(Equals), uint32(0))
+		c.Assert(idx.Entries[0].UID, Not(Equals), uint32(0))
+		c.Assert(idx.Entries[0].GID, Not(Equals), uint32(0))
+	}
 }
 
 func (s *WorktreeSuite) TestCheckoutBranch(c *C) {

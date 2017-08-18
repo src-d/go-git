@@ -286,7 +286,7 @@ func dotGitFileToOSFilesystem(path string, fs billy.Filesystem) (billy.Filesyste
 		return nil, fmt.Errorf(".git file has no %s prefix", prefix)
 	}
 
-	gitdir := line[len(prefix):]
+	gitdir := strings.Split(line[len(prefix):], "\n")[0]
 	gitdir = strings.TrimSpace(gitdir)
 	if filepath.IsAbs(gitdir) {
 		return osfs.New(gitdir), nil
@@ -408,7 +408,7 @@ func (r *Repository) clone(ctx context.Context, o *CloneOptions) error {
 
 	c := &config.RemoteConfig{
 		Name: o.RemoteName,
-		URL:  o.URL,
+		URLs: []string{o.URL},
 	}
 
 	if _, err := r.CreateRemote(c); err != nil {
@@ -436,7 +436,10 @@ func (r *Repository) clone(ctx context.Context, o *CloneOptions) error {
 		}
 
 		if o.RecurseSubmodules != NoRecurseSubmodules {
-			if err := w.updateSubmodules(o.RecurseSubmodules); err != nil {
+			if err := w.updateSubmodules(&SubmoduleUpdateOptions{
+				RecurseSubmodules: o.RecurseSubmodules,
+				Auth:              o.Auth,
+			}); err != nil {
 				return err
 			}
 		}
@@ -445,20 +448,24 @@ func (r *Repository) clone(ctx context.Context, o *CloneOptions) error {
 	return r.updateRemoteConfigIfNeeded(o, c, head)
 }
 
-func (r *Repository) cloneRefSpec(o *CloneOptions,
-	c *config.RemoteConfig) []config.RefSpec {
+const (
+	refspecTagWithDepth     = "+refs/tags/%s:refs/tags/%[1]s"
+	refspecSingleBranch     = "+refs/heads/%s:refs/remotes/%s/%[1]s"
+	refspecSingleBranchHEAD = "+HEAD:refs/remotes/%s/HEAD"
+)
 
-	if !o.SingleBranch {
-		return c.Fetch
-	}
-
+func (r *Repository) cloneRefSpec(o *CloneOptions, c *config.RemoteConfig) []config.RefSpec {
 	var rs string
 
-	if o.ReferenceName == plumbing.HEAD {
+	switch {
+	case o.ReferenceName.IsTag() && o.Depth > 0:
+		rs = fmt.Sprintf(refspecTagWithDepth, o.ReferenceName.Short())
+	case o.SingleBranch && o.ReferenceName == plumbing.HEAD:
 		rs = fmt.Sprintf(refspecSingleBranchHEAD, c.Name)
-	} else {
-		rs = fmt.Sprintf(refspecSingleBranch,
-			o.ReferenceName.Short(), c.Name)
+	case o.SingleBranch:
+		rs = fmt.Sprintf(refspecSingleBranch, o.ReferenceName.Short(), c.Name)
+	default:
+		return c.Fetch
 	}
 
 	return []config.RefSpec{config.RefSpec(rs)}
@@ -473,11 +480,6 @@ func (r *Repository) setIsBare(isBare bool) error {
 	cfg.Core.IsBare = isBare
 	return r.Storer.SetConfig(cfg)
 }
-
-const (
-	refspecSingleBranch     = "+refs/heads/%s:refs/remotes/%s/%[1]s"
-	refspecSingleBranchHEAD = "+HEAD:refs/remotes/%s/HEAD"
-)
 
 func (r *Repository) updateRemoteConfigIfNeeded(o *CloneOptions, c *config.RemoteConfig, head *plumbing.Reference) error {
 	if !o.SingleBranch {
@@ -538,7 +540,7 @@ func (r *Repository) fetchAndUpdateReferences(
 func (r *Repository) updateReferences(spec []config.RefSpec,
 	resolvedHead *plumbing.Reference) (updated bool, err error) {
 
-	if !resolvedHead.IsBranch() {
+	if !resolvedHead.Name().IsBranch() {
 		// Detached HEAD mode
 		head := plumbing.NewHashReference(plumbing.HEAD, resolvedHead.Hash())
 		return updateReferenceStorerIfNeeded(r.Storer, head)
@@ -698,7 +700,7 @@ func (r *Repository) Tags() (storer.ReferenceIter, error) {
 
 	return storer.NewReferenceFilteredIter(
 		func(r *plumbing.Reference) bool {
-			return r.IsTag()
+			return r.Name().IsTag()
 		}, refIter), nil
 }
 
@@ -711,7 +713,7 @@ func (r *Repository) Branches() (storer.ReferenceIter, error) {
 
 	return storer.NewReferenceFilteredIter(
 		func(r *plumbing.Reference) bool {
-			return r.IsBranch()
+			return r.Name().IsBranch()
 		}, refIter), nil
 }
 
@@ -724,7 +726,7 @@ func (r *Repository) Notes() (storer.ReferenceIter, error) {
 
 	return storer.NewReferenceFilteredIter(
 		func(r *plumbing.Reference) bool {
-			return r.IsNote()
+			return r.Name().IsNote()
 		}, refIter), nil
 }
 
