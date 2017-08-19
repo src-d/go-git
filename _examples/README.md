@@ -15,4 +15,5 @@ Here you can find a list of annotated _go-git_ examples:
 - [pull](pull/main.go) - pull changes from a remote repository
 ### Advanced
 - [custom_http](custom_http/main.go) - Replacing the HTTP client using a custom one
+- [http_basic_auth](http_basic_auth/main.go) - Clone repository with HTTP basic authentication
 - [storage](storage/README.md) - Implementing a custom storage system

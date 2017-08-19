@@ -145,6 +145,29 @@ type AuthMethod interface {
 	setAuth(r *http.Request)
 }
 
+// BasicAuthMethod is concrete implementation of AuthMethod for HTTP services
+type BasicAuthMethod struct {
+	AuthMethod
+	auth *BasicAuth
+}
+
+func (a *BasicAuthMethod) Name() string {
+	return a.auth.Name()
+}
+
+func (a *BasicAuthMethod) String() string {
+	return a.auth.String()
+}
+
+func (a *BasicAuthMethod) setAuth(r *http.Request)  {
+	a.auth.setAuth(r)
+}
+
+// NewBasicAuthMethod returns a BasicAuthMethod base on the given user and password
+func NewBasicAuthMethod(username, password string) *BasicAuthMethod {
+	return &BasicAuthMethod{auth:NewBasicAuth( username, password)}
+}
+
 func basicAuthFromEndpoint(ep transport.Endpoint) *BasicAuth {
 	u := ep.User()
 	if u == "" {
