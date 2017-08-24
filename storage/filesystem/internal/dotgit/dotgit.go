@@ -56,14 +56,15 @@ var (
 // The DotGit type represents a local git repository on disk. This
 // type is not zero-value-safe, use the New function to initialize it.
 type DotGit struct {
-	fs billy.Filesystem
+	fs   billy.Filesystem
+	refs map[string]*plumbing.Reference
 }
 
 // New returns a DotGit value ready to be used. The path argument must
 // be the absolute path of a git repository directory (e.g.
 // "/foo/bar/.git").
 func New(fs billy.Filesystem) *DotGit {
-	return &DotGit{fs: fs}
+	return &DotGit{fs: fs, refs: make(map[string]*plumbing.Reference)}
 }
 
 // Initialize creates all the folder scaffolding.
@@ -280,6 +281,10 @@ func (d *DotGit) Refs() ([]*plumbing.Reference, error) {
 
 // Ref returns the reference for a given reference name.
 func (d *DotGit) Ref(name plumbing.ReferenceName) (*plumbing.Reference, error) {
+	if ref, ok := d.refs[name.String()]; ok {
+		return ref, nil
+	}
+
 	ref, err := d.readReferenceFile(".", name.String())
 	if err == nil {
 		return ref, nil
@@ -332,6 +337,7 @@ func (d *DotGit) addRefsFromPackedRefs(refs *[]*plumbing.Reference) (err error) 
 		}
 
 		if ref != nil {
+			d.refs[ref.Name().String()] = ref
 			*refs = append(*refs, ref)
 		}
 	}
@@ -446,6 +452,7 @@ func (d *DotGit) walkReferencesTree(refs *[]*plumbing.Reference, relPath []strin
 		}
 
 		if ref != nil {
+			d.refs[ref.Name().String()] = ref
 			*refs = append(*refs, ref)
 		}
 	}
@@ -463,6 +470,7 @@ func (d *DotGit) addRefFromHEAD(refs *[]*plumbing.Reference) error {
 		return err
 	}
 
+	d.refs[ref.Name().String()] = ref
 	*refs = append(*refs, ref)
 	return nil
 }
