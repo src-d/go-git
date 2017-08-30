@@ -137,8 +137,8 @@ func (d *DotGit) Shallow() (billy.File, error) {
 
 // NewObjectPack return a writer for a new packfile, it saves the packfile to
 // disk and also generates and save the index for the given packfile.
-func (d *DotGit) NewObjectPack() (*PackWriter, error) {
-	return newPackWrite(d.fs)
+func (d *DotGit) NewObjectPack(statusChan plumbing.StatusChan) (*PackWriter, error) {
+	return newPackWrite(d.fs, statusChan)
 }
 
 // ObjectPacks returns the list of availables packfiles
