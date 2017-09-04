@@ -9,9 +9,9 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-billy.v3"
 	"gopkg.in/src-d/go-billy.v3/memfs"
 	"gopkg.in/src-d/go-billy.v3/util"
+	"gopkg.in/src-d/go-billy.v3"
 )
 
 func (s *WorktreeSuite) TestCommitInvalidOptions(c *C) {
@@ -134,14 +134,6 @@ func (s *WorktreeSuite) TestRemoveAndCommitAll(c *C) {
 	c.Assert(err, IsNil)
 
 	assertStorageStatus(c, s.Repository, 13, 11, 11, expected)
-}
-
-func emulateExternalRemoval(c *C, fs billy.Basic, w *Worktree, path string) {
-
-	s, errStatus := w.Status()
-	c.Assert(errStatus, IsNil)
-	s[path].Worktree = Unmodified
-	s[path].Staging = Unmodified
 }
 
 func assertStorageStatus(
