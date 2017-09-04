@@ -236,7 +236,7 @@ func (w *Worktree) Add(path string) (plumbing.Hash, error) {
 
 	h, err := w.copyFileToStorage(path)
 	if err != nil {
-		return h, err
+		return w.removeIfDeleted(path, h, err)
 	}
 
 	if s.File(path).Worktree == Unmodified {
@@ -248,6 +248,23 @@ func (w *Worktree) Add(path string) (plumbing.Hash, error) {
 	}
 
 	return h, err
+}
+
+func (w *Worktree) removeIfDeleted(path string, hash plumbing.Hash, err error) (plumbing.Hash, error) {
+	pathError, ok := err.(*os.PathError)
+	if ok && pathError.Op == "lstat" || w.isErrNotExist(err) {
+		h, errDelete := w.deleteFromIndex(path)
+		if errDelete != nil {
+			return h, errDelete
+		}
+		return hash, nil
+	}
+
+	return hash, err
+}
+
+func (w *Worktree) isErrNotExist(err error) bool {
+	return err.Error() == os.ErrNotExist.Error()
 }
 
 func (w *Worktree) copyFileToStorage(path string) (hash plumbing.Hash, err error) {
