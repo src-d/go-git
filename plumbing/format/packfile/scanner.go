@@ -278,7 +278,7 @@ func (s *Scanner) NextObject(w io.Writer) (written int64, crc32 uint32, err erro
 // from it zlib stream in an object entry in the packfile.
 func (s *Scanner) copyObject(w io.Writer) (n int64, err error) {
 	if s.zr == nil {
-		zr, err := zlib.NewReader(s.r)
+		zr, err := zlib.NewReader(bufio.NewReader(s.r))
 		if err != nil {
 			return 0, fmt.Errorf("zlib initialization error: %s", err)
 		}
