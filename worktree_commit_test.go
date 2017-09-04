@@ -11,7 +11,6 @@ import (
 	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-billy.v3/memfs"
 	"gopkg.in/src-d/go-billy.v3/util"
-	"gopkg.in/src-d/go-billy.v3"
 )
 
 func (s *WorktreeSuite) TestCommitInvalidOptions(c *C) {
