@@ -267,8 +267,7 @@ func (w *Worktree) Add(path string) (plumbing.Hash, error) {
 }
 
 func (w *Worktree) removeIfDeleted(path string, hash plumbing.Hash, err error) (plumbing.Hash, error) {
-	pathError, ok := err.(*os.PathError)
-	if ok && pathError.Op == "lstat" || os.IsNotExist(err) {
+	if os.IsNotExist(err) {
 		h, errDelete := w.deleteFromIndex(path)
 		if errDelete != nil {
 			return h, errDelete
