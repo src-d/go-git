@@ -177,6 +177,27 @@ func (s *RepositorySuite) TestCloneContext(c *C) {
 	c.Assert(err, NotNil)
 }
 
+func (s *RepositorySuite) TestCloneWithTags(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, err := Clone(memory.NewStorage(), nil, &CloneOptions{URL: url, Tags: NoTags})
+	c.Assert(err, IsNil)
+
+	remotes, err := r.Remotes()
+	c.Assert(err, IsNil)
+	c.Assert(remotes, HasLen, 1)
+
+	i, err := r.References()
+	c.Assert(err, IsNil)
+
+	var count int
+	i.ForEach(func(r *plumbing.Reference) error { count++; return nil })
+
+	c.Assert(count, Equals, 3)
+}
+
 func (s *RepositorySuite) TestCreateRemoteAndRemote(c *C) {
 	r, _ := Init(memory.NewStorage(), nil)
 	remote, err := r.CreateRemote(&config.RemoteConfig{
@@ -717,6 +738,47 @@ func (s *RepositorySuite) TestPushContext(c *C) {
 		RemoteName: "foo",
 	})
 	c.Assert(err, NotNil)
+}
+
+// installPreReceiveHook installs a pre-receive hook in the .git
+// directory at path which prints message m before exiting
+// successfully.
+func installPreReceiveHook(c *C, path, m string) {
+	hooks := filepath.Join(path, "hooks")
+	err := os.MkdirAll(hooks, 0777)
+	c.Assert(err, IsNil)
+
+	err = ioutil.WriteFile(filepath.Join(hooks, "pre-receive"), preReceiveHook(m), 0777)
+	c.Assert(err, IsNil)
+}
+
+func (s *RepositorySuite) TestPushWithProgress(c *C) {
+	url := c.MkDir()
+	server, err := PlainInit(url, true)
+	c.Assert(err, IsNil)
+
+	m := "Receiving..."
+	installPreReceiveHook(c, url, m)
+
+	_, err = s.Repository.CreateRemote(&config.RemoteConfig{
+		Name: "bar",
+		URLs: []string{url},
+	})
+	c.Assert(err, IsNil)
+
+	var p bytes.Buffer
+	err = s.Repository.Push(&PushOptions{
+		RemoteName: "bar",
+		Progress:   &p,
+	})
+	c.Assert(err, IsNil)
+
+	AssertReferences(c, server, map[string]string{
+		"refs/heads/master": "6ecf0ef2c2dffb796033e5a02219af86ec6584e5",
+		"refs/heads/branch": "e8d3ffab552895c19b9fcf7aa264d277cde33881",
+	})
+
+	c.Assert((&p).Bytes(), DeepEquals, []byte(m))
 }
 
 func (s *RepositorySuite) TestPushDepth(c *C) {
