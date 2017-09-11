@@ -158,7 +158,7 @@ func (s *BaseStorageSuite) TestPackfileWriter(c *C) {
 		c.Skip("not a storer.PackWriter")
 	}
 
-	pw, err := pwr.PackfileWriter()
+	pw, err := pwr.PackfileWriter(nil)
 	c.Assert(err, IsNil)
 
 	f := fixtures.Basic().One()
@@ -414,7 +414,7 @@ func (s *BaseStorageSuite) TestDeltaObjectStorer(c *C) {
 		c.Skip("not a storer.PackWriter")
 	}
 
-	pw, err := pwr.PackfileWriter()
+	pw, err := pwr.PackfileWriter(nil)
 	c.Assert(err, IsNil)
 
 	f := fixtures.Basic().One()
