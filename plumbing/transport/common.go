@@ -130,17 +130,17 @@ func NewEndpoint(endpoint string) (Endpoint, error) {
 		))
 	}
 
-	return urlEndpoint{u}, nil
+	return URLEndpoint{u}, nil
 }
 
-type urlEndpoint struct {
+type URLEndpoint struct {
 	*url.URL
 }
 
-func (e urlEndpoint) Protocol() string { return e.URL.Scheme }
-func (e urlEndpoint) Host() string     { return e.URL.Hostname() }
+func (e URLEndpoint) Protocol() string { return e.URL.Scheme }
+func (e URLEndpoint) Host() string     { return e.URL.Hostname() }
 
-func (e urlEndpoint) User() string {
+func (e URLEndpoint) User() string {
 	if e.URL.User == nil {
 		return ""
 	}
@@ -148,7 +148,7 @@ func (e urlEndpoint) User() string {
 	return e.URL.User.Username()
 }
 
-func (e urlEndpoint) Password() string {
+func (e URLEndpoint) Password() string {
 	if e.URL.User == nil {
 		return ""
 	}
@@ -157,7 +157,7 @@ func (e urlEndpoint) Password() string {
 	return p
 }
 
-func (e urlEndpoint) Port() int {
+func (e URLEndpoint) Port() int {
 	p := e.URL.Port()
 	if p == "" {
 		return 0
@@ -171,7 +171,7 @@ func (e urlEndpoint) Port() int {
 	return i
 }
 
-func (e urlEndpoint) Path() string {
+func (e URLEndpoint) Path() string {
 	var res string = e.URL.Path
 	if e.URL.RawQuery != "" {
 		res += "?" + e.URL.RawQuery
@@ -184,39 +184,40 @@ func (e urlEndpoint) Path() string {
 	return res
 }
 
-type scpEndpoint struct {
-	user string
-	host string
-	path string
+type SCPEndpoint struct {
+	// Renamed to avoid collision with methods.
+	Username string
+	Hostname string
+	Pathname string
 }
 
-func (e *scpEndpoint) Protocol() string { return "ssh" }
-func (e *scpEndpoint) User() string     { return e.user }
-func (e *scpEndpoint) Password() string { return "" }
-func (e *scpEndpoint) Host() string     { return e.host }
-func (e *scpEndpoint) Port() int        { return 22 }
-func (e *scpEndpoint) Path() string     { return e.path }
+func (e *SCPEndpoint) Protocol() string { return "ssh" }
+func (e *SCPEndpoint) User() string     { return e.Username }
+func (e *SCPEndpoint) Password() string { return "" }
+func (e *SCPEndpoint) Host() string     { return e.Hostname }
+func (e *SCPEndpoint) Port() int        { return 22 }
+func (e *SCPEndpoint) Path() string     { return e.Pathname }
 
-func (e *scpEndpoint) String() string {
+func (e *SCPEndpoint) String() string {
 	var user string
-	if e.user != "" {
-		user = fmt.Sprintf("%s@", e.user)
+	if e.Username != "" {
+		user = fmt.Sprintf("%s@", e.Username)
 	}
 
-	return fmt.Sprintf("%s%s:%s", user, e.host, e.path)
+	return fmt.Sprintf("%s%s:%s", user, e.Hostname, e.Pathname)
 }
 
-type fileEndpoint struct {
-	path string
+type FileEndpoint struct {
+	Pathname string
 }
 
-func (e *fileEndpoint) Protocol() string { return "file" }
-func (e *fileEndpoint) User() string     { return "" }
-func (e *fileEndpoint) Password() string { return "" }
-func (e *fileEndpoint) Host() string     { return "" }
-func (e *fileEndpoint) Port() int        { return 0 }
-func (e *fileEndpoint) Path() string     { return e.path }
-func (e *fileEndpoint) String() string   { return e.path }
+func (e *FileEndpoint) Protocol() string { return "file" }
+func (e *FileEndpoint) User() string     { return "" }
+func (e *FileEndpoint) Password() string { return "" }
+func (e *FileEndpoint) Host() string     { return "" }
+func (e *FileEndpoint) Port() int        { return 0 }
+func (e *FileEndpoint) Path() string     { return e.Pathname }
+func (e *FileEndpoint) String() string   { return e.Pathname }
 
 var (
 	isSchemeRegExp   = regexp.MustCompile(`^[^:]+://`)
@@ -229,10 +230,10 @@ func parseSCPLike(endpoint string) (Endpoint, bool) {
 	}
 
 	m := scpLikeUrlRegExp.FindStringSubmatch(endpoint)
-	return &scpEndpoint{
-		user: m[1],
-		host: m[2],
-		path: m[3],
+	return &SCPEndpoint{
+		Username: m[1],
+		Hostname: m[2],
+		Pathname: m[3],
 	}, true
 }
 
@@ -241,8 +242,7 @@ func parseFile(endpoint string) (Endpoint, bool) {
 		return nil, false
 	}
 
-	path := endpoint
-	return &fileEndpoint{path}, true
+	return &FileEndpoint{Pathname: endpoint}, true
 }
 
 // UnsupportedCapabilities are the capabilities not supported by any client
