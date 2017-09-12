@@ -736,7 +736,7 @@ func (r *Remote) updateLocalReferenceStorage(
 				}
 			}
 
-			refUpdated, err := updateReferenceStorerIfNeeded(r.s, new)
+			refUpdated, err := checkAndUpdateReferenceStorerIfNeeded(r.s, new, old)
 			if err != nil {
 				return updated, err
 			}
