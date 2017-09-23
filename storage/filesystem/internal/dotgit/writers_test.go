@@ -29,7 +29,7 @@ func (s *SuiteDotGit) TestNewObjectPack(c *C) {
 	fs := osfs.New(dir)
 	dot := New(fs)
 
-	w, err := dot.NewObjectPack()
+	w, err := dot.NewObjectPack(nil)
 	c.Assert(err, IsNil)
 
 	_, err = io.Copy(w, f.Packfile())
@@ -74,7 +74,7 @@ func (s *SuiteDotGit) TestNewObjectPackUnused(c *C) {
 	fs := osfs.New(dir)
 	dot := New(fs)
 
-	w, err := dot.NewObjectPack()
+	w, err := dot.NewObjectPack(nil)
 	c.Assert(err, IsNil)
 
 	c.Assert(w.Close(), IsNil)
@@ -144,7 +144,7 @@ func (s *SuiteDotGit) TestPackWriterUnusedNotify(c *C) {
 
 	fs := osfs.New(dir)
 
-	w, err := newPackWrite(fs)
+	w, err := newPackWrite(fs, nil)
 	c.Assert(err, IsNil)
 
 	w.Notify = func(h plumbing.Hash, idx *packfile.Index) {

@@ -47,7 +47,7 @@ func (s *IdxfileSuite) TestDecodeCRCs(c *C) {
 
 	pd, err := packfile.NewDecoder(scanner, storage)
 	c.Assert(err, IsNil)
-	_, err = pd.Decode()
+	_, err = pd.Decode(nil)
 	c.Assert(err, IsNil)
 
 	i := pd.Index().ToIdxFile()
@@ -55,7 +55,7 @@ func (s *IdxfileSuite) TestDecodeCRCs(c *C) {
 
 	buf := bytes.NewBuffer(nil)
 	e := NewEncoder(buf)
-	_, err = e.Encode(i)
+	_, err = e.Encode(i, nil)
 	c.Assert(err, IsNil)
 
 	idx := &Idxfile{}
@@ -103,7 +103,7 @@ func (s *IdxfileSuite) TestDecode64bitsOffsetsIdempotent(c *C) {
 	c.Assert(err, IsNil)
 
 	buf := bytes.NewBuffer(nil)
-	_, err = NewEncoder(buf).Encode(expected)
+	_, err = NewEncoder(buf).Encode(expected, nil)
 	c.Assert(err, IsNil)
 
 	idx := &Idxfile{}

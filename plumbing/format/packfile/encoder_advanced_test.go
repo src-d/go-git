@@ -57,14 +57,14 @@ func (s *EncoderAdvancedSuite) testEncodeDecode(c *C, storage storer.Storer) {
 
 	buf := bytes.NewBuffer(nil)
 	enc := NewEncoder(buf, storage, false)
-	_, err = enc.Encode(hashes)
+	_, err = enc.Encode(hashes, 10, nil)
 	c.Assert(err, IsNil)
 
 	scanner := NewScanner(buf)
 	storage = memory.NewStorage()
 	d, err := NewDecoder(scanner, storage)
 	c.Assert(err, IsNil)
-	_, err = d.Decode()
+	_, err = d.Decode(nil)
 	c.Assert(err, IsNil)
 
 	objIter, err = storage.IterEncodedObjects(plumbing.AnyObject)
