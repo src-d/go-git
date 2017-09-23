@@ -1,6 +1,8 @@
 package packfile
 
 import (
+	"sync"
+
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 
@@ -146,7 +148,7 @@ func (s *DeltaSelectorSuite) createTestObjects() {
 func (s *DeltaSelectorSuite) TestObjectsToPack(c *C) {
 	// Different type
 	hashes := []plumbing.Hash{s.hashes["base"], s.hashes["treeType"]}
-	otp, err := s.ds.ObjectsToPack(hashes)
+	otp, err := s.ds.ObjectsToPack(hashes, 10, nil)
 	c.Assert(err, IsNil)
 	c.Assert(len(otp), Equals, 2)
 	c.Assert(otp[0].Object, Equals, s.store.Objects[s.hashes["base"]])
@@ -154,7 +156,7 @@ func (s *DeltaSelectorSuite) TestObjectsToPack(c *C) {
 
 	// Size radically different
 	hashes = []plumbing.Hash{s.hashes["bigBase"], s.hashes["target"]}
-	otp, err = s.ds.ObjectsToPack(hashes)
+	otp, err = s.ds.ObjectsToPack(hashes, 10, nil)
 	c.Assert(err, IsNil)
 	c.Assert(len(otp), Equals, 2)
 	c.Assert(otp[0].Object, Equals, s.store.Objects[s.hashes["bigBase"]])
@@ -162,7 +164,7 @@ func (s *DeltaSelectorSuite) TestObjectsToPack(c *C) {
 
 	// Delta Size Limit with no best delta yet
 	hashes = []plumbing.Hash{s.hashes["smallBase"], s.hashes["smallTarget"]}
-	otp, err = s.ds.ObjectsToPack(hashes)
+	otp, err = s.ds.ObjectsToPack(hashes, 10, nil)
 	c.Assert(err, IsNil)
 	c.Assert(len(otp), Equals, 2)
 	c.Assert(otp[0].Object, Equals, s.store.Objects[s.hashes["smallBase"]])
@@ -170,7 +172,7 @@ func (s *DeltaSelectorSuite) TestObjectsToPack(c *C) {
 
 	// It will create the delta
 	hashes = []plumbing.Hash{s.hashes["base"], s.hashes["target"]}
-	otp, err = s.ds.ObjectsToPack(hashes)
+	otp, err = s.ds.ObjectsToPack(hashes, 10, nil)
 	c.Assert(err, IsNil)
 	c.Assert(len(otp), Equals, 2)
 	c.Assert(otp[0].Object, Equals, s.store.Objects[s.hashes["target"]])
@@ -185,7 +187,7 @@ func (s *DeltaSelectorSuite) TestObjectsToPack(c *C) {
 		s.hashes["o2"],
 		s.hashes["o3"],
 	}
-	otp, err = s.ds.ObjectsToPack(hashes)
+	otp, err = s.ds.ObjectsToPack(hashes, 10, nil)
 	c.Assert(err, IsNil)
 	c.Assert(len(otp), Equals, 3)
 	c.Assert(otp[0].Object, Equals, s.store.Objects[s.hashes["o1"]])
@@ -199,20 +201,22 @@ func (s *DeltaSelectorSuite) TestObjectsToPack(c *C) {
 
 	// Check that objects outside of the sliding window don't produce
 	// a delta.
-	hashes = make([]plumbing.Hash, 0, deltaWindowSize+2)
+	hashes = make([]plumbing.Hash, 0, 12)
 	hashes = append(hashes, s.hashes["base"])
-	for i := 0; i < deltaWindowSize; i++ {
+	for i := 0; i < 10; i++ {
 		hashes = append(hashes, s.hashes["smallTarget"])
 	}
 	hashes = append(hashes, s.hashes["target"])
 
 	// Don't sort so we can easily check the sliding window without
 	// creating a bunch of new objects.
-	otp, err = s.ds.objectsToPack(hashes)
+	otp, err = s.ds.objectsToPack(hashes, 10, nil, plumbing.StatusUpdate{})
 	c.Assert(err, IsNil)
-	err = s.ds.walk(otp)
+	u := plumbing.StatusUpdate{}
+	var m sync.Mutex
+	err = s.ds.walk(otp, 10, nil, &u, &m)
 	c.Assert(err, IsNil)
-	c.Assert(len(otp), Equals, deltaWindowSize+2)
+	c.Assert(len(otp), Equals, 12)
 	targetIdx := len(otp) - 1
 	c.Assert(otp[targetIdx].IsDelta(), Equals, false)
 }
