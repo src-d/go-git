@@ -44,6 +44,13 @@ func (s *ClientSuite) TestNewBasicAuth(c *C) {
 	c.Assert(a.String(), Equals, "http-basic-auth - foo:*******")
 }
 
+func (s *ClientSuite) TestNewBasicAuthCallback(c *C) {
+	a := NewBasicAuthCallback("foo", func() string { return "qux" })
+
+	c.Assert(a.Name(), Equals, "http-basic-auth-callback")
+	c.Assert(a.String(), Equals, "http-basic-auth-callback - foo")
+}
+
 func (s *ClientSuite) TestNewErrOK(c *C) {
 	res := &http.Response{StatusCode: http.StatusOK}
 	err := NewErr(res)
