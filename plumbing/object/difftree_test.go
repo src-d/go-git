@@ -57,7 +57,7 @@ func (s *DiffTreeSuite) storageFromPackfile(f *fixtures.Fixture) storer.EncodedO
 		panic(err)
 	}
 
-	_, err = d.Decode()
+	_, err = d.Decode(nil)
 	if err != nil {
 		panic(err)
 	}

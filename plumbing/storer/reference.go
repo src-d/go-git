@@ -16,9 +16,11 @@ var ErrMaxResolveRecursion = errors.New("max. recursion level reached")
 // ReferenceStorer is a generic storage of references.
 type ReferenceStorer interface {
 	SetReference(*plumbing.Reference) error
+	CheckAndSetReference(new, old *plumbing.Reference) error
 	Reference(plumbing.ReferenceName) (*plumbing.Reference, error)
 	IterReferences() (ReferenceIter, error)
 	RemoveReference(plumbing.ReferenceName) error
+	SetPackedRefs(refs []plumbing.Reference) error
 }
 
 // ReferenceIter is a generic closable interface for iterating over references.

@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	stdioutil "io/ioutil"
 	"os"
 	"strings"
@@ -137,8 +138,8 @@ func (d *DotGit) Shallow() (billy.File, error) {
 
 // NewObjectPack return a writer for a new packfile, it saves the packfile to
 // disk and also generates and save the index for the given packfile.
-func (d *DotGit) NewObjectPack() (*PackWriter, error) {
-	return newPackWrite(d.fs)
+func (d *DotGit) NewObjectPack(statusChan plumbing.StatusChan) (*PackWriter, error) {
+	return newPackWrite(d.fs, statusChan)
 }
 
 // ObjectPacks returns the list of availables packfiles
@@ -242,7 +243,45 @@ func (d *DotGit) Object(h plumbing.Hash) (billy.File, error) {
 	return d.fs.Open(file)
 }
 
-func (d *DotGit) SetRef(r *plumbing.Reference) error {
+func (d *DotGit) readReferenceFrom(rd io.Reader, name string) (ref *plumbing.Reference, err error) {
+	b, err := stdioutil.ReadAll(rd)
+	if err != nil {
+		return nil, err
+	}
+
+	line := strings.TrimSpace(string(b))
+	return plumbing.NewReferenceFromStrings(name, line), nil
+}
+
+func (d *DotGit) checkReferenceAndTruncate(f billy.File, old *plumbing.Reference) error {
+	if old == nil {
+		return nil
+	}
+	ref, err := d.readReferenceFrom(f, old.Name().String())
+	if err != nil {
+		return err
+	}
+	if ref.Hash().IsZero() {
+		ref, err = d.packedRef(old.Name())
+		if err != nil {
+			return err
+		}
+	}
+	if ref.Hash() != old.Hash() {
+		return fmt.Errorf("reference has changed concurrently")
+	}
+	_, err = f.Seek(0, io.SeekStart)
+	if err != nil {
+		return err
+	}
+	err = f.Truncate(0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *DotGit) SetRef(r, old *plumbing.Reference) (err error) {
 	var content string
 	switch r.Type() {
 	case plumbing.SymbolicReference:
@@ -251,12 +290,33 @@ func (d *DotGit) SetRef(r *plumbing.Reference) error {
 		content = fmt.Sprintln(r.Hash().String())
 	}
 
-	f, err := d.fs.Create(r.Name().String())
+	// If we are not checking an old ref, just truncate the file.
+	mode := os.O_RDWR | os.O_CREATE
+	if old == nil {
+		mode |= os.O_TRUNC
+	}
+
+	f, err := d.fs.OpenFile(r.Name().String(), mode, 0666)
 	if err != nil {
 		return err
 	}
 
 	defer ioutil.CheckClose(f, &err)
+
+	// Lock is unlocked by the deferred Close above. This is because Unlock
+	// does not imply a fsync and thus there would be a race between
+	// Unlock+Close and other concurrent writers. Adding Sync to go-billy
+	// could work, but this is better (and avoids superfluous syncs).
+	err = f.Lock()
+	if err != nil {
+		return err
+	}
+
+	// this is a no-op to call even when old is nil.
+	err = d.checkReferenceAndTruncate(f, old)
+	if err != nil {
+		return err
+	}
 
 	_, err = f.Write([]byte(content))
 	return err
@@ -292,7 +352,7 @@ func (d *DotGit) Ref(name plumbing.ReferenceName) (*plumbing.Reference, error) {
 	return d.packedRef(name)
 }
 
-func (d *DotGit) syncPackedRefs() error {
+func (d *DotGit) syncPackedRefs() (err error) {
 	fi, err := d.fs.Stat(packedRefsPath)
 	if os.IsNotExist(err) {
 		return nil
@@ -512,13 +572,46 @@ func (d *DotGit) readReferenceFile(path, name string) (ref *plumbing.Reference, 
 	}
 	defer ioutil.CheckClose(f, &err)
 
-	b, err := stdioutil.ReadAll(f)
+	return d.readReferenceFrom(f, name)
+}
+
+func (d *DotGit) SetPackedRefs(refs []plumbing.Reference) (err error) {
+	// Lock it using a temp file.  TODO: clean this up?
+	lockFile, err := d.fs.Create(tmpPackedRefsPrefix)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	defer ioutil.CheckClose(lockFile, &err)
+
+	err = lockFile.Lock()
+	if err != nil {
+		return err
 	}
 
-	line := strings.TrimSpace(string(b))
-	return plumbing.NewReferenceFromStrings(name, line), nil
+	f, err := d.fs.Create(packedRefsPath)
+	if err != nil {
+		return err
+	}
+	defer ioutil.CheckClose(f, &err)
+
+	// Check that the file is empty. Technically the locked create
+	// above should fail if the file exists yet, but let's just be
+	// safe and check.
+	buf, err := stdioutil.ReadAll(f)
+	if err != nil {
+		return err
+	}
+	if len(buf) != 0 {
+		return errors.New("packed-refs file already initialized")
+	}
+
+	for _, ref := range refs {
+		_, err := f.Write([]byte(ref.String() + "\n"))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Module return a billy.Filesystem poiting to the module folder

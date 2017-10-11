@@ -77,12 +77,12 @@ func (s *ObjectStorage) NewEncodedObject() plumbing.EncodedObject {
 	return &plumbing.MemoryObject{}
 }
 
-func (s *ObjectStorage) PackfileWriter() (io.WriteCloser, error) {
+func (s *ObjectStorage) PackfileWriter(statusChan plumbing.StatusChan) (io.WriteCloser, error) {
 	if err := s.requireIndex(); err != nil {
 		return nil, err
 	}
 
-	w, err := s.dir.NewObjectPack()
+	w, err := s.dir.NewObjectPack(statusChan)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +123,32 @@ func (s *ObjectStorage) SetEncodedObject(o plumbing.EncodedObject) (plumbing.Has
 	}
 
 	return o.Hash(), err
+}
+
+// HasEncodedObject returns nil if the object exists, without actually
+// reading the object data from storage.
+func (s *ObjectStorage) HasEncodedObject(h plumbing.Hash) (err error) {
+	// Check unpacked objects
+	f, err := s.dir.Object(h)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		// Fall through to check packed objects.
+	} else {
+		defer ioutil.CheckClose(f, &err)
+		return nil
+	}
+
+	// Check packed objects.
+	if err := s.requireIndex(); err != nil {
+		return err
+	}
+	_, _, offset := s.findObjectInPackfile(h)
+	if offset == -1 {
+		return plumbing.ErrObjectNotFound
+	}
+	return nil
 }
 
 // EncodedObject returns the object with the given hash, by searching for it in

@@ -39,7 +39,7 @@ func (s *ReaderSuite) TestDecode(c *C) {
 		c.Assert(err, IsNil)
 		defer d.Close()
 
-		ch, err := d.Decode()
+		ch, err := d.Decode(nil)
 		c.Assert(err, IsNil)
 		c.Assert(ch, Equals, f.PackfileHash)
 
@@ -161,11 +161,11 @@ func (s *ReaderSuite) TestDecodeMultipleTimes(c *C) {
 	c.Assert(err, IsNil)
 	defer d.Close()
 
-	ch, err := d.Decode()
+	ch, err := d.Decode(nil)
 	c.Assert(err, IsNil)
 	c.Assert(ch, Equals, f.PackfileHash)
 
-	ch, err = d.Decode()
+	ch, err = d.Decode(nil)
 	c.Assert(err, Equals, packfile.ErrAlreadyDecoded)
 	c.Assert(ch, Equals, plumbing.ZeroHash)
 }
@@ -176,7 +176,7 @@ func (s *ReaderSuite) TestDecodeInMemory(c *C) {
 		d, err := packfile.NewDecoder(scanner, nil)
 		c.Assert(err, IsNil)
 
-		ch, err := d.Decode()
+		ch, err := d.Decode(nil)
 		c.Assert(err, IsNil)
 		c.Assert(ch, Equals, f.PackfileHash)
 	})
@@ -206,7 +206,7 @@ func (s *ReaderSuite) TestDecodeNoSeekableWithTxStorer(c *C) {
 		c.Assert(err, IsNil)
 		defer d.Close()
 
-		ch, err := d.Decode()
+		ch, err := d.Decode(nil)
 		c.Assert(err, IsNil)
 		c.Assert(ch, Equals, f.PackfileHash)
 
@@ -231,7 +231,7 @@ func (s *ReaderSuite) TestDecodeNoSeekableWithoutTxStorer(c *C) {
 		c.Assert(err, IsNil)
 		defer d.Close()
 
-		ch, err := d.Decode()
+		ch, err := d.Decode(nil)
 		c.Assert(err, IsNil)
 		c.Assert(ch, Equals, f.PackfileHash)
 
@@ -281,7 +281,7 @@ func (s *ReaderSuite) TestDecodeCRCs(c *C) {
 
 	d, err := packfile.NewDecoder(scanner, storage)
 	c.Assert(err, IsNil)
-	_, err = d.Decode()
+	_, err = d.Decode(nil)
 	c.Assert(err, IsNil)
 
 	var sum uint64
@@ -319,7 +319,7 @@ func (s *ReaderSuite) TestIndex(c *C) {
 
 	c.Assert(d.Index().ToIdxFile().Entries, HasLen, 0)
 
-	_, err = d.Decode()
+	_, err = d.Decode(nil)
 	c.Assert(err, IsNil)
 
 	c.Assert(len(d.Index().ToIdxFile().Entries), Equals, 31)

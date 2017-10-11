@@ -119,7 +119,7 @@ func (s *BaseSuite) NewRepositoryFromPackfile(f *fixtures.Fixture) *Repository {
 		panic(err)
 	}
 
-	_, err = d.Decode()
+	_, err = d.Decode(nil)
 	if err != nil {
 		panic(err)
 	}

@@ -73,7 +73,7 @@ func (s *RevListSuite) TestRevListObjects_Submodules(c *C) {
 	ref, err := storer.ResolveReference(sto, plumbing.HEAD)
 	c.Assert(err, IsNil)
 
-	revList, err := Objects(sto, []plumbing.Hash{ref.Hash()}, nil)
+	revList, err := Objects(sto, []plumbing.Hash{ref.Hash()}, nil, nil)
 	c.Assert(err, IsNil)
 	for _, h := range revList {
 		c.Assert(submodules[h.String()], Equals, false)
@@ -95,11 +95,11 @@ func (s *RevListSuite) TestRevListObjects(c *C) {
 	}
 
 	localHist, err := Objects(s.Storer,
-		[]plumbing.Hash{plumbing.NewHash(initialCommit)}, nil)
+		[]plumbing.Hash{plumbing.NewHash(initialCommit)}, nil, nil)
 	c.Assert(err, IsNil)
 
 	remoteHist, err := Objects(s.Storer,
-		[]plumbing.Hash{plumbing.NewHash(secondCommit)}, localHist)
+		[]plumbing.Hash{plumbing.NewHash(secondCommit)}, localHist, nil)
 	c.Assert(err, IsNil)
 
 	for _, h := range remoteHist {
@@ -121,7 +121,7 @@ func (s *RevListSuite) TestRevListObjectsTagObject(c *C) {
 		"f7b877701fbf855b44c0a9e86f3fdce2c298b07f": true,
 	}
 
-	hist, err := Objects(sto, []plumbing.Hash{plumbing.NewHash("ad7897c0fb8e7d9a9ba41fa66072cf06095a6cfc")}, nil)
+	hist, err := Objects(sto, []plumbing.Hash{plumbing.NewHash("ad7897c0fb8e7d9a9ba41fa66072cf06095a6cfc")}, nil, nil)
 	c.Assert(err, IsNil)
 
 	for _, h := range hist {
@@ -148,11 +148,11 @@ func (s *RevListSuite) TestRevListObjectsWithBlobsAndTrees(c *C) {
 			plumbing.NewHash(initialCommit),
 			plumbing.NewHash("c2d30fa8ef288618f65f6eed6e168e0d514886f4"),
 			plumbing.NewHash("d3ff53e0564a9f87d8e84b6e28e5060e517008aa"),
-		}, nil)
+		}, nil, nil)
 	c.Assert(err, IsNil)
 
 	remoteHist, err := Objects(s.Storer,
-		[]plumbing.Hash{plumbing.NewHash(secondCommit)}, localHist)
+		[]plumbing.Hash{plumbing.NewHash(secondCommit)}, localHist, nil)
 	c.Assert(err, IsNil)
 
 	for _, h := range remoteHist {
@@ -164,11 +164,11 @@ func (s *RevListSuite) TestRevListObjectsWithBlobsAndTrees(c *C) {
 func (s *RevListSuite) TestRevListObjectsReverse(c *C) {
 
 	localHist, err := Objects(s.Storer,
-		[]plumbing.Hash{plumbing.NewHash(secondCommit)}, nil)
+		[]plumbing.Hash{plumbing.NewHash(secondCommit)}, nil, nil)
 	c.Assert(err, IsNil)
 
 	remoteHist, err := Objects(s.Storer,
-		[]plumbing.Hash{plumbing.NewHash(initialCommit)}, localHist)
+		[]plumbing.Hash{plumbing.NewHash(initialCommit)}, localHist, nil)
 	c.Assert(err, IsNil)
 
 	c.Assert(len(remoteHist), Equals, 0)
@@ -176,11 +176,11 @@ func (s *RevListSuite) TestRevListObjectsReverse(c *C) {
 
 func (s *RevListSuite) TestRevListObjectsSameCommit(c *C) {
 	localHist, err := Objects(s.Storer,
-		[]plumbing.Hash{plumbing.NewHash(secondCommit)}, nil)
+		[]plumbing.Hash{plumbing.NewHash(secondCommit)}, nil, nil)
 	c.Assert(err, IsNil)
 
 	remoteHist, err := Objects(s.Storer,
-		[]plumbing.Hash{plumbing.NewHash(secondCommit)}, localHist)
+		[]plumbing.Hash{plumbing.NewHash(secondCommit)}, localHist, nil)
 	c.Assert(err, IsNil)
 
 	c.Assert(len(remoteHist), Equals, 0)
@@ -193,13 +193,13 @@ func (s *RevListSuite) TestRevListObjectsSameCommit(c *C) {
 // -----
 func (s *RevListSuite) TestRevListObjectsNewBranch(c *C) {
 	localHist, err := Objects(s.Storer,
-		[]plumbing.Hash{plumbing.NewHash(someCommit)}, nil)
+		[]plumbing.Hash{plumbing.NewHash(someCommit)}, nil, nil)
 	c.Assert(err, IsNil)
 
 	remoteHist, err := Objects(
 		s.Storer, []plumbing.Hash{
 			plumbing.NewHash(someCommitBranch),
-			plumbing.NewHash(someCommitOtherBranch)}, localHist)
+			plumbing.NewHash(someCommitOtherBranch)}, localHist, nil)
 	c.Assert(err, IsNil)
 
 	revList := map[string]bool{

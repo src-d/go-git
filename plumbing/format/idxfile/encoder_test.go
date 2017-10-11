@@ -18,7 +18,7 @@ func (s *IdxfileSuite) TestEncode(c *C) {
 
 	buf := bytes.NewBuffer(nil)
 	e := NewEncoder(buf)
-	_, err := e.Encode(expected)
+	_, err := e.Encode(expected, nil)
 	c.Assert(err, IsNil)
 
 	idx := &Idxfile{}
@@ -41,7 +41,7 @@ func (s *IdxfileSuite) TestDecodeEncode(c *C) {
 
 		result := bytes.NewBuffer(nil)
 		e := NewEncoder(result)
-		size, err := e.Encode(idx)
+		size, err := e.Encode(idx, nil)
 		c.Assert(err, IsNil)
 
 		c.Assert(size, Equals, len(expected))
