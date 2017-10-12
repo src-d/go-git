@@ -33,8 +33,8 @@ type Commit struct {
 	// Committer is the one performing the commit, might be different from
 	// Author.
 	Committer Signature
-	// GPGSignature is the GPG signature of the commit.
-	GPGSignature string
+	// PGPSignature is the PGP signature of the commit.
+	PGPSignature string
 	// Message is the commit message, contains arbitrary text.
 	Message string
 	// TreeHash is the hash of the root tree of the commit.
@@ -152,30 +152,30 @@ func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 	r := bufio.NewReader(reader)
 
 	var message bool
-	var gpgsig bool
+	var pgpsig bool
 	for {
 		line, err := r.ReadBytes('\n')
 		if err != nil && err != io.EOF {
 			return err
 		}
 
-		if gpgsig {
+		if pgpsig {
 			// Check if it's the end of a PGP signature.
 			if bytes.Contains(line, []byte(endpgp)) {
-				c.GPGSignature += string(endpgp) + "\n"
-				gpgsig = false
+				c.PGPSignature += endpgp + "\n"
+				pgpsig = false
 			} else {
 				// Trim the left padding.
 				line = bytes.TrimLeft(line, " ")
-				c.GPGSignature += string(line)
+				c.PGPSignature += string(line)
 			}
 			continue
 		}
 
 		// Check if it's the beginning of a PGP signature.
 		if bytes.Contains(line, []byte(beginpgp)) {
-			c.GPGSignature += string(beginpgp) + "\n"
-			gpgsig = true
+			c.PGPSignature += beginpgp + "\n"
+			pgpsig = true
 			continue
 		}
 
@@ -243,14 +243,14 @@ func (b *Commit) Encode(o plumbing.EncodedObject) error {
 		return err
 	}
 
-	if b.GPGSignature != "" {
-		if _, err = fmt.Fprint(w, "gpgsig"); err != nil {
+	if b.PGPSignature != "" {
+		if _, err = fmt.Fprint(w, "pgpsig"); err != nil {
 			return err
 		}
 
 		// Split all the signature lines and write with a left padding and
 		// newline at the end.
-		lines := strings.Split(b.GPGSignature, "\n")
+		lines := strings.Split(b.PGPSignature, "\n")
 		for _, line := range lines {
 			if _, err = fmt.Fprintf(w, " %s\n", line); err != nil {
 				return err

@@ -233,12 +233,12 @@ func (s *SuiteCommit) TestLongCommitMessageSerialization(c *C) {
 	c.Assert(decoded.Message, Equals, longMessage)
 }
 
-func (s *SuiteCommit) TestGPGSignatureSerialization(c *C) {
+func (s *SuiteCommit) TestPGPSignatureSerialization(c *C) {
 	encoded := &plumbing.MemoryObject{}
 	decoded := &Commit{}
 	commit := *s.Commit
 
-	gpgsignature := `-----BEGIN PGP SIGNATURE-----
+	pgpsignature := `-----BEGIN PGP SIGNATURE-----
 
 iQEcBAABAgAGBQJTZbQlAAoJEF0+sviABDDrZbQH/09PfE51KPVPlanr6q1v4/Ut
 LQxfojUWiLQdg2ESJItkcuweYg+kc3HCyFejeDIBw9dpXt00rY26p05qrpnG+85b
@@ -249,12 +249,12 @@ RUysgqjcpT8+iQM1PblGfHR4XAhuOqN5Fx06PSaFZhqvWFezJ28/CLyX5q+oIVk=
 =EFTF
 -----END PGP SIGNATURE-----
 `
-	commit.GPGSignature = gpgsignature
+	commit.PGPSignature = pgpsignature
 
 	err := commit.Encode(encoded)
 	c.Assert(err, IsNil)
 
 	err = decoded.Decode(encoded)
 	c.Assert(err, IsNil)
-	c.Assert(decoded.GPGSignature, Equals, gpgsignature)
+	c.Assert(decoded.PGPSignature, Equals, pgpsignature)
 }
