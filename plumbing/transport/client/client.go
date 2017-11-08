@@ -4,6 +4,7 @@ package client
 
 import (
 	"fmt"
+	"sync"
 
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/file"
@@ -21,8 +22,15 @@ var Protocols = map[string]transport.Transport{
 	"file":  file.DefaultClient,
 }
 
+// protocolsMut keeps Protocols synchronised in case protocols are either
+// installed or new clients are created concurrently.
+var protocolsMut sync.RWMutex
+
 // InstallProtocol adds or modifies an existing protocol.
 func InstallProtocol(scheme string, c transport.Transport) {
+	protocolsMut.Lock()
+	defer protocolsMut.Unlock()
+
 	if c == nil {
 		delete(Protocols, scheme)
 		return
@@ -35,6 +43,9 @@ func InstallProtocol(scheme string, c transport.Transport) {
 // http://, https://, ssh:// and file://.
 // See `InstallProtocol` to add or modify protocols.
 func NewClient(endpoint transport.Endpoint) (transport.Transport, error) {
+	protocolsMut.RLock()
+	defer protocolsMut.RUnlock()
+
 	f, ok := Protocols[endpoint.Protocol()]
 	if !ok {
 		return nil, fmt.Errorf("unsupported scheme %q", endpoint.Protocol())
