@@ -905,15 +905,29 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 	for _, item := range items {
 		switch item.(type) {
 		case revision.Ref:
-			ref, err := storer.ResolveReference(r.Storer, plumbing.ReferenceName(item.(revision.Ref)))
+			revisionRef := item.(revision.Ref)
+			var ref *plumbing.Reference
 
-			if err != nil {
-				return &plumbing.ZeroHash, err
+			for _, rule := range []string{
+				"%s",
+				"refs/%s",
+				"refs/tags/%s",
+				"refs/heads/%s",
+				"refs/remotes/%s",
+				"refs/remotes/%s/HEAD",
+			} {
+				ref, err = storer.ResolveReference(r.Storer, plumbing.ReferenceName(fmt.Sprintf(rule, revisionRef)))
+
+				if err == nil {
+					break
+				}
 			}
 
-			h := ref.Hash()
+			if ref == nil {
+				return &plumbing.ZeroHash, plumbing.ErrReferenceNotFound
+			}
 
-			commit, err = r.CommitObject(h)
+			commit, err = r.CommitObject(ref.Hash())
 
 			if err != nil {
 				return &plumbing.ZeroHash, err
