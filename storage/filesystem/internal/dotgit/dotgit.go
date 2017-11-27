@@ -3,6 +3,7 @@ package dotgit
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -756,9 +757,27 @@ func (d *DotGit) PackRefs() (err error) {
 	return nil
 }
 
-// Module return a billy.Filesystem poiting to the module folder
+// Module return a billy.Filesystem pointing to the module folder
 func (d *DotGit) Module(name string) (billy.Filesystem, error) {
 	return d.fs.Chroot(d.fs.Join(modulePath, name))
+}
+
+// Alternates returns the content of objects/info/alternates if available.
+// This can be used to checks if it's a shared repository.
+func (d *DotGit) Alternates() (string, error) {
+	altpath := d.fs.Join("objects", "info", "alternates")
+	f, err := d.fs.Open(altpath)
+	if os.IsNotExist(err) {
+		return "", err
+	}
+
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(f)
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 func isHex(s string) bool {

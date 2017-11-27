@@ -615,3 +615,30 @@ func (s *SuiteDotGit) TestPackRefs(c *C) {
 	c.Assert(ref, NotNil)
 	c.Assert(ref.Hash().String(), Equals, "b8d3ffab552895c19b9fcf7aa264d277cde33881")
 }
+
+func (s *SuiteDotGit) TestAlternates(c *C) {
+	tmp, err := ioutil.TempDir("", "dot-git")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(tmp)
+
+	// Create a new billy fs.
+	fs := osfs.New(tmp)
+
+	// Create a new dotgit object and initialize.
+	dir := New(fs)
+	err = dir.Initialize()
+	c.Assert(err, IsNil)
+
+	// Create alternates file.
+	altpath := filepath.Join("objects", "info", "alternates")
+	f, err := fs.Create(altpath)
+	c.Assert(err, IsNil)
+
+	content := []byte("/Users/username/rep1//.git/objects")
+	f.Write(content)
+	f.Close()
+
+	alt, err := dir.Alternates()
+	c.Assert(err, IsNil)
+	c.Assert(alt, Equals, "/Users/username/rep1//.git/objects")
+}
