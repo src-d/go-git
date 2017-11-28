@@ -891,6 +891,9 @@ func (r *Repository) Worktree() (*Worktree, error) {
 }
 
 // ResolveRevision resolves revision to corresponding hash.
+//
+// Implemented resolvers : HEAD, branch, tag, heads/branch, refs/heads/branch,
+// refs/tags/tag, refs/remotes/origin/branch, refs/remotes/origin/HEAD, tilde and caret (HEAD~1, master~^, tag~2, ref/heads/master~1, ...), selection by text (HEAD^{/fix nasty bug})
 func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, error) {
 	p := revision.NewParserFromString(string(rev))
 
