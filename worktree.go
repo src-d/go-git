@@ -141,9 +141,9 @@ func (w *Worktree) Checkout(opts *CheckoutOptions) error {
 	}
 
 	if opts.Create {
-		if err := w.createBranch(opts); err != nil {
-			return err
-		}
+		h := plumbing.NewSymbolicReference(plumbing.HEAD, opts.Branch)
+		w.r.Storer.SetReference(h)
+		return nil
 	}
 
 	if !opts.Force {
@@ -165,6 +165,21 @@ func (w *Worktree) Checkout(opts *CheckoutOptions) error {
 	ro := &ResetOptions{Commit: c, Mode: MergeReset}
 	if opts.Force {
 		ro.Mode = HardReset
+	}
+
+	if opts.Create {
+		err := w.createBranch(opts)
+		if err != nil {
+			return err
+		}
+
+		err = w.setHEADToBranch(opts.Branch, c)
+		if err == plumbing.ErrObjectNotFound {
+			fmt.Println("ERRRRRR")
+			return nil
+		} else {
+			return err
+		}
 	}
 
 	if !opts.Hash.IsZero() && !opts.Create {
