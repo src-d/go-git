@@ -140,7 +140,20 @@ func (w *Worktree) Checkout(opts *CheckoutOptions) error {
 	}
 
 	if opts.Create {
-		if err := w.createBranch(opts); err != nil {
+		err := w.createBranch(opts)
+		if err != nil {
+			return err
+		}
+
+		c, err := w.getCommitFromCheckoutOptions(opts)
+		if err != nil {
+			return err
+		}
+
+		err = w.setHEADToBranch(opts.Branch, c)
+		if err == plumbing.ErrObjectNotFound {
+			return nil
+		} else {
 			return err
 		}
 	}
@@ -188,7 +201,7 @@ func (w *Worktree) createBranch(opts *CheckoutOptions) error {
 		return err
 	}
 
-	if err == plumbing.ErrReferenceNotFound && !opts.Create {
+	if err == plumbing.ErrReferenceNotFound {
 		return w.r.Storer.SetReference(
 			plumbing.NewHashReference(opts.Branch, opts.Hash),
 		)
