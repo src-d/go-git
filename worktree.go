@@ -144,11 +144,19 @@ func (w *Worktree) Checkout(opts *CheckoutOptions) error {
 		if err != nil {
 			return err
 		}
+	}
 
-		c, err := w.getCommitFromCheckoutOptions(opts)
-		if err != nil {
-			return err
-		}
+	c, err := w.getCommitFromCheckoutOptions(opts)
+	if err != nil {
+		return err
+	}
+
+	ro := &ResetOptions{Commit: c, Mode: MergeReset}
+	if opts.Force {
+		ro.Mode = HardReset
+	}
+
+	if opts.Create {
 
 		err = w.setHEADToBranch(opts.Branch, c)
 		if err == plumbing.ErrObjectNotFound {
@@ -167,16 +175,6 @@ func (w *Worktree) Checkout(opts *CheckoutOptions) error {
 		if unstaged {
 			return ErrUnstaggedChanges
 		}
-	}
-
-	c, err := w.getCommitFromCheckoutOptions(opts)
-	if err != nil {
-		return err
-	}
-
-	ro := &ResetOptions{Commit: c, Mode: MergeReset}
-	if opts.Force {
-		ro.Mode = HardReset
 	}
 
 	if !opts.Hash.IsZero() && !opts.Create {
