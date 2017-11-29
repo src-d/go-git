@@ -188,6 +188,12 @@ func (w *Worktree) createBranch(opts *CheckoutOptions) error {
 		return err
 	}
 
+	if err == plumbing.ErrReferenceNotFound && !opts.Create {
+		return w.r.Storer.SetReference(
+			plumbing.NewHashReference(opts.Branch, opts.Hash),
+		)
+	}
+
 	if opts.Hash.IsZero() {
 		ref, err := w.r.Head()
 		if err != nil {
