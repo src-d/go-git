@@ -140,9 +140,9 @@ func (w *Worktree) Checkout(opts *CheckoutOptions) error {
 	}
 
 	if opts.Create {
-		h := plumbing.NewSymbolicReference(plumbing.HEAD, opts.Branch)
-		w.r.Storer.SetReference(h)
-		return nil
+		if err := w.createBranch(opts); err != nil {
+			return err
+		}
 	}
 
 	if !opts.Force {
