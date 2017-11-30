@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/src-d/go-git-fixtures"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
@@ -16,7 +15,8 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-billy.v3/osfs"
+	"gopkg.in/src-d/go-billy.v4/osfs"
+	"gopkg.in/src-d/go-git-fixtures.v3"
 )
 
 type RemoteSuite struct {
@@ -176,6 +176,7 @@ func (s *RemoteSuite) testFetch(c *C, r *Remote, o *FetchOptions, expected []*pl
 
 	var refs int
 	l, err := r.s.IterReferences()
+	c.Assert(err, IsNil)
 	l.ForEach(func(r *plumbing.Reference) error { refs++; return nil })
 
 	c.Assert(refs, Equals, len(expected))
@@ -305,6 +306,65 @@ func (s *RemoteSuite) doTestFetchNoErrAlreadyUpToDate(c *C, url string) {
 	c.Assert(err, IsNil)
 	err = r.Fetch(o)
 	c.Assert(err, Equals, NoErrAlreadyUpToDate)
+}
+
+func (s *RemoteSuite) testFetchFastForward(c *C, sto storage.Storer) {
+	r := newRemote(sto, &config.RemoteConfig{
+		URLs: []string{s.GetBasicLocalRepositoryURL()},
+	})
+
+	s.testFetch(c, r, &FetchOptions{
+		RefSpecs: []config.RefSpec{
+			config.RefSpec("+refs/heads/master:refs/heads/master"),
+		},
+	}, []*plumbing.Reference{
+		plumbing.NewReferenceFromStrings("refs/heads/master", "6ecf0ef2c2dffb796033e5a02219af86ec6584e5"),
+	})
+
+	// First make sure that we error correctly when a force is required.
+	err := r.Fetch(&FetchOptions{
+		RefSpecs: []config.RefSpec{
+			config.RefSpec("refs/heads/branch:refs/heads/master"),
+		},
+	})
+	c.Assert(err, Equals, ErrForceNeeded)
+
+	// And that forcing it fixes the problem.
+	err = r.Fetch(&FetchOptions{
+		RefSpecs: []config.RefSpec{
+			config.RefSpec("+refs/heads/branch:refs/heads/master"),
+		},
+	})
+	c.Assert(err, IsNil)
+
+	// Now test that a fast-forward, non-force fetch works.
+	r.s.SetReference(plumbing.NewReferenceFromStrings(
+		"refs/heads/master", "918c48b83bd081e863dbe1b80f8998f058cd8294",
+	))
+	s.testFetch(c, r, &FetchOptions{
+		RefSpecs: []config.RefSpec{
+			config.RefSpec("refs/heads/master:refs/heads/master"),
+		},
+	}, []*plumbing.Reference{
+		plumbing.NewReferenceFromStrings("refs/heads/master", "6ecf0ef2c2dffb796033e5a02219af86ec6584e5"),
+	})
+}
+
+func (s *RemoteSuite) TestFetchFastForwardMem(c *C) {
+	s.testFetchFastForward(c, memory.NewStorage())
+}
+
+func (s *RemoteSuite) TestFetchFastForwardFS(c *C) {
+	dir, err := ioutil.TempDir("", "fetch")
+	c.Assert(err, IsNil)
+
+	defer os.RemoveAll(dir) // clean up
+
+	fss, err := filesystem.NewStorage(osfs.New(dir))
+	c.Assert(err, IsNil)
+
+	// This exercises `storage.filesystem.Storage.CheckAndSetReference()`.
+	s.testFetchFastForward(c, fss)
 }
 
 func (s *RemoteSuite) TestString(c *C) {
@@ -512,6 +572,7 @@ func (s *RemoteSuite) TestPushNewReference(c *C) {
 	server, err := PlainClone(url, true, &CloneOptions{
 		URL: fs.Root(),
 	})
+	c.Assert(err, IsNil)
 
 	r, err := PlainClone(c.MkDir(), true, &CloneOptions{
 		URL: url,
@@ -544,6 +605,7 @@ func (s *RemoteSuite) TestPushNewReferenceAndDeleteInBatch(c *C) {
 	server, err := PlainClone(url, true, &CloneOptions{
 		URL: fs.Root(),
 	})
+	c.Assert(err, IsNil)
 
 	r, err := PlainClone(c.MkDir(), true, &CloneOptions{
 		URL: url,
@@ -625,20 +687,57 @@ func (s *RemoteSuite) TestPushWrongRemoteName(c *C) {
 }
 
 func (s *RemoteSuite) TestGetHaves(c *C) {
-	st := memory.NewStorage()
-	st.SetReference(plumbing.NewReferenceFromStrings(
-		"foo", "f7b877701fbf855b44c0a9e86f3fdce2c298b07f",
-	))
+	f := fixtures.Basic().One()
+	sto, err := filesystem.NewStorage(f.DotGit())
+	c.Assert(err, IsNil)
 
-	st.SetReference(plumbing.NewReferenceFromStrings(
-		"bar", "fe6cb94756faa81e5ed9240f9191b833db5f40ae",
-	))
+	var localRefs = []*plumbing.Reference{
+		plumbing.NewReferenceFromStrings(
+			"foo",
+			"f7b877701fbf855b44c0a9e86f3fdce2c298b07f",
+		),
+		plumbing.NewReferenceFromStrings(
+			"bar",
+			"fe6cb94756faa81e5ed9240f9191b833db5f40ae",
+		),
+		plumbing.NewReferenceFromStrings(
+			"qux",
+			"f7b877701fbf855b44c0a9e86f3fdce2c298b07f",
+		),
+	}
 
-	st.SetReference(plumbing.NewReferenceFromStrings(
-		"qux", "f7b877701fbf855b44c0a9e86f3fdce2c298b07f",
-	))
-
-	l, err := getHaves(st)
+	l, err := getHaves(localRefs, memory.NewStorage(), sto)
 	c.Assert(err, IsNil)
 	c.Assert(l, HasLen, 2)
+}
+
+func (s *RemoteSuite) TestList(c *C) {
+	repo := fixtures.Basic().One()
+	remote := newRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: DefaultRemoteName,
+		URLs: []string{repo.URL},
+	})
+
+	refs, err := remote.List(&ListOptions{})
+	c.Assert(err, IsNil)
+
+	expected := []*plumbing.Reference{
+		plumbing.NewSymbolicReference("HEAD", "refs/heads/master"),
+		plumbing.NewReferenceFromStrings("refs/heads/master", "6ecf0ef2c2dffb796033e5a02219af86ec6584e5"),
+		plumbing.NewReferenceFromStrings("refs/heads/branch", "e8d3ffab552895c19b9fcf7aa264d277cde33881"),
+		plumbing.NewReferenceFromStrings("refs/pull/1/head", "b8e471f58bcbca63b07bda20e428190409c2db47"),
+		plumbing.NewReferenceFromStrings("refs/pull/2/head", "9632f02833b2f9613afb5e75682132b0b22e4a31"),
+		plumbing.NewReferenceFromStrings("refs/pull/2/merge", "c37f58a130ca555e42ff96a071cb9ccb3f437504"),
+	}
+	c.Assert(len(refs), Equals, len(expected))
+	for _, e := range expected {
+		found := false
+		for _, r := range refs {
+			if r.Name() == e.Name() {
+				found = true
+				c.Assert(r, DeepEquals, e)
+			}
+		}
+		c.Assert(found, Equals, true)
+	}
 }

@@ -95,6 +95,9 @@ type PullOptions struct {
 	// stored, if nil nothing is stored and the capability (if supported)
 	// no-progress, is sent to the server to avoid send this information.
 	Progress sideband.Progress
+	// Force allows the pull to update a local branch even when the remote
+	// branch does not descend from it.
+	Force bool
 }
 
 // Validate validates the fields and sets the default values.
@@ -142,6 +145,9 @@ type FetchOptions struct {
 	// Tags describe how the tags will be fetched from the remote repository,
 	// by default is TagFollowing.
 	Tags TagMode
+	// Force allows the fetch to update a local branch even when the remote
+	// branch does not descend from it.
+	Force bool
 }
 
 // Validate validates the fields and sets the default values.
@@ -347,4 +353,10 @@ func (o *CommitOptions) Validate(r *Repository) error {
 	}
 
 	return nil
+}
+
+// ListOptions describes how a remote list should be performed.
+type ListOptions struct {
+	// Auth credentials, if required, to use with the remote repository.
+	Auth transport.AuthMethod
 }

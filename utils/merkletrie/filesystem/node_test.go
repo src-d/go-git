@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-billy.v3"
-	"gopkg.in/src-d/go-billy.v3/memfs"
+	"gopkg.in/src-d/go-billy.v4"
+	"gopkg.in/src-d/go-billy.v4/memfs"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/utils/merkletrie"
 	"gopkg.in/src-d/go-git.v4/utils/merkletrie/noder"
@@ -70,6 +70,42 @@ func (s *NoderSuite) TestDiffChangeContent(c *C) {
 	fsB := memfs.New()
 	WriteFile(fsB, "foo", []byte("foo"), 0644)
 	WriteFile(fsB, "qux/bar", []byte("bar"), 0644)
+	WriteFile(fsB, "qux/qux", []byte("foo"), 0644)
+
+	ch, err := merkletrie.DiffTree(
+		NewRootNode(fsA, nil),
+		NewRootNode(fsB, nil),
+		IsEquals,
+	)
+
+	c.Assert(err, IsNil)
+	c.Assert(ch, HasLen, 1)
+}
+
+func (s *NoderSuite) TestDiffSymlinkDirOnA(c *C) {
+	fsA := memfs.New()
+	WriteFile(fsA, "qux/qux", []byte("foo"), 0644)
+
+	fsB := memfs.New()
+	fsB.Symlink("qux", "foo")
+	WriteFile(fsB, "qux/qux", []byte("foo"), 0644)
+
+	ch, err := merkletrie.DiffTree(
+		NewRootNode(fsA, nil),
+		NewRootNode(fsB, nil),
+		IsEquals,
+	)
+
+	c.Assert(err, IsNil)
+	c.Assert(ch, HasLen, 1)
+}
+
+func (s *NoderSuite) TestDiffSymlinkDirOnB(c *C) {
+	fsA := memfs.New()
+	fsA.Symlink("qux", "foo")
+	WriteFile(fsA, "qux/qux", []byte("foo"), 0644)
+
+	fsB := memfs.New()
 	WriteFile(fsB, "qux/qux", []byte("foo"), 0644)
 
 	ch, err := merkletrie.DiffTree(

@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/src-d/go-billy.v3/util"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
@@ -19,13 +18,14 @@ import (
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 	"gopkg.in/src-d/go-git.v4/utils/merkletrie"
 
-	"gopkg.in/src-d/go-billy.v3"
+	"gopkg.in/src-d/go-billy.v4"
+	"gopkg.in/src-d/go-billy.v4/util"
 )
 
 var (
 	ErrWorktreeNotClean  = errors.New("worktree is not clean")
 	ErrSubmoduleNotFound = errors.New("submodule not found")
-	ErrUnstaggedChanges  = errors.New("worktree contains unstagged changes")
+	ErrUnstagedChanges   = errors.New("worktree contains unstaged changes")
 )
 
 // Worktree represents a git worktree.
@@ -69,6 +69,7 @@ func (w *Worktree) PullContext(ctx context.Context, o *PullOptions) error {
 		Depth:      o.Depth,
 		Auth:       o.Auth,
 		Progress:   o.Progress,
+		Force:      o.Force,
 	})
 
 	updated := true
@@ -159,7 +160,7 @@ func (w *Worktree) Checkout(opts *CheckoutOptions) error {
 		}
 
 		if unstaged {
-			return ErrUnstaggedChanges
+			return ErrUnstagedChanges
 		}
 	}
 
@@ -271,7 +272,7 @@ func (w *Worktree) Reset(opts *ResetOptions) error {
 		}
 
 		if unstaged {
-			return ErrUnstaggedChanges
+			return ErrUnstagedChanges
 		}
 	}
 

@@ -5,15 +5,15 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	stdioutil "io/ioutil"
 	"os"
 	"strings"
-	"time"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 
-	"gopkg.in/src-d/go-billy.v3"
+	"gopkg.in/src-d/go-billy.v4"
 )
 
 const (
@@ -57,16 +57,14 @@ var (
 // The DotGit type represents a local git repository on disk. This
 // type is not zero-value-safe, use the New function to initialize it.
 type DotGit struct {
-	fs                billy.Filesystem
-	cachedPackedRefs  refCache
-	packedRefsLastMod time.Time
+	fs billy.Filesystem
 }
 
 // New returns a DotGit value ready to be used. The path argument must
 // be the absolute path of a git repository directory (e.g.
 // "/foo/bar/.git").
 func New(fs billy.Filesystem) *DotGit {
-	return &DotGit{fs: fs, cachedPackedRefs: make(refCache)}
+	return &DotGit{fs: fs}
 }
 
 // Initialize creates all the folder scaffolding.
@@ -242,7 +240,35 @@ func (d *DotGit) Object(h plumbing.Hash) (billy.File, error) {
 	return d.fs.Open(file)
 }
 
-func (d *DotGit) SetRef(r *plumbing.Reference) error {
+func (d *DotGit) readReferenceFrom(rd io.Reader, name string) (ref *plumbing.Reference, err error) {
+	b, err := stdioutil.ReadAll(rd)
+	if err != nil {
+		return nil, err
+	}
+
+	line := strings.TrimSpace(string(b))
+	return plumbing.NewReferenceFromStrings(name, line), nil
+}
+
+func (d *DotGit) checkReferenceAndTruncate(f billy.File, old *plumbing.Reference) error {
+	if old == nil {
+		return nil
+	}
+	ref, err := d.readReferenceFrom(f, old.Name().String())
+	if err != nil {
+		return err
+	}
+	if ref.Hash() != old.Hash() {
+		return fmt.Errorf("reference has changed concurrently")
+	}
+	_, err = f.Seek(0, io.SeekStart)
+	if err != nil {
+		return err
+	}
+	return f.Truncate(0)
+}
+
+func (d *DotGit) SetRef(r, old *plumbing.Reference) error {
 	var content string
 	switch r.Type() {
 	case plumbing.SymbolicReference:
@@ -251,12 +277,33 @@ func (d *DotGit) SetRef(r *plumbing.Reference) error {
 		content = fmt.Sprintln(r.Hash().String())
 	}
 
-	f, err := d.fs.Create(r.Name().String())
+	// If we are not checking an old ref, just truncate the file.
+	mode := os.O_RDWR | os.O_CREATE
+	if old == nil {
+		mode |= os.O_TRUNC
+	}
+
+	f, err := d.fs.OpenFile(r.Name().String(), mode, 0666)
 	if err != nil {
 		return err
 	}
 
 	defer ioutil.CheckClose(f, &err)
+
+	// Lock is unlocked by the deferred Close above. This is because Unlock
+	// does not imply a fsync and thus there would be a race between
+	// Unlock+Close and other concurrent writers. Adding Sync to go-billy
+	// could work, but this is better (and avoids superfluous syncs).
+	err = f.Lock()
+	if err != nil {
+		return err
+	}
+
+	// this is a no-op to call even when old is nil.
+	err = d.checkReferenceAndTruncate(f, old)
+	if err != nil {
+		return err
+	}
 
 	_, err = f.Write([]byte(content))
 	return err
@@ -292,54 +339,43 @@ func (d *DotGit) Ref(name plumbing.ReferenceName) (*plumbing.Reference, error) {
 	return d.packedRef(name)
 }
 
-func (d *DotGit) syncPackedRefs() error {
-	fi, err := d.fs.Stat(packedRefsPath)
-	if os.IsNotExist(err) {
-		return nil
-	}
-
+func (d *DotGit) findPackedRefs() ([]*plumbing.Reference, error) {
+	f, err := d.fs.Open(packedRefsPath)
 	if err != nil {
-		return err
-	}
-
-	if d.packedRefsLastMod.Before(fi.ModTime()) {
-		d.cachedPackedRefs = make(refCache)
-		f, err := d.fs.Open(packedRefsPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return nil
-			}
-			return err
+		if os.IsNotExist(err) {
+			return nil, nil
 		}
-		defer ioutil.CheckClose(f, &err)
-
-		s := bufio.NewScanner(f)
-		for s.Scan() {
-			ref, err := d.processLine(s.Text())
-			if err != nil {
-				return err
-			}
-
-			if ref != nil {
-				d.cachedPackedRefs[ref.Name()] = ref
-			}
-		}
-
-		d.packedRefsLastMod = fi.ModTime()
-
-		return s.Err()
-	}
-
-	return nil
-}
-
-func (d *DotGit) packedRef(name plumbing.ReferenceName) (*plumbing.Reference, error) {
-	if err := d.syncPackedRefs(); err != nil {
 		return nil, err
 	}
 
-	if ref, ok := d.cachedPackedRefs[name]; ok {
-		return ref, nil
+	defer ioutil.CheckClose(f, &err)
+
+	s := bufio.NewScanner(f)
+	var refs []*plumbing.Reference
+	for s.Scan() {
+		ref, err := d.processLine(s.Text())
+		if err != nil {
+			return nil, err
+		}
+
+		if ref != nil {
+			refs = append(refs, ref)
+		}
+	}
+
+	return refs, s.Err()
+}
+
+func (d *DotGit) packedRef(name plumbing.ReferenceName) (*plumbing.Reference, error) {
+	refs, err := d.findPackedRefs()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, ref := range refs {
+		if ref.Name() == name {
+			return ref, nil
+		}
 	}
 
 	return nil, plumbing.ErrReferenceNotFound
@@ -350,7 +386,8 @@ func (d *DotGit) RemoveRef(name plumbing.ReferenceName) error {
 	path := d.fs.Join(".", name.String())
 	_, err := d.fs.Stat(path)
 	if err == nil {
-		return d.fs.Remove(path)
+		err = d.fs.Remove(path)
+		// Drop down to remove it from the packed refs file, too.
 	}
 
 	if err != nil && !os.IsNotExist(err) {
@@ -361,17 +398,17 @@ func (d *DotGit) RemoveRef(name plumbing.ReferenceName) error {
 }
 
 func (d *DotGit) addRefsFromPackedRefs(refs *[]*plumbing.Reference, seen map[plumbing.ReferenceName]bool) (err error) {
-	if err := d.syncPackedRefs(); err != nil {
+	packedRefs, err := d.findPackedRefs()
+	if err != nil {
 		return err
 	}
 
-	for name, ref := range d.cachedPackedRefs {
-		if !seen[name] {
+	for _, ref := range packedRefs {
+		if !seen[ref.Name()] {
 			*refs = append(*refs, ref)
-			seen[name] = true
+			seen[ref.Name()] = true
 		}
 	}
-
 	return nil
 }
 
@@ -384,6 +421,17 @@ func (d *DotGit) rewritePackedRefsWithoutRef(name plumbing.ReferenceName) (err e
 
 		return err
 	}
+	doCloseF := true
+	defer func() {
+		if doCloseF {
+			ioutil.CheckClose(f, &err)
+		}
+	}()
+
+	err = f.Lock()
+	if err != nil {
+		return err
+	}
 
 	// Creating the temp file in the same directory as the target file
 	// improves our chances for rename operation to be atomic.
@@ -391,6 +439,12 @@ func (d *DotGit) rewritePackedRefsWithoutRef(name plumbing.ReferenceName) (err e
 	if err != nil {
 		return err
 	}
+	doCloseTmp := true
+	defer func() {
+		if doCloseTmp {
+			ioutil.CheckClose(tmp, &err)
+		}
+	}()
 
 	s := bufio.NewScanner(f)
 	found := false
@@ -416,14 +470,21 @@ func (d *DotGit) rewritePackedRefsWithoutRef(name plumbing.ReferenceName) (err e
 	}
 
 	if !found {
-		return nil
+		doCloseTmp = false
+		ioutil.CheckClose(tmp, &err)
+		if err != nil {
+			return err
+		}
+		// Delete the temp file if nothing needed to be removed.
+		return d.fs.Remove(tmp.Name())
 	}
 
+	doCloseF = false
 	if err := f.Close(); err != nil {
-		ioutil.CheckClose(tmp, &err)
 		return err
 	}
 
+	doCloseTmp = false
 	if err := tmp.Close(); err != nil {
 		return err
 	}
@@ -512,13 +573,7 @@ func (d *DotGit) readReferenceFile(path, name string) (ref *plumbing.Reference, 
 	}
 	defer ioutil.CheckClose(f, &err)
 
-	b, err := stdioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	line := strings.TrimSpace(string(b))
-	return plumbing.NewReferenceFromStrings(name, line), nil
+	return d.readReferenceFrom(f, name)
 }
 
 // Module return a billy.Filesystem poiting to the module folder

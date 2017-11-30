@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"golang.org/x/text/unicode/norm"
-
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
@@ -17,11 +15,12 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 
-	"github.com/src-d/go-git-fixtures"
+	"golang.org/x/text/unicode/norm"
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-billy.v3/memfs"
-	"gopkg.in/src-d/go-billy.v3/osfs"
-	"gopkg.in/src-d/go-billy.v3/util"
+	"gopkg.in/src-d/go-billy.v4/memfs"
+	"gopkg.in/src-d/go-billy.v4/osfs"
+	"gopkg.in/src-d/go-billy.v4/util"
+	"gopkg.in/src-d/go-git-fixtures.v3"
 )
 
 type WorktreeSuite struct {
@@ -61,10 +60,12 @@ func (s *WorktreeSuite) TestPullFastForward(c *C) {
 	server, err := PlainClone(url, false, &CloneOptions{
 		URL: path,
 	})
+	c.Assert(err, IsNil)
 
 	r, err := PlainClone(c.MkDir(), false, &CloneOptions{
 		URL: url,
 	})
+	c.Assert(err, IsNil)
 
 	w, err := server.Worktree()
 	c.Assert(err, IsNil)
@@ -91,10 +92,12 @@ func (s *WorktreeSuite) TestPullNonFastForward(c *C) {
 	server, err := PlainClone(url, false, &CloneOptions{
 		URL: path,
 	})
+	c.Assert(err, IsNil)
 
 	r, err := PlainClone(c.MkDir(), false, &CloneOptions{
 		URL: url,
 	})
+	c.Assert(err, IsNil)
 
 	w, err := server.Worktree()
 	c.Assert(err, IsNil)
@@ -213,6 +216,7 @@ func (s *WorktreeSuite) TestPullProgressWithRecursion(c *C) {
 	c.Assert(err, IsNil)
 
 	cfg, err := r.Config()
+	c.Assert(err, IsNil)
 	c.Assert(cfg.Submodules, HasLen, 2)
 }
 
@@ -307,6 +311,7 @@ func (s *WorktreeSuite) TestCheckoutSymlink(c *C) {
 	}
 
 	dir, err := ioutil.TempDir("", "checkout")
+	c.Assert(err, IsNil)
 	defer os.RemoveAll(dir)
 
 	r, err := PlainInit(dir, false)
@@ -345,6 +350,7 @@ func (s *WorktreeSuite) TestFilenameNormalization(c *C) {
 	server, err := PlainClone(url, false, &CloneOptions{
 		URL: path,
 	})
+	c.Assert(err, IsNil)
 
 	filename := "페"
 
@@ -359,6 +365,7 @@ func (s *WorktreeSuite) TestFilenameNormalization(c *C) {
 	r, err := Clone(memory.NewStorage(), memfs.New(), &CloneOptions{
 		URL: url,
 	})
+	c.Assert(err, IsNil)
 
 	w, err = r.Worktree()
 	c.Assert(err, IsNil)
@@ -372,7 +379,11 @@ func (s *WorktreeSuite) TestFilenameNormalization(c *C) {
 
 	modFilename := norm.Form(norm.NFKD).String(filename)
 	util.WriteFile(w.Filesystem, modFilename, []byte("foo"), 0755)
+
 	_, err = w.Add(filename)
+	c.Assert(err, IsNil)
+	_, err = w.Add(modFilename)
+	c.Assert(err, IsNil)
 
 	status, err = w.Status()
 	c.Assert(err, IsNil)
@@ -441,6 +452,7 @@ func (s *WorktreeSuite) TestCheckoutIndexMem(c *C) {
 
 func (s *WorktreeSuite) TestCheckoutIndexOS(c *C) {
 	dir, err := ioutil.TempDir("", "checkout")
+	c.Assert(err, IsNil)
 	defer os.RemoveAll(dir)
 
 	fs := osfs.New(filepath.Join(dir, "worktree"))
@@ -809,7 +821,7 @@ func (s *WorktreeSuite) TestResetMerge(c *C) {
 	c.Assert(err, IsNil)
 
 	err = w.Reset(&ResetOptions{Mode: MergeReset, Commit: commitB})
-	c.Assert(err, Equals, ErrUnstaggedChanges)
+	c.Assert(err, Equals, ErrUnstagedChanges)
 
 	branch, err = w.r.Reference(plumbing.Master, false)
 	c.Assert(err, IsNil)
@@ -861,6 +873,7 @@ func (s *WorktreeSuite) TestStatusAfterCheckout(c *C) {
 
 func (s *WorktreeSuite) TestStatusModified(c *C) {
 	dir, err := ioutil.TempDir("", "status")
+	c.Assert(err, IsNil)
 	defer os.RemoveAll(dir)
 
 	fs := osfs.New(filepath.Join(dir, "worktree"))
@@ -954,6 +967,7 @@ func (s *WorktreeSuite) TestStatusUntracked(c *C) {
 
 func (s *WorktreeSuite) TestStatusDeleted(c *C) {
 	dir, err := ioutil.TempDir("", "status")
+	c.Assert(err, IsNil)
 	defer os.RemoveAll(dir)
 
 	fs := osfs.New(filepath.Join(dir, "worktree"))
@@ -1102,6 +1116,7 @@ func (s *WorktreeSuite) TestAddUnmodified(c *C) {
 
 func (s *WorktreeSuite) TestAddSymlink(c *C) {
 	dir, err := ioutil.TempDir("", "checkout")
+	c.Assert(err, IsNil)
 	defer os.RemoveAll(dir)
 
 	r, err := PlainInit(dir, false)

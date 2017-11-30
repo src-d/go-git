@@ -43,7 +43,7 @@ func NewClient(loader Loader) transport.Transport {
 	}
 }
 
-func (s *server) NewUploadPackSession(ep transport.Endpoint, auth transport.AuthMethod) (transport.UploadPackSession, error) {
+func (s *server) NewUploadPackSession(ep *transport.Endpoint, auth transport.AuthMethod) (transport.UploadPackSession, error) {
 	sto, err := s.loader.Load(ep)
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (s *server) NewUploadPackSession(ep transport.Endpoint, auth transport.Auth
 	return s.handler.NewUploadPackSession(sto)
 }
 
-func (s *server) NewReceivePackSession(ep transport.Endpoint, auth transport.AuthMethod) (transport.ReceivePackSession, error) {
+func (s *server) NewReceivePackSession(ep *transport.Endpoint, auth transport.AuthMethod) (transport.ReceivePackSession, error) {
 	sto, err := s.loader.Load(ep)
 	if err != nil {
 		return nil, err
@@ -165,7 +165,8 @@ func (s *upSession) UploadPack(ctx context.Context, req *packp.UploadPackRequest
 	pr, pw := io.Pipe()
 	e := packfile.NewEncoder(pw, s.storer, false)
 	go func() {
-		_, err := e.Encode(objs)
+		// TODO: plumb through a pack window.
+		_, err := e.Encode(objs, 10)
 		pw.CloseWithError(err)
 	}()
 

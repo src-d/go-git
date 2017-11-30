@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/src-d/go-git-fixtures"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-billy.v3/osfs"
+	"gopkg.in/src-d/go-billy.v4/osfs"
+	"gopkg.in/src-d/go-git-fixtures.v3"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -55,24 +55,25 @@ func (s *SuiteDotGit) TestSetRefs(c *C) {
 	fs := osfs.New(tmp)
 	dir := New(fs)
 
-	err = dir.SetRef(plumbing.NewReferenceFromStrings(
+	firstFoo := plumbing.NewReferenceFromStrings(
 		"refs/heads/foo",
 		"e8d3ffab552895c19b9fcf7aa264d277cde33881",
-	))
+	)
+	err = dir.SetRef(firstFoo, nil)
 
 	c.Assert(err, IsNil)
 
 	err = dir.SetRef(plumbing.NewReferenceFromStrings(
 		"refs/heads/symbolic",
 		"ref: refs/heads/foo",
-	))
+	), nil)
 
 	c.Assert(err, IsNil)
 
 	err = dir.SetRef(plumbing.NewReferenceFromStrings(
 		"bar",
 		"e8d3ffab552895c19b9fcf7aa264d277cde33881",
-	))
+	), nil)
 	c.Assert(err, IsNil)
 
 	refs, err := dir.Refs()
@@ -105,6 +106,20 @@ func (s *SuiteDotGit) TestSetRefs(c *C) {
 	c.Assert(ref, NotNil)
 	c.Assert(ref.Hash().String(), Equals, "e8d3ffab552895c19b9fcf7aa264d277cde33881")
 
+	// Check that SetRef with a non-nil `old` works.
+	err = dir.SetRef(plumbing.NewReferenceFromStrings(
+		"refs/heads/foo",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5",
+	), firstFoo)
+	c.Assert(err, IsNil)
+
+	// `firstFoo` is no longer the right `old` reference, so this
+	// should fail.
+	err = dir.SetRef(plumbing.NewReferenceFromStrings(
+		"refs/heads/foo",
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5",
+	), firstFoo)
+	c.Assert(err, NotNil)
 }
 
 func (s *SuiteDotGit) TestRefsFromPackedRefs(c *C) {
@@ -182,6 +197,46 @@ func (s *SuiteDotGit) TestRemoveRefFromPackedRefs(c *C) {
 		"# pack-refs with: peeled fully-peeled \n"+
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 refs/heads/master\n"+
 		"e8d3ffab552895c19b9fcf7aa264d277cde33881 refs/remotes/origin/branch\n")
+}
+
+func (s *SuiteDotGit) TestRemoveRefFromReferenceFileAndPackedRefs(c *C) {
+	fs := fixtures.Basic().ByTag(".git").One().DotGit()
+	dir := New(fs)
+
+	// Make a ref file for a ref that's already in `packed-refs`.
+	err := dir.SetRef(plumbing.NewReferenceFromStrings(
+		"refs/remotes/origin/branch",
+		"e8d3ffab552895c19b9fcf7aa264d277cde33881",
+	), nil)
+
+	// Make sure it only appears once in the refs list.
+	refs, err := dir.Refs()
+	c.Assert(err, IsNil)
+	found := false
+	for _, ref := range refs {
+		if ref.Name() == "refs/remotes/origin/branch" {
+			c.Assert(found, Equals, false)
+			found = true
+		}
+	}
+
+	name := plumbing.ReferenceName("refs/remotes/origin/branch")
+	err = dir.RemoveRef(name)
+	c.Assert(err, IsNil)
+
+	b, err := ioutil.ReadFile(filepath.Join(fs.Root(), packedRefsPath))
+	c.Assert(err, IsNil)
+
+	c.Assert(string(b), Equals, ""+
+		"# pack-refs with: peeled fully-peeled \n"+
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 refs/heads/master\n"+
+		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5 refs/remotes/origin/master\n")
+
+	refs, err = dir.Refs()
+	c.Assert(err, IsNil)
+
+	ref := findReference(refs, string(name))
+	c.Assert(ref, IsNil)
 }
 
 func (s *SuiteDotGit) TestRemoveRefNonExistent(c *C) {
@@ -418,6 +473,7 @@ func (s *SuiteDotGit) TestNewObject(c *C) {
 	c.Assert(err, IsNil)
 
 	err = w.WriteHeader(plumbing.BlobObject, 14)
+	c.Assert(err, IsNil)
 	n, err := w.Write([]byte("this is a test"))
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 14)

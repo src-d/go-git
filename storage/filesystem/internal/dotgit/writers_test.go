@@ -8,12 +8,12 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/src-d/go-git-fixtures"
-
-	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-billy.v3/osfs"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
+
+	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-billy.v4/osfs"
+	"gopkg.in/src-d/go-git-fixtures.v3"
 )
 
 func (s *SuiteDotGit) TestNewObjectPack(c *C) {
@@ -85,6 +85,7 @@ func (s *SuiteDotGit) TestNewObjectPackUnused(c *C) {
 
 	// check clean up of temporary files
 	info, err = fs.ReadDir("")
+	c.Assert(err, IsNil)
 	for _, fi := range info {
 		c.Assert(fi.IsDir(), Equals, true)
 	}

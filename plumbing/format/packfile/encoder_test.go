@@ -3,11 +3,11 @@ package packfile
 import (
 	"bytes"
 
-	"github.com/src-d/go-git-fixtures"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git-fixtures.v3"
 )
 
 type EncoderSuite struct {
@@ -26,7 +26,7 @@ func (s *EncoderSuite) SetUpTest(c *C) {
 }
 
 func (s *EncoderSuite) TestCorrectPackHeader(c *C) {
-	hash, err := s.enc.Encode([]plumbing.Hash{})
+	hash, err := s.enc.Encode([]plumbing.Hash{}, 10)
 	c.Assert(err, IsNil)
 
 	hb := [20]byte(hash)
@@ -47,7 +47,7 @@ func (s *EncoderSuite) TestCorrectPackWithOneEmptyObject(c *C) {
 	_, err := s.store.SetEncodedObject(o)
 	c.Assert(err, IsNil)
 
-	hash, err := s.enc.Encode([]plumbing.Hash{o.Hash()})
+	hash, err := s.enc.Encode([]plumbing.Hash{o.Hash()}, 10)
 	c.Assert(err, IsNil)
 
 	// PACK + VERSION(2) + OBJECT NUMBER(1)
@@ -74,13 +74,13 @@ func (s *EncoderSuite) TestMaxObjectSize(c *C) {
 	o.SetType(plumbing.CommitObject)
 	_, err := s.store.SetEncodedObject(o)
 	c.Assert(err, IsNil)
-	hash, err := s.enc.Encode([]plumbing.Hash{o.Hash()})
+	hash, err := s.enc.Encode([]plumbing.Hash{o.Hash()}, 10)
 	c.Assert(err, IsNil)
 	c.Assert(hash.IsZero(), Not(Equals), true)
 }
 
 func (s *EncoderSuite) TestHashNotFound(c *C) {
-	h, err := s.enc.Encode([]plumbing.Hash{plumbing.NewHash("BAD")})
+	h, err := s.enc.Encode([]plumbing.Hash{plumbing.NewHash("BAD")}, 10)
 	c.Assert(h, Equals, plumbing.ZeroHash)
 	c.Assert(err, NotNil)
 	c.Assert(err, Equals, plumbing.ErrObjectNotFound)

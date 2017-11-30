@@ -18,13 +18,13 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 
-	"gopkg.in/src-d/go-billy.v3"
-	"gopkg.in/src-d/go-billy.v3/osfs"
+	"gopkg.in/src-d/go-billy.v4"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 )
 
 var (
 	ErrInvalidReference        = errors.New("invalid reference, should be a tag or a branch")
-	ErrRepositoryNotExists     = errors.New("repository not exists")
+	ErrRepositoryNotExists     = errors.New("repository does not exist")
 	ErrRepositoryAlreadyExists = errors.New("repository already exists")
 	ErrRemoteNotFound          = errors.New("remote not found")
 	ErrRemoteExists            = errors.New("remote already exists	")
@@ -323,7 +323,7 @@ func newRepository(s storage.Storer, worktree billy.Filesystem) *Repository {
 	return &Repository{
 		Storer: s,
 		wt:     worktree,
-		r:      make(map[string]*Remote, 0),
+		r:      make(map[string]*Remote),
 	}
 }
 
@@ -625,9 +625,9 @@ func (r *Repository) calculateRemoteHeadReference(spec []config.RefSpec,
 	return refs
 }
 
-func updateReferenceStorerIfNeeded(
-	s storer.ReferenceStorer, r *plumbing.Reference) (updated bool, err error) {
-
+func checkAndUpdateReferenceStorerIfNeeded(
+	s storer.ReferenceStorer, r, old *plumbing.Reference) (
+	updated bool, err error) {
 	p, err := s.Reference(r.Name())
 	if err != nil && err != plumbing.ErrReferenceNotFound {
 		return false, err
@@ -635,7 +635,7 @@ func updateReferenceStorerIfNeeded(
 
 	// we use the string method to compare references, is the easiest way
 	if err == plumbing.ErrReferenceNotFound || r.String() != p.String() {
-		if err := s.SetReference(r); err != nil {
+		if err := s.CheckAndSetReference(r, old); err != nil {
 			return false, err
 		}
 
@@ -643,6 +643,11 @@ func updateReferenceStorerIfNeeded(
 	}
 
 	return false, nil
+}
+
+func updateReferenceStorerIfNeeded(
+	s storer.ReferenceStorer, r *plumbing.Reference) (updated bool, err error) {
+	return checkAndUpdateReferenceStorerIfNeeded(s, r, nil)
 }
 
 // Fetch fetches references along with the objects necessary to complete
@@ -720,7 +725,7 @@ func (r *Repository) Log(o *LogOptions) (object.CommitIter, error) {
 		return nil, err
 	}
 
-	return object.NewCommitPreorderIter(commit, nil), nil
+	return object.NewCommitPreorderIter(commit, nil, nil), nil
 }
 
 // Tags returns all the References from Tags. This method returns all the tag
@@ -949,7 +954,7 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 				commit = c
 			}
 		case revision.CaretReg:
-			history := object.NewCommitPreorderIter(commit, nil)
+			history := object.NewCommitPreorderIter(commit, nil, nil)
 
 			re := item.(revision.CaretReg).Regexp
 			negate := item.(revision.CaretReg).Negate
@@ -979,7 +984,7 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 
 			commit = c
 		case revision.AtDate:
-			history := object.NewCommitPreorderIter(commit, nil)
+			history := object.NewCommitPreorderIter(commit, nil, nil)
 
 			date := item.(revision.AtDate).Date
 
