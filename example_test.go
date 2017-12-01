@@ -85,36 +85,6 @@ func ExampleRepository_References() {
 
 }
 
-func ExampleRepository_ResolveRevision() {
-	r, _ := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL: "https://github.com/git-fixtures/basic.git",
-	})
-
-	// Resolve revision to their corresponding sha
-	revisions := []string {
-		"master~1",
-		"HEAD~2^^~",
-		"HEAD~2^{/binary file}",
-		"refs/heads/master~2^^~",
-	}
-
-	for _, revision := range revisions {
-		h, err := r.ResolveRevision(plumbing.Revision(revision))
-
-		if err != nil {
-			log.Fatalf("%s : %s", revision, err)
-		}
-
-		fmt.Printf("%s  %s\n", h.String(), revision)
-	}
-
-	// Output:
-	// 918c48b83bd081e863dbe1b80f8998f058cd8294  master~1
-	// b029517f6300c2da0f4b651b8642506cd6aaf45d  HEAD~2^^~
-	// 35e85108805c84807bc66a02d91535e1e24b38b9  HEAD~2^{/binary file}
-	// b029517f6300c2da0f4b651b8642506cd6aaf45d  refs/heads/master~2^^~
-}
-
 func ExampleRepository_CreateRemote() {
 	r, _ := git.Init(memory.NewStorage(), nil)
 
