@@ -911,14 +911,7 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 			revisionRef := item.(revision.Ref)
 			var ref *plumbing.Reference
 
-			for _, rule := range []string{
-				"%s",
-				"refs/%s",
-				"refs/tags/%s",
-				"refs/heads/%s",
-				"refs/remotes/%s",
-				"refs/remotes/%s/HEAD",
-			} {
+			for _, rule := range append(plumbing.RefRevParseRules, "%s") {
 				ref, err = storer.ResolveReference(r.Storer, plumbing.ReferenceName(fmt.Sprintf(rule, revisionRef)))
 
 				if err == nil {
