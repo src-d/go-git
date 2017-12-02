@@ -634,11 +634,20 @@ func (s *SuiteDotGit) TestAlternates(c *C) {
 	f, err := fs.Create(altpath)
 	c.Assert(err, IsNil)
 
-	content := []byte("/Users/username/rep1//.git/objects")
+	// Multiple alternates.
+	content := []byte("/Users/username/rep1//.git/objects\n../../../rep2//.git/objects")
 	f.Write(content)
 	f.Close()
 
-	alt, err := dir.Alternates()
+	dotgits, err := dir.Alternates()
 	c.Assert(err, IsNil)
-	c.Assert(alt, Equals, "/Users/username/rep1//.git/objects")
+	c.Assert(dotgits[0].fs.Root(), Equals, "/Users/username/rep1/.git")
+
+	// For relative path:
+	// /some/absolute/path/to/dot-git -> /some/absolute/path
+	pathx := strings.Split(tmp, "/")
+	pathx = pathx[:len(pathx)-2]
+	resolvedPath := filepath.Join(pathx...)
+	// Append the alternate path to the resolvedPath
+	c.Assert(dotgits[1].fs.Root(), Equals, filepath.Join("/", resolvedPath, "rep2", ".git"))
 }

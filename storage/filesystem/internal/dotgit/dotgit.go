@@ -3,15 +3,16 @@ package dotgit
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	stdioutil "io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"gopkg.in/src-d/go-billy.v4/osfs"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 
@@ -762,22 +763,41 @@ func (d *DotGit) Module(name string) (billy.Filesystem, error) {
 	return d.fs.Chroot(d.fs.Join(modulePath, name))
 }
 
-// Alternates returns the content of objects/info/alternates if available.
-// This can be used to checks if it's a shared repository.
-func (d *DotGit) Alternates() (string, error) {
+// Alternates returns DotGit(s) based off paths in objects/info/alternates if
+// available. This can be used to checks if it's a shared repository.
+func (d *DotGit) Alternates() ([]*DotGit, error) {
 	altpath := d.fs.Join("objects", "info", "alternates")
 	f, err := d.fs.Open(altpath)
-	if os.IsNotExist(err) {
-		return "", err
-	}
-
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(f)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	defer f.Close()
+
+	var alternates []*DotGit
+
+	// Read alternate paths line-by-line and create DotGit objects.
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		path := scanner.Text()
+		if !filepath.IsAbs(path) {
+			// If the path is not absolute, it must be relative to object
+			// database (.git/objects/info).
+			// https://www.kernel.org/pub/software/scm/git/docs/gitrepository-layout.html
+			// Hence, derive a path relative to DotGit's root.
+			// "../../../reponame/.git/" -> "../../reponame/.git"
+			// Remove the first ../
+			relpath := filepath.Join(strings.Split(path, "/")[1:]...)
+			path = filepath.Join(d.fs.Root(), relpath)
+		}
+		fs := osfs.New(filepath.Dir(path))
+		alternates = append(alternates, New(fs))
 	}
 
-	return buf.String(), nil
+	if err = scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return alternates, nil
 }
 
 func isHex(s string) bool {

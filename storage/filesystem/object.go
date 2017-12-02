@@ -3,7 +3,6 @@ package filesystem
 import (
 	"io"
 	"os"
-	"path/filepath"
 	"time"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -17,7 +16,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 
 	"gopkg.in/src-d/go-billy.v4"
-	"gopkg.in/src-d/go-billy.v4/osfs"
 )
 
 const DefaultMaxDeltaBaseCacheSize = 92 * cache.MiByte
@@ -165,17 +163,21 @@ func (s *ObjectStorage) EncodedObject(t plumbing.ObjectType, h plumbing.Hash) (p
 	// If the error is still object not found, check if it's a shared object
 	// repository.
 	if err == plumbing.ErrObjectNotFound {
-		alt, e := s.dir.Alternates()
+		dotgits, e := s.dir.Alternates()
 		if e == nil {
-			// Create a new object storage pointing to the path in the
-			// alternates file.
-			fs := osfs.New(filepath.Dir(alt))
-			dir := dotgit.New(fs)
-			o, oe := newObjectStorage(dir)
-			if oe != nil {
-				return nil, oe
+			// Create a new object storage with the DotGit(s) and check for the
+			// required hash object. Skip when not found.
+			for _, dg := range dotgits {
+				o, oe := newObjectStorage(dg)
+				if oe != nil {
+					continue
+				}
+				enobj, enerr := o.EncodedObject(t, h)
+				if enerr != nil {
+					continue
+				}
+				return enobj, nil
 			}
-			return o.EncodedObject(t, h)
 		}
 	}
 
