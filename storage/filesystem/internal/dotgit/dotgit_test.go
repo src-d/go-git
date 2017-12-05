@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -635,19 +636,35 @@ func (s *SuiteDotGit) TestAlternates(c *C) {
 	c.Assert(err, IsNil)
 
 	// Multiple alternates.
-	content := []byte("/Users/username/rep1//.git/objects\n../../../rep2//.git/objects")
+	var strContent string
+	if runtime.GOOS == "windows" {
+		strContent = "C:\\Users\\username\\repo1\\.git\\objects\r\n..\\..\\..\\rep2\\.git\\objects"
+	} else {
+		strContent = "/Users/username/rep1//.git/objects\n../../../rep2//.git/objects"
+	}
+	content := []byte(strContent)
 	f.Write(content)
 	f.Close()
 
 	dotgits, err := dir.Alternates()
 	c.Assert(err, IsNil)
-	c.Assert(dotgits[0].fs.Root(), Equals, "/Users/username/rep1/.git")
+	if runtime.GOOS == "windows" {
+		c.Assert(dotgits[0].fs.Root(), Equals, "C:\\Users\\username\\repo1\\.git")
+	} else {
+		c.Assert(dotgits[0].fs.Root(), Equals, "/Users/username/rep1/.git")
+	}
 
 	// For relative path:
 	// /some/absolute/path/to/dot-git -> /some/absolute/path
-	pathx := strings.Split(tmp, "/")
+	pathx := strings.Split(tmp, string(filepath.Separator))
 	pathx = pathx[:len(pathx)-2]
-	resolvedPath := filepath.Join(pathx...)
+	// Use string.Join() to avoid malformed absolutepath on windows
+	// C:Users\\User\\... instead of C:\\Users\\appveyor\\... .
+	resolvedPath := strings.Join(pathx, string(filepath.Separator))
 	// Append the alternate path to the resolvedPath
-	c.Assert(dotgits[1].fs.Root(), Equals, filepath.Join("/", resolvedPath, "rep2", ".git"))
+	expectedPath := filepath.Join(string(filepath.Separator), resolvedPath, "rep2", ".git")
+	if runtime.GOOS == "windows" {
+		expectedPath = filepath.Join(resolvedPath, "rep2", ".git")
+	}
+	c.Assert(dotgits[1].fs.Root(), Equals, expectedPath)
 }

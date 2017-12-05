@@ -780,14 +780,18 @@ func (d *DotGit) Alternates() ([]*DotGit, error) {
 	for scanner.Scan() {
 		path := scanner.Text()
 		if !filepath.IsAbs(path) {
+			// For relative paths, we can perform an internal conversion to
+			// slash so that they work cross-platform.
+			slashPath := filepath.ToSlash(path)
 			// If the path is not absolute, it must be relative to object
 			// database (.git/objects/info).
 			// https://www.kernel.org/pub/software/scm/git/docs/gitrepository-layout.html
 			// Hence, derive a path relative to DotGit's root.
 			// "../../../reponame/.git/" -> "../../reponame/.git"
 			// Remove the first ../
-			relpath := filepath.Join(strings.Split(path, "/")[1:]...)
-			path = filepath.Join(d.fs.Root(), relpath)
+			relpath := filepath.Join(strings.Split(slashPath, "/")[1:]...)
+			normalPath := filepath.FromSlash(relpath)
+			path = filepath.Join(d.fs.Root(), normalPath)
 		}
 		fs := osfs.New(filepath.Dir(path))
 		alternates = append(alternates, New(fs))
