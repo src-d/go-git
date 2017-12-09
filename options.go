@@ -365,3 +365,42 @@ type ListOptions struct {
 type CleanOptions struct {
 	Dir bool
 }
+
+// GrepOptions describes how a grep should be performed.
+type GrepOptions struct {
+	// Pattern is the match pattern.
+	Pattern string
+	// IgnoreCase enables case insensitive match.
+	IgnoreCase bool
+	// InvertMatch selects non-matching lines.
+	InvertMatch bool
+	// CommitHash is the hash of the commit from which worktree should be derived.
+	CommitHash plumbing.Hash
+	// ReferenceName is the branch or tag name from which worktree should be derived.
+	ReferenceName plumbing.ReferenceName
+	// PathSpec is the pathspec to use for matching.
+	PathSpec string
+}
+
+var (
+	ErrHashOrReference = errors.New("ambiguous options, only one of CommitHash or ReferenceName can be passed")
+)
+
+// Validate validates the fields and sets the default values.
+func (o *GrepOptions) Validate(w *Worktree) error {
+	if !o.CommitHash.IsZero() && o.ReferenceName != "" {
+		return ErrHashOrReference
+	}
+
+	// If none of CommitHash and ReferenceName are provided, set commit hash of
+	// the repository's head.
+	if o.CommitHash.IsZero() && o.ReferenceName == "" {
+		ref, err := w.r.Head()
+		if err != nil {
+			return err
+		}
+		o.CommitHash = ref.Hash()
+	}
+
+	return nil
+}
