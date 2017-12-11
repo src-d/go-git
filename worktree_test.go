@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 
 	"gopkg.in/src-d/go-git.v4/config"
@@ -1329,7 +1330,7 @@ func (s *WorktreeSuite) TestGrep(c *C) {
 		{
 			name: "basic word match",
 			options: GrepOptions{
-				Pattern: "import",
+				Pattern: regexp.MustCompile("import"),
 			},
 			wantResult: []GrepResult{
 				{
@@ -1345,12 +1346,10 @@ func (s *WorktreeSuite) TestGrep(c *C) {
 					TreeName:   "6ecf0ef2c2dffb796033e5a02219af86ec6584e5",
 				},
 			},
-		},
-		{
-			name: "ignore case match",
+		}, {
+			name: "case insensitive match",
 			options: GrepOptions{
-				Pattern:    "IMport",
-				IgnoreCase: true,
+				Pattern: regexp.MustCompile(`(?i)IMport`),
 			},
 			wantResult: []GrepResult{
 				{
@@ -1366,11 +1365,10 @@ func (s *WorktreeSuite) TestGrep(c *C) {
 					TreeName:   "6ecf0ef2c2dffb796033e5a02219af86ec6584e5",
 				},
 			},
-		},
-		{
+		}, {
 			name: "invert match",
 			options: GrepOptions{
-				Pattern:     "import",
+				Pattern:     regexp.MustCompile("import"),
 				InvertMatch: true,
 			},
 			dontWantResult: []GrepResult{
@@ -1387,11 +1385,10 @@ func (s *WorktreeSuite) TestGrep(c *C) {
 					TreeName:   "6ecf0ef2c2dffb796033e5a02219af86ec6584e5",
 				},
 			},
-		},
-		{
+		}, {
 			name: "match at a given commit hash",
 			options: GrepOptions{
-				Pattern:    "The MIT License",
+				Pattern:    regexp.MustCompile("The MIT License"),
 				CommitHash: plumbing.NewHash("b029517f6300c2da0f4b651b8642506cd6aaf45d"),
 			},
 			wantResult: []GrepResult{
@@ -1410,12 +1407,11 @@ func (s *WorktreeSuite) TestGrep(c *C) {
 					TreeName:   "6ecf0ef2c2dffb796033e5a02219af86ec6584e5",
 				},
 			},
-		},
-		{
+		}, {
 			name: "match for a given pathspec",
 			options: GrepOptions{
-				Pattern:  "import",
-				PathSpec: "go/",
+				Pattern:  regexp.MustCompile("import"),
+				PathSpec: regexp.MustCompile("go/"),
 			},
 			wantResult: []GrepResult{
 				{
@@ -1433,11 +1429,10 @@ func (s *WorktreeSuite) TestGrep(c *C) {
 					TreeName:   "6ecf0ef2c2dffb796033e5a02219af86ec6584e5",
 				},
 			},
-		},
-		{
+		}, {
 			name: "match at a given reference name",
 			options: GrepOptions{
-				Pattern:       "import",
+				Pattern:       regexp.MustCompile("import"),
 				ReferenceName: "refs/heads/master",
 			},
 			wantResult: []GrepResult{
@@ -1448,11 +1443,10 @@ func (s *WorktreeSuite) TestGrep(c *C) {
 					TreeName:   "refs/heads/master",
 				},
 			},
-		},
-		{
+		}, {
 			name: "ambiguous options",
 			options: GrepOptions{
-				Pattern:       "import",
+				Pattern:       regexp.MustCompile("import"),
 				CommitHash:    plumbing.NewHash("2d55a722f3c3ecc36da919dfd8b6de38352f3507"),
 				ReferenceName: "somereferencename",
 			},

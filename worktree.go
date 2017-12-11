@@ -8,7 +8,6 @@ import (
 	stdioutil "io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/config"
@@ -753,8 +752,6 @@ func (w *Worktree) Grep(opts *GrepOptions) ([]GrepResult, error) {
 		treeName = opts.CommitHash.String()
 	}
 
-	var results []GrepResult
-
 	// Obtain a tree from the commit hash and get a tracked files iterator from
 	// the tree.
 	tree, err := w.getTreeFromCommitHash(commitHash)
@@ -763,30 +760,19 @@ func (w *Worktree) Grep(opts *GrepOptions) ([]GrepResult, error) {
 	}
 	fileiter := tree.Files()
 
-	// Create a Regexp object using the provided Pattern.
-	reg, err := regexp.Compile(opts.Pattern)
-	if err != nil {
-		return nil, err
-	}
+	return findMatchInFiles(fileiter, treeName, opts)
+}
 
-	// Create a case insensitive Regexp object if IgnoreCase is enabled.
-	if opts.IgnoreCase {
-		reg, err = regexp.Compile("(?i)" + opts.Pattern)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Create a Regexp object using the PathSpec.
-	regPathSpec, err := regexp.Compile(opts.PathSpec)
-	if err != nil {
-		return nil, err
-	}
+// findMatchInFiles takes a FileIter, worktree name and GrepOptions, and
+// returns a slice of GrepResult containing the result of regex pattern matching
+// in the file content.
+func findMatchInFiles(fileiter *object.FileIter, treeName string, opts *GrepOptions) ([]GrepResult, error) {
+	var results []GrepResult
 
 	// Iterate through the files and look for any matches.
-	err = fileiter.ForEach(func(file *object.File) error {
+	err := fileiter.ForEach(func(file *object.File) error {
 		// Check if the file name matches with the pathspec.
-		if !regPathSpec.MatchString(file.Name) {
+		if opts.PathSpec != nil && !opts.PathSpec.MatchString(file.Name) {
 			return nil
 		}
 
@@ -800,7 +786,7 @@ func (w *Worktree) Grep(opts *GrepOptions) ([]GrepResult, error) {
 		for lineNum, cnt := range contentByLine {
 			addToResult := false
 			// Match the pattern and content.
-			if reg.MatchString(cnt) {
+			if opts.Pattern != nil && opts.Pattern.MatchString(cnt) {
 				// Add to result only if invert match is not enabled.
 				if !opts.InvertMatch {
 					addToResult = true
