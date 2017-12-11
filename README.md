@@ -1,4 +1,5 @@
 # go-git [![GoDoc](https://godoc.org/gopkg.in/src-d/go-git.v4?status.svg)](https://godoc.org/github.com/src-d/go-git) [![Build Status](https://travis-ci.org/src-d/go-git.svg)](https://travis-ci.org/src-d/go-git) [![Build status](https://ci.appveyor.com/api/projects/status/nyidskwifo4py6ub?svg=true)](https://ci.appveyor.com/project/mcuadros/go-git) [![codecov.io](https://codecov.io/github/src-d/go-git/coverage.svg)](https://codecov.io/github/src-d/go-git) [![codebeat badge](https://codebeat.co/badges/b6cb2f73-9e54-483d-89f9-4b95a911f40c)](https://codebeat.co/projects/github-com-src-d-go-git)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fsrc-d%2Fgo-git.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fsrc-d%2Fgo-git?ref=badge_shield)
 
 A highly extensible git implementation in **pure Go**.
 
@@ -125,3 +126,7 @@ License
 -------
 
 MIT, see [LICENSE](LICENSE)
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fsrc-d%2Fgo-git.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fsrc-d%2Fgo-git?ref=badge_large)
