@@ -222,10 +222,16 @@ func (dw *deltaSelector) walk(
 ) error {
 	indexMap := make(map[plumbing.Hash]*deltaIndex)
 	for i := 0; i < len(objectsToPack); i++ {
-		// Clean up the index map for anything outside our pack
-		// window, to save memory.
+		// Clean up the index map and reconstructed delta objects for anything
+		// outside our pack window, to save memory.
 		if i > int(packWindow) {
-			delete(indexMap, objectsToPack[i-int(packWindow)].Hash())
+			obj := objectsToPack[i-int(packWindow)]
+
+			delete(indexMap, obj.Hash())
+
+			if obj.IsDelta() {
+				obj.Original = nil
+			}
 		}
 
 		target := objectsToPack[i]
