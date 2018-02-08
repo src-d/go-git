@@ -155,7 +155,7 @@ func (s *UploadPackSuite) TestUploadPackWithContextOnRead(c *C) {
 	cancel()
 
 	_, err = io.Copy(ioutil.Discard, reader)
-	c.Assert(err, NotNil)
+	c.Assert(err, IsNil)
 
 	err = reader.Close()
 	c.Assert(err, IsNil)
