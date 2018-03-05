@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -502,7 +503,7 @@ func (w *Worktree) checkoutChangeRegularFile(name string,
 			return err
 		}
 
-		if err := w.checkoutFile(f); err != nil {
+		if err := w.checkoutFile(f, t); err != nil {
 			return err
 		}
 
@@ -512,14 +513,23 @@ func (w *Worktree) checkoutChangeRegularFile(name string,
 	return nil
 }
 
-func (w *Worktree) checkoutFile(f *object.File) (err error) {
+func (w *Worktree) checkoutFile(f *object.File, t *object.Tree) (err error) {
 	mode, err := f.Mode.ToOSFileMode()
 	if err != nil {
 		return
 	}
 
 	if mode&os.ModeSymlink != 0 {
-		return w.checkoutFileSymlink(f)
+		return w.checkoutFileSymlink(f, t)
+	}
+
+	return w.checkoutFilePlain(f, f.Name, t)
+}
+
+func (w *Worktree) checkoutFilePlain(f *object.File, filename string, t *object.Tree) (err error) {
+	mode, err := f.Mode.ToOSFileMode()
+	if err != nil {
+		return
 	}
 
 	from, err := f.Reader()
@@ -529,7 +539,7 @@ func (w *Worktree) checkoutFile(f *object.File) (err error) {
 
 	defer ioutil.CheckClose(from, &err)
 
-	to, err := w.Filesystem.OpenFile(f.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode.Perm())
+	to, err := w.Filesystem.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode.Perm())
 	if err != nil {
 		return
 	}
@@ -540,7 +550,21 @@ func (w *Worktree) checkoutFile(f *object.File) (err error) {
 	return
 }
 
-func (w *Worktree) checkoutFileSymlink(f *object.File) (err error) {
+func isSymlinkWindowsNonAdmin(err error) bool {
+	const ERROR_PRIVILEGE_NOT_HELD syscall.Errno = 1314
+
+	if err != nil {
+		if x, ok := err.(*os.LinkError); ok {
+			if xx, ok := x.Err.(syscall.Errno); ok {
+				return xx == ERROR_PRIVILEGE_NOT_HELD
+			}
+		}
+	}
+
+	return false
+}
+
+func (w *Worktree) checkoutFileSymlink(f *object.File, t *object.Tree) (err error) {
 	from, err := f.Reader()
 	if err != nil {
 		return
@@ -554,6 +578,19 @@ func (w *Worktree) checkoutFileSymlink(f *object.File) (err error) {
 	}
 
 	err = w.Filesystem.Symlink(string(bytes), f.Name)
+
+	if err != nil && isSymlinkWindowsNonAdmin(err) {
+		// On Windows, elevated rights are required for symlinks.
+		// This operation failed, because they are missing.
+		// Simply copy the file as workaround
+		target, err := t.File(string(bytes))
+		if err != nil {
+			return err
+		}
+
+		return w.checkoutFilePlain(target, f.Name, t)
+	}
+
 	return
 }
 
