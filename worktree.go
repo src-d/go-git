@@ -542,17 +542,19 @@ func (w *Worktree) checkoutFile(f *object.File) (err error) {
 }
 
 func isSymlinkWindowsNonAdmin(err error) bool {
+	const ERROR_PRIVILEGE_NOT_HELD syscall.Errno = 1314
+
 	if err != nil {
 		if x, ok := err.(*os.LinkError); ok {
 			if xx, ok := x.Err.(syscall.Errno); ok {
-				return xx == syscall.ERROR_PRIVILEGE_NOT_HELD
+				return xx == ERROR_PRIVILEGE_NOT_HELD
 			}
 		}
 	}
 
-	return false 
-} 
-  
+	return false
+}
+
 func (w *Worktree) checkoutFileSymlink(f *object.File) (err error) {
 	from, err := f.Reader()
 	if err != nil {
@@ -571,11 +573,13 @@ func (w *Worktree) checkoutFileSymlink(f *object.File) (err error) {
 	// On windows, this might fail.
 	// Follow Git on Windows behavior by writing the link as it is.
 	if err != nil && isSymlinkWindowsNonAdmin(err) {
+		mode, _ := f.Mode.ToOSFileMode()
+
 		to, err := w.Filesystem.OpenFile(f.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode.Perm())
 		if err != nil {
 			return
 		}
-	
+
 		defer ioutil.CheckClose(to, &err)
 
 		_, err = to.Write(bytes)
