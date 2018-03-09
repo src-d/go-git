@@ -577,12 +577,13 @@ func (w *Worktree) checkoutFileSymlink(f *object.File) (err error) {
 
 		to, err := w.Filesystem.OpenFile(f.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode.Perm())
 		if err != nil {
-			return
+			return err
 		}
 
 		defer ioutil.CheckClose(to, &err)
 
 		_, err = to.Write(bytes)
+		return err
 	}
 
 	return
