@@ -8,9 +8,7 @@ import (
 	stdioutil "io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"syscall"
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -540,24 +538,6 @@ func (w *Worktree) checkoutFile(f *object.File) (err error) {
 
 	_, err = io.Copy(to, from)
 	return
-}
-
-func isSymlinkWindowsNonAdmin(err error) bool {
-	const ERROR_PRIVILEGE_NOT_HELD syscall.Errno = 1314
-
-	if runtime.GOOS != "windows" {
-		return false
-	}
-
-	if err != nil {
-		if errLink, ok := err.(*os.LinkError); ok {
-			if errNo, ok := errLink.Err.(syscall.Errno); ok {
-				return errNo == ERROR_PRIVILEGE_NOT_HELD
-			}
-		}
-	}
-
-	return false
 }
 
 func (w *Worktree) checkoutFileSymlink(f *object.File) (err error) {
