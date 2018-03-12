@@ -8,6 +8,7 @@ import (
 	stdioutil "io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -543,6 +544,10 @@ func (w *Worktree) checkoutFile(f *object.File) (err error) {
 
 func isSymlinkWindowsNonAdmin(err error) bool {
 	const ERROR_PRIVILEGE_NOT_HELD syscall.Errno = 1314
+
+	if runtime.GOOS != "windows" {
+		return false
+	}
 
 	if err != nil {
 		if errLink, ok := err.(*os.LinkError); ok {
