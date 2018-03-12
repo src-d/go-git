@@ -545,9 +545,9 @@ func isSymlinkWindowsNonAdmin(err error) bool {
 	const ERROR_PRIVILEGE_NOT_HELD syscall.Errno = 1314
 
 	if err != nil {
-		if x, ok := err.(*os.LinkError); ok {
-			if xx, ok := x.Err.(syscall.Errno); ok {
-				return xx == ERROR_PRIVILEGE_NOT_HELD
+		if errLink, ok := err.(*os.LinkError); ok {
+			if errNo, ok := errLink.Err.(syscall.Errno); ok {
+				return errNo == ERROR_PRIVILEGE_NOT_HELD
 			}
 		}
 	}
