@@ -32,6 +32,10 @@ func (s *BlameSuite) TestBlame(c *C) {
 		obt, err := Blame(commit, t.path)
 		c.Assert(err, IsNil)
 		c.Assert(obt, DeepEquals, exp)
+
+		for i, l := range obt.Lines {
+			c.Assert(l.Hash, Equals, t.blames[i])
+		}
 	}
 }
 
