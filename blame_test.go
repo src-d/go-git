@@ -34,7 +34,7 @@ func (s *BlameSuite) TestBlame(c *C) {
 		c.Assert(obt, DeepEquals, exp)
 
 		for i, l := range obt.Lines {
-			c.Assert(l.Hash, Equals, t.blames[i])
+			c.Assert(l.Hash.String(), Equals, t.blames[i])
 		}
 	}
 }
