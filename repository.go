@@ -20,6 +20,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 
+	"bytes"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 )
@@ -38,6 +39,7 @@ var (
 	ErrIsBareRepository          = errors.New("worktree not available in a bare repository")
 	ErrUnableToResolveCommit     = errors.New("unable to resolve commit")
 	ErrPackedObjectsNotSupported = errors.New("Packed objects not supported")
+	ErrTagNotFound               = errors.New("tag not found")
 )
 
 // Repository represents a git repository
@@ -1219,4 +1221,140 @@ func (r *Repository) createNewObjectPack(cfg *RepackConfig) (h plumbing.Hash, er
 	}
 
 	return h, err
+}
+
+type Describe struct {
+	// Reference being described
+	Reference *plumbing.Reference
+	// Tag of the describe object
+	Tag *plumbing.Reference
+	// Distance to the tag object in commits
+	Distance int
+	// Dirty string to append
+	Dirty string
+	// Use <Abbrev> digits to display SHA-ls
+	Abbrev int
+}
+
+func (d *Describe) String() string {
+	var s []string
+
+	if d.Tag != nil {
+		s = append(s, d.Tag.Name().Short())
+	}
+	if d.Distance > 0 {
+		s = append(s, fmt.Sprint(d.Distance))
+	}
+	s = append(s, "g"+d.Reference.Hash().String()[0:d.Abbrev])
+	if d.Dirty != "" {
+		s = append(s, d.Dirty)
+	}
+
+	return strings.Join(s, "-")
+}
+
+// Describe just like the `git describe` command will return a Describe struct for the hash passed.
+// Describe struct implements String interface so it can be easily printed out.
+func (r *Repository) Describe(ref *plumbing.Reference, opts *DescribeOptions) (*Describe, error) {
+	if err := opts.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Describes through the commit log ordered by commit time seems to be the best approximation to
+	// git describe.
+	commitIterator, err := r.Log(&LogOptions{
+		From:  ref.Hash(),
+		Order: LogOrderCommitterTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// To query tags we create a temporary map.
+	tagIterator, err := r.Tags()
+	if err != nil {
+		return nil, err
+	}
+	tags := make(map[plumbing.Hash]*plumbing.Reference)
+	tagIterator.ForEach(func(t *plumbing.Reference) error {
+		if to, err := r.TagObject(t.Hash()); err == nil {
+			tags[to.Target] = t
+		} else {
+			tags[t.Hash()] = t
+		}
+		return nil
+	})
+	tagIterator.Close()
+
+	// The search looks for a number of suitable candidates in the log (specified through the options)
+	type describeCandidate struct {
+		ref       *plumbing.Reference
+		annotated bool
+		distance  int
+	}
+	var candidates []*describeCandidate
+	var candidatesFound int
+	var count = -1
+	var lastCommit *object.Commit
+
+	if opts.Debug {
+		fmt.Fprintf(os.Stderr, "searching to describe %v\n", ref.Name())
+	}
+
+	for {
+		var candidate = &describeCandidate{annotated: false}
+
+		err = commitIterator.ForEach(func(commit *object.Commit) error {
+			lastCommit = commit
+			count++
+			if tagReference, ok := tags[commit.Hash]; ok {
+				delete(tags, commit.Hash)
+				candidate.ref = tagReference
+				hash := tagReference.Hash()
+				if !bytes.Equal(commit.Hash[:], hash[:]) {
+					candidate.annotated = true
+				}
+				return storer.ErrStop
+			}
+			return nil
+		})
+
+		if candidate.annotated || opts.Tags {
+			if candidatesFound < opts.Candidates {
+				candidate.distance = count
+				candidates = append(candidates, candidate)
+			}
+			candidatesFound++
+		}
+
+		if candidatesFound > opts.Candidates || len(tags) == 0 {
+			break
+		}
+
+	}
+
+	if opts.Debug {
+		for _, c := range candidates {
+			var description = "lightweight"
+			if c.annotated {
+				description = "annotated"
+			}
+			fmt.Fprintf(os.Stderr, " %-11s %8d %v\n", description, c.distance, c.ref.Name().Short())
+		}
+		fmt.Fprintf(os.Stderr, "traversed %v commits\n", count)
+		if candidatesFound > opts.Candidates {
+			fmt.Fprintf(os.Stderr, "more than %v tags found; listed %v most recent\n",
+				opts.Candidates, len(candidates))
+		}
+		fmt.Fprintf(os.Stderr, "gave up search at %v\n", lastCommit.Hash.String())
+	}
+
+	return &Describe{
+		ref,
+		candidates[0].ref,
+		candidates[0].distance,
+		opts.Dirty,
+		opts.Abbrev,
+	}, nil
+
 }
