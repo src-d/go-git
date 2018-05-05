@@ -317,7 +317,14 @@ func (s *session) ReceivePack(ctx context.Context, req *packp.ReferenceUpdateReq
 		r = d
 	}
 
-	report := packp.NewReportStatus()
+	var report *packp.ReportStatus
+	if req.Capabilities.Supports(capability.Sideband64k) ||
+		req.Capabilities.Supports(capability.Sideband) {
+		report = packp.NewReportStatusWithSideband()
+	} else {
+		report = packp.NewReportStatus()
+	}
+
 	if err := report.Decode(r); err != nil {
 		return nil, err
 	}

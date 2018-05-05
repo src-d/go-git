@@ -5,6 +5,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/sideband"
 
 	. "gopkg.in/check.v1"
 )
@@ -42,6 +43,13 @@ func (s *ReportStatusSuite) testEncodeDecodeOk(c *C, rs *ReportStatus, lines ...
 func (s *ReportStatusSuite) testDecodeOk(c *C, expected *ReportStatus, lines ...string) {
 	r := toPktLines(c, lines)
 	rs := NewReportStatus()
+	c.Assert(rs.Decode(r), IsNil)
+	c.Assert(rs, DeepEquals, expected)
+}
+
+func (s *ReportStatusSuite) testDecodeOkWithSideband(c *C, expected *ReportStatus, lines ...string) {
+	r := toPktLines(c, lines)
+	rs := NewReportStatusWithSideband()
 	c.Assert(rs.Decode(r), IsNil)
 	c.Assert(rs, DeepEquals, expected)
 }
@@ -253,4 +261,53 @@ func (s *ReportStatusSuite) TestDecodeErrorPrematureFlush(c *C) {
 	s.testDecodeError(c, "premature flush",
 		pktline.FlushString,
 	)
+}
+
+func (s *ReportStatusSuite) TestEncodeDecodeOkWithoutVerboseSideband(c *C) {
+	rs := NewReportStatus()
+	rs.UnpackStatus = "ok"
+	rs.CommandStatuses = []*CommandStatus{{
+		ReferenceName: plumbing.ReferenceName("refs/heads/develop"),
+		Status:        "ok",
+	}}
+
+	payloads := []string{
+		"unpack ok\n",
+		"ok refs/heads/develop\n",
+		pktline.FlushString,
+		string(sideband.ProgressMessage),
+		"\n",
+		"This is extra information on band 2, the verbose band.\n",
+		"None of this should affect the decoding of band 1, which is the actual data band.\n",
+		"",
+		"",
+		pktline.FlushString,
+	}
+
+	s.testDecodeOk(c, rs, payloads...)
+}
+
+
+func (s *ReportStatusSuite) TestEncodeDecodeOkWithVerboseSideband(c *C) {
+	rs := NewReportStatusWithSideband()
+	rs.UnpackStatus = "ok"
+	rs.CommandStatuses = []*CommandStatus{{
+		ReferenceName: plumbing.ReferenceName("refs/heads/develop"),
+		Status:        "ok",
+	}}
+
+	payloads := []string{
+		"unpack ok\n",
+		"ok refs/heads/develop\n",
+		pktline.FlushString,
+		string(sideband.ProgressMessage),
+		"\n",
+		"This is extra information on band 2, the verbose band.\n",
+		"None of this should affect the decoding of band 1, which is the actual data band.\n",
+		"",
+		"",
+		pktline.FlushString,
+	}
+
+	s.testDecodeOkWithSideband(c, rs, payloads...)
 }

@@ -19,11 +19,23 @@ const (
 type ReportStatus struct {
 	UnpackStatus    string
 	CommandStatuses []*CommandStatus
+	withSideband    bool
 }
 
 // NewReportStatus creates a new ReportStatus message.
+// without support for reading additional withSideband data.
 func NewReportStatus() *ReportStatus {
-	return &ReportStatus{}
+	return &ReportStatus{
+		withSideband: false,
+	}
+}
+
+// NewReportStatusWithSideband creates a new ReportStatus message,
+// with support for reading additional withSideband data.
+func NewReportStatusWithSideband() *ReportStatus {
+	return &ReportStatus{
+		withSideband: true,
+	}
 }
 
 // Error returns the first error if any.
@@ -57,8 +69,7 @@ func (s *ReportStatus) Encode(w io.Writer) error {
 	return e.Flush()
 }
 
-// Decode reads from the given reader and decodes a report-status message. It
-// does not read more input than what is needed to fill the report status.
+// Decode reads from the given reader and decodes a report-status message.
 func (s *ReportStatus) Decode(r io.Reader) error {
 	scan := pktline.NewScanner(r)
 	if err := s.scanFirstLine(scan); err != nil {
@@ -74,11 +85,22 @@ func (s *ReportStatus) Decode(r io.Reader) error {
 		b := scan.Bytes()
 		if isFlush(b) {
 			flushed = true
+
+			if s.withSideband {
+				continue
+			}
+
 			break
 		}
 
-		if err := s.decodeCommandStatus(b); err != nil {
-			return err
+		// Only try to decode command status if there hasn't been a flush yet.
+		// That means we're still on band 1, the primary payload band (pack status).
+		// However, more data may follow on bands 2 or even 3;
+		// we should not ignore that data just because band 1 is done.
+		if !flushed {
+			if err := s.decodeCommandStatus(b); err != nil {
+				return err
+			}
 		}
 	}
 

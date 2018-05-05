@@ -67,7 +67,14 @@ func (s *rpSession) ReceivePack(ctx context.Context, req *packp.ReferenceUpdateR
 
 	rc := ioutil.NewReadCloser(r, res.Body)
 
-	report := packp.NewReportStatus()
+	var report *packp.ReportStatus
+	if req.Capabilities.Supports(capability.Sideband64k) ||
+		req.Capabilities.Supports(capability.Sideband) {
+		report = packp.NewReportStatusWithSideband()
+	} else {
+		report = packp.NewReportStatus()
+	}
+
 	if err := report.Decode(rc); err != nil {
 		return nil, err
 	}
