@@ -47,6 +47,13 @@ func (s *ReportStatusSuite) testDecodeOk(c *C, expected *ReportStatus, lines ...
 	c.Assert(rs, DeepEquals, expected)
 }
 
+func (s *ReportStatusSuite) testDecodeOkWithSideband(c *C, expected *ReportStatus, lines ...string) {
+	r := toPktLines(c, lines)
+	rs := NewReportStatusWithSideband()
+	c.Assert(rs.Decode(r), IsNil)
+	c.Assert(rs, DeepEquals, expected)
+}
+
 func (s *ReportStatusSuite) testDecodeError(c *C, errorMatch string, lines ...string) {
 	r := toPktLines(c, lines)
 	rs := NewReportStatus()
@@ -302,5 +309,5 @@ func (s *ReportStatusSuite) TestEncodeDecodeOkWithVerboseSideband(c *C) {
 		pktline.FlushString,
 	}
 
-	s.testDecodeOk(c, rs, payloads...)
+	s.testDecodeOkWithSideband(c, rs, payloads...)
 }
