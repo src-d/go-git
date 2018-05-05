@@ -256,8 +256,33 @@ func (s *ReportStatusSuite) TestDecodeErrorPrematureFlush(c *C) {
 	)
 }
 
-func (s *ReportStatusSuite) TestEncodeDecodeOkWithVerboseSideband(c *C) {
+func (s *ReportStatusSuite) TestEncodeDecodeOkWithoutVerboseSideband(c *C) {
 	rs := NewReportStatus()
+	rs.UnpackStatus = "ok"
+	rs.CommandStatuses = []*CommandStatus{{
+		ReferenceName: plumbing.ReferenceName("refs/heads/develop"),
+		Status:        "ok",
+	}}
+
+	payloads := []string{
+		"unpack ok\n",
+		"ok refs/heads/develop\n",
+		pktline.FlushString,
+		string(sideband.ProgressMessage),
+		"\n",
+		"This is extra information on band 2, the verbose band.\n",
+		"None of this should affect the decoding of band 1, which is the actual data band.\n",
+		"",
+		"",
+		pktline.FlushString,
+	}
+
+	s.testDecodeOk(c, rs, payloads...)
+}
+
+
+func (s *ReportStatusSuite) TestEncodeDecodeOkWithVerboseSideband(c *C) {
+	rs := NewReportStatusWithSideband()
 	rs.UnpackStatus = "ok"
 	rs.CommandStatuses = []*CommandStatus{{
 		ReferenceName: plumbing.ReferenceName("refs/heads/develop"),
