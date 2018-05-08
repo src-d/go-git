@@ -1,7 +1,6 @@
 package gitignore
 
 import (
-	"fmt"
 	"os"
 	"os/user"
 
@@ -60,7 +59,7 @@ func (s *MatcherSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	_, err = f.Write([]byte("[core]\n"))
 	c.Assert(err, IsNil)
-	_, err = f.Write([]byte("	excludesfile = " + fs.Join(usr.HomeDir, ".gitignore_global") + "\n"))
+	_, err = f.Write([]byte("	excludesfile = \"" + fs.Join(usr.HomeDir, ".gitignore_global") + "\"\n"))
 	c.Assert(err, IsNil)
 	err = f.Close()
 	c.Assert(err, IsNil)
@@ -130,7 +129,7 @@ func (s *MatcherSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	_, err = f.Write([]byte("[core]\n"))
 	c.Assert(err, IsNil)
-	_, err = f.Write([]byte("	excludesfile = " + fs.Join(usr.HomeDir, ".gitignore_global") + "\n"))
+	_, err = f.Write([]byte("	excludesfile = \"" + fs.Join(usr.HomeDir, ".gitignore_global") + "\"\n"))
 	c.Assert(err, IsNil)
 	err = f.Close()
 	c.Assert(err, IsNil)
@@ -139,19 +138,19 @@ func (s *MatcherSuite) SetUpTest(c *C) {
 
 	// setup root that contains user home
 	fs = memfs.New()
-	err = fs.MkdirAll("/etc", os.ModePerm)
+	err = fs.MkdirAll("etc", os.ModePerm)
 	c.Assert(err, IsNil)
 
 	f, err = fs.Create(systemFile)
 	c.Assert(err, IsNil)
 	_, err = f.Write([]byte("[core]\n"))
 	c.Assert(err, IsNil)
-	_, err = f.Write([]byte("	excludesfile = /etc/gitignore_global\n"))
+	_, err = f.Write([]byte("	excludesfile = \"" + fs.Join("etc", "gitignore_global") + "\"\n"))
 	c.Assert(err, IsNil)
 	err = f.Close()
 	c.Assert(err, IsNil)
 
-	f, err = fs.Create("/etc/gitignore_global")
+	f, err = fs.Create(fs.Join("etc", "gitignore_global"))
 	c.Assert(err, IsNil)
 	_, err = f.Write([]byte("# IntelliJ\n"))
 	c.Assert(err, IsNil)
@@ -177,11 +176,6 @@ func (s *MatcherSuite) TestDir_ReadPatterns(c *C) {
 
 func (s *MatcherSuite) TestDir_LoadGlobalPatterns(c *C) {
 	ps, err := LoadGlobalPatterns(s.RFS)
-	if err != nil {
-		usr, err := user.Current()
-		c.Assert(err, IsNil)
-		fmt.Println("	excludesfile = " + s.RFS.Join(usr.HomeDir, ".gitignore_global") + "\n")
-	}
 	c.Assert(err, IsNil)
 	c.Assert(ps, HasLen, 2)
 
@@ -204,11 +198,6 @@ func (s *MatcherSuite) TestDir_LoadGlobalPatternsMissingExcludesfile(c *C) {
 
 func (s *MatcherSuite) TestDir_LoadGlobalPatternsMissingGitignore(c *C) {
 	ps, err := LoadGlobalPatterns(s.MIFS)
-	if err != nil {
-		usr, err := user.Current()
-		c.Assert(err, IsNil)
-		fmt.Println("	excludesfile = " + s.RFS.Join(usr.HomeDir, ".gitignore_global") + "\n")
-	}
 	c.Assert(err, IsNil)
 	c.Assert(ps, HasLen, 0)
 }
