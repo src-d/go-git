@@ -3,6 +3,7 @@ package gitignore
 import (
 	"os"
 	"os/user"
+	"strconv"
 
 	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-billy.v4"
@@ -59,7 +60,7 @@ func (s *MatcherSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	_, err = f.Write([]byte("[core]\n"))
 	c.Assert(err, IsNil)
-	_, err = f.Write([]byte("	excludesfile = \"" + fs.Join(usr.HomeDir, ".gitignore_global") + "\"\n"))
+	_, err = f.Write([]byte("	excludesfile = " + strconv.Quote(fs.Join(usr.HomeDir, ".gitignore_global")) + "\n"))
 	c.Assert(err, IsNil)
 	err = f.Close()
 	c.Assert(err, IsNil)
@@ -129,7 +130,7 @@ func (s *MatcherSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	_, err = f.Write([]byte("[core]\n"))
 	c.Assert(err, IsNil)
-	_, err = f.Write([]byte("	excludesfile = '" + fs.Join(usr.HomeDir, ".gitignore_global") + "'\n"))
+	_, err = f.Write([]byte("	excludesfile = " + strconv.Quote(fs.Join(usr.HomeDir, ".gitignore_global")) + "\n"))
 	c.Assert(err, IsNil)
 	err = f.Close()
 	c.Assert(err, IsNil)
@@ -145,12 +146,12 @@ func (s *MatcherSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	_, err = f.Write([]byte("[core]\n"))
 	c.Assert(err, IsNil)
-	_, err = f.Write([]byte("	excludesfile = '" + fs.Join("etc", "gitignore_global") + "'\n"))
+	_, err = f.Write([]byte("	excludesfile = /etc/gitignore_global\n"))
 	c.Assert(err, IsNil)
 	err = f.Close()
 	c.Assert(err, IsNil)
 
-	f, err = fs.Create(fs.Join("etc", "gitignore_global"))
+	f, err = fs.Create("/etc/gitignore_global")
 	c.Assert(err, IsNil)
 	_, err = f.Write([]byte("# IntelliJ\n"))
 	c.Assert(err, IsNil)
