@@ -1,6 +1,7 @@
 package gitignore
 
 import (
+	"fmt"
 	"os"
 	"os/user"
 
@@ -174,8 +175,13 @@ func (s *MatcherSuite) TestDir_ReadPatterns(c *C) {
 	c.Assert(m.Match([]string{"vendor", "github.com"}, true), Equals, false)
 }
 
-func (s *MatcherSuite) TestDir_LoadGlobalPatterns(c *C) { // F
+func (s *MatcherSuite) TestDir_LoadGlobalPatterns(c *C) {
 	ps, err := LoadGlobalPatterns(s.RFS)
+	if err != nil {
+		usr, err := user.Current()
+		c.Assert(err, IsNil)
+		fmt.Println("	excludesfile = " + s.RFS.Join(usr.HomeDir, ".gitignore_global") + "\n")
+	}
 	c.Assert(err, IsNil)
 	c.Assert(ps, HasLen, 2)
 
@@ -196,8 +202,13 @@ func (s *MatcherSuite) TestDir_LoadGlobalPatternsMissingExcludesfile(c *C) {
 	c.Assert(ps, HasLen, 0)
 }
 
-func (s *MatcherSuite) TestDir_LoadGlobalPatternsMissingGitignore(c *C) { // F
+func (s *MatcherSuite) TestDir_LoadGlobalPatternsMissingGitignore(c *C) {
 	ps, err := LoadGlobalPatterns(s.MIFS)
+	if err != nil {
+		usr, err := user.Current()
+		c.Assert(err, IsNil)
+		fmt.Println("	excludesfile = " + s.RFS.Join(usr.HomeDir, ".gitignore_global") + "\n")
+	}
 	c.Assert(err, IsNil)
 	c.Assert(ps, HasLen, 0)
 }
