@@ -59,7 +59,7 @@ func (s *MatcherSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	_, err = f.Write([]byte("[core]\n"))
 	c.Assert(err, IsNil)
-	_, err = f.Write([]byte("	excludesfile = " + fs.Join(usr.HomeDir, ".gitignore_global")))
+	_, err = f.Write([]byte("	excludesfile = " + fs.Join(usr.HomeDir, ".gitignore_global") + "\n"))
 	c.Assert(err, IsNil)
 	err = f.Close()
 	c.Assert(err, IsNil)
@@ -129,7 +129,7 @@ func (s *MatcherSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	_, err = f.Write([]byte("[core]\n"))
 	c.Assert(err, IsNil)
-	_, err = f.Write([]byte("	excludesfile = " + fs.Join(usr.HomeDir, ".gitignore_global")))
+	_, err = f.Write([]byte("	excludesfile = " + fs.Join(usr.HomeDir, ".gitignore_global") + "\n"))
 	c.Assert(err, IsNil)
 	err = f.Close()
 	c.Assert(err, IsNil)
@@ -145,7 +145,7 @@ func (s *MatcherSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	_, err = f.Write([]byte("[core]\n"))
 	c.Assert(err, IsNil)
-	_, err = f.Write([]byte("	excludesfile = /etc/gitignore_global"))
+	_, err = f.Write([]byte("	excludesfile = /etc/gitignore_global\n"))
 	c.Assert(err, IsNil)
 	err = f.Close()
 	c.Assert(err, IsNil)
@@ -174,7 +174,7 @@ func (s *MatcherSuite) TestDir_ReadPatterns(c *C) {
 	c.Assert(m.Match([]string{"vendor", "github.com"}, true), Equals, false)
 }
 
-func (s *MatcherSuite) TestDir_LoadGlobalPatterns(c *C) {
+func (s *MatcherSuite) TestDir_LoadGlobalPatterns(c *C) { // F
 	ps, err := LoadGlobalPatterns(s.RFS)
 	c.Assert(err, IsNil)
 	c.Assert(ps, HasLen, 2)
@@ -196,7 +196,7 @@ func (s *MatcherSuite) TestDir_LoadGlobalPatternsMissingExcludesfile(c *C) {
 	c.Assert(ps, HasLen, 0)
 }
 
-func (s *MatcherSuite) TestDir_LoadGlobalPatternsMissingGitignore(c *C) {
+func (s *MatcherSuite) TestDir_LoadGlobalPatternsMissingGitignore(c *C) { // F
 	ps, err := LoadGlobalPatterns(s.MIFS)
 	c.Assert(err, IsNil)
 	c.Assert(ps, HasLen, 0)
