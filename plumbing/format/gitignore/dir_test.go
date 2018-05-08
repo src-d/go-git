@@ -23,7 +23,6 @@ type MatcherSuite struct {
 var _ = Suite(&MatcherSuite{})
 
 func (s *MatcherSuite) SetUpTest(c *C) {
-
 	// setup generic git repository root
 	fs := memfs.New()
 	f, err := fs.Create(".gitignore")
