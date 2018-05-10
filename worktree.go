@@ -34,7 +34,6 @@ var (
 type Worktree struct {
 	// Filesystem underlying filesystem.
 	Filesystem billy.Filesystem
-
 	// External excludes not found in the repository .gitignore
 	Excludes []gitignore.Pattern
 

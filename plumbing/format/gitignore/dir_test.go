@@ -12,7 +12,6 @@ import (
 
 type MatcherSuite struct {
 	GFS  billy.Filesystem // git repository root
-
 	RFS  billy.Filesystem // root that contains user home
 	MCFS billy.Filesystem // root that contains user home, but missing ~/.gitconfig
 	MEFS billy.Filesystem // root that contains user home, but missing excludesfile entry
