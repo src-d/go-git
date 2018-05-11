@@ -291,7 +291,7 @@ func (r *Remote) fetch(ctx context.Context, o *FetchOptions) (sto storer.Referen
 	req.Wants, err = getWants(r.s, refs)
 	if len(req.Wants) > 0 {
 		req.Haves, err = getHaves(localRefs, remoteRefs, r.s)
-		if err != nil {
+		if err != nil && err != plumbing.ErrObjectNotFound {
 			return nil, err
 		}
 
