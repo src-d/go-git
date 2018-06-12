@@ -44,7 +44,7 @@ type runner struct {
 func (r *runner) Command(cmd string, ep *transport.Endpoint, auth transport.AuthMethod) (common.Command, error) {
 	c := &command{command: cmd, endpoint: ep, config: r.config}
 	if auth != nil {
-		c.setAuth(auth)
+		c.SetAuth(auth)
 	}
 
 	if err := c.connect(); err != nil {
@@ -63,7 +63,7 @@ type command struct {
 	config    *ssh.ClientConfig
 }
 
-func (c *command) setAuth(auth transport.AuthMethod) error {
+func (c *command) SetAuth(auth transport.AuthMethod) error {
 	a, ok := auth.(AuthMethod)
 	if !ok {
 		return transport.ErrInvalidAuthMethod
