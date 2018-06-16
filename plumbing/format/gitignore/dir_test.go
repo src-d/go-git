@@ -17,7 +17,7 @@ type MatcherSuite struct {
 	MEFS billy.Filesystem // root that contains user home, but missing excludesfile entry
 	MIFS billy.Filesystem // root that contains user home, but missing .gitnignore
 
-	SFS  billy.Filesystem // root that contains /etc/gitconfig
+	SFS billy.Filesystem // root that contains /etc/gitconfig
 }
 
 var _ = Suite(&MatcherSuite{})
