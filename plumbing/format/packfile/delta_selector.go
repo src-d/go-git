@@ -135,12 +135,17 @@ func (dw *deltaSelector) encodedObject(h plumbing.Hash) (plumbing.EncodedObject,
 
 func (dw *deltaSelector) fixAndBreakChains(objectsToPack []*ObjectToPack) error {
 	m := make(map[plumbing.Hash]*ObjectToPack, len(objectsToPack))
-	for _, otp := range objectsToPack {
+	stack := make([]*ObjectToPack, len(objectsToPack))
+
+	for i, otp := range objectsToPack {
 		m[otp.Hash()] = otp
+		stack[i] = otp
 	}
 
-	for _, otp := range objectsToPack {
-		if err := dw.fixAndBreakChainsOne(m, otp); err != nil {
+	for len(stack) > 0 {
+		otp := stack[0]
+		stack = stack[1:]
+		if err := dw.fixAndBreakChainsOne(stack, m, otp); err != nil {
 			return err
 		}
 	}
@@ -148,7 +153,7 @@ func (dw *deltaSelector) fixAndBreakChains(objectsToPack []*ObjectToPack) error 
 	return nil
 }
 
-func (dw *deltaSelector) fixAndBreakChainsOne(objectsToPack map[plumbing.Hash]*ObjectToPack, otp *ObjectToPack) error {
+func (dw *deltaSelector) fixAndBreakChainsOne(stack []*ObjectToPack, objectsToPack map[plumbing.Hash]*ObjectToPack, otp *ObjectToPack) error {
 	if !otp.Object.Type().IsDelta() {
 		return nil
 	}
@@ -174,9 +179,8 @@ func (dw *deltaSelector) fixAndBreakChainsOne(objectsToPack map[plumbing.Hash]*O
 		return dw.undeltify(otp)
 	}
 
-	if err := dw.fixAndBreakChainsOne(objectsToPack, base); err != nil {
-		return err
-	}
+	// append base to the stack for later
+	stack = append(stack, base)
 
 	otp.SetDelta(base, otp.Object)
 	return nil

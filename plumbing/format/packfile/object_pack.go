@@ -100,20 +100,27 @@ func (o *ObjectToPack) CleanOriginal() {
 }
 
 func (o *ObjectToPack) Type() plumbing.ObjectType {
-	if o.Original != nil {
-		return o.Original.Type()
-	}
+	cur := o
 
-	if o.resolvedOriginal {
-		return o.originalType
-	}
+	for cur != nil {
+		if cur.Original != nil {
+			return cur.Original.Type()
+		}
 
-	if o.Base != nil {
-		return o.Base.Type()
-	}
+		if cur.resolvedOriginal {
+			return cur.originalType
+		}
 
-	if o.Object != nil {
-		return o.Object.Type()
+		if cur.Base != nil {
+			cur = cur.Base
+			continue
+		}
+
+		if cur.Object != nil {
+			return cur.Object.Type()
+		}
+
+		break
 	}
 
 	panic("cannot get type")
