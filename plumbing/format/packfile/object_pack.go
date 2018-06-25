@@ -29,6 +29,9 @@ type ObjectToPack struct {
 	originalType     plumbing.ObjectType
 	originalSize     int64
 	originalHash     plumbing.Hash
+
+	// Cached information from calculations
+	cachedType *plumbing.ObjectType
 }
 
 // newObjectToPack creates a correct ObjectToPack based on a non-delta object
@@ -100,24 +103,44 @@ func (o *ObjectToPack) CleanOriginal() {
 }
 
 func (o *ObjectToPack) Type() plumbing.ObjectType {
+	if o.cachedType != nil {
+		return *o.cachedType
+	}
+
+	seen := make(map[plumbing.Hash]bool)
 	cur := o
 
 	for cur != nil {
+		seen[cur.Hash()] = true
+
 		if cur.Original != nil {
-			return cur.Original.Type()
+			typeVal := cur.Original.Type()
+			o.cachedType = &typeVal
+			return *o.cachedType
 		}
 
 		if cur.resolvedOriginal {
-			return cur.originalType
+			typeVal := cur.originalType
+			o.cachedType = &typeVal
+			return *o.cachedType
 		}
 
 		if cur.Base != nil {
 			cur = cur.Base
+
+			// if this base has been seen before, try to fall back to the object
+			if _, ok := seen[cur.Hash()]; ok {
+				if cur.Object != nil {
+					return cur.Object.Type()
+				}
+			}
 			continue
 		}
 
 		if cur.Object != nil {
-			return cur.Object.Type()
+			typeVal := cur.Object.Type()
+			o.cachedType = &typeVal
+			return *o.cachedType
 		}
 
 		break
