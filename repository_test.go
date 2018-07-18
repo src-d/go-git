@@ -577,6 +577,24 @@ func (s *RepositorySuite) TestPlainCloneContext(c *C) {
 	c.Assert(err, NotNil)
 }
 
+func (s *RepositorySuite) TestPlainCloneContextWithIncorrectRepo(c *C) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	dir, err := ioutil.TempDir("", "plain-clone-context-failure")
+	c.Assert(err, IsNil)
+
+	r, err := PlainCloneContext(ctx, dir, false, &CloneOptions{
+		URL: "incorrectOnPurpose",
+	})
+	c.Assert(r, IsNil)
+	c.Assert(err, NotNil)
+
+	_, err = os.Stat(dir)
+	dirNotExist := os.IsNotExist(err)
+	c.Assert(dirNotExist, Equals, true)
+}
+
 func (s *RepositorySuite) TestPlainCloneWithRecurseSubmodules(c *C) {
 	if testing.Short() {
 		c.Skip("skipping test in short mode.")

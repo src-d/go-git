@@ -350,7 +350,13 @@ func PlainCloneContext(ctx context.Context, path string, isBare bool, o *CloneOp
 		return nil, err
 	}
 
-	return r, r.clone(ctx, o)
+	err = r.clone(ctx, o)
+	if err != nil && err != ErrRepositoryAlreadyExists {
+		os.RemoveAll(path)
+		return nil, err
+	}
+
+	return r, err
 }
 
 func newRepository(s storage.Storer, worktree billy.Filesystem) *Repository {
