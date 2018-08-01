@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -581,16 +582,15 @@ func (s *RepositorySuite) TestPlainCloneContextWithIncorrectRepo(c *C) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	dir, err := ioutil.TempDir("", "plain-clone-context-failure")
-	c.Assert(err, IsNil)
-
-	r, err := PlainCloneContext(ctx, dir, false, &CloneOptions{
+	tmpDir := c.MkDir()
+	repoDir := path.Join(path.Dir(tmpDir), "repoDir")
+	r, err := PlainCloneContext(ctx, repoDir, false, &CloneOptions{
 		URL: "incorrectOnPurpose",
 	})
 	c.Assert(r, IsNil)
 	c.Assert(err, NotNil)
 
-	_, err = os.Stat(dir)
+	_, err = os.Stat(repoDir)
 	dirNotExist := os.IsNotExist(err)
 	c.Assert(dirNotExist, Equals, true)
 }
