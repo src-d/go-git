@@ -47,9 +47,9 @@ func (r ReferenceType) String() string {
 		return "hash-reference"
 	case SymbolicReference:
 		return "symbolic-reference"
+	default:
+		return ""
 	}
-
-	return ""
 }
 
 // ReferenceName reference name's
