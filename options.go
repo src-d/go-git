@@ -431,3 +431,41 @@ type PlainOpenOptions struct {
 
 // Validate validates the fields and sets the default values.
 func (o *PlainOpenOptions) Validate() error { return nil }
+
+// DescribeOptions as defined by `git describe`
+type DescribeOptions struct {
+	// Contains find the tag that comes after the commit
+	//Contains bool
+	// Debug search strategy on stderr
+	Debug bool
+	// All Use any reference
+	//All bool
+	// Tags use any tag, even unannotated
+	Tags bool
+	// FirstParent only follow first parent
+	//FirstParent bool
+	// Use <Abbrev> digits to display SHA-1s
+	// By default is 8
+	Abbrev int
+	// Only output exact matches
+	//ExactMatch bool
+	// Consider <Candidates> most recent tags
+	// By default is 10
+	Candidates int
+	// Only consider tags matching <Match> pattern
+	//Match string
+	// Show abbreviated commit object as fallback
+	//Always bool
+	// Append <mark> on dirty working tree (default: "-dirty")
+	Dirty string
+}
+
+func (o *DescribeOptions) Validate() error {
+	if o.Abbrev == 0 {
+		o.Abbrev = 7
+	}
+	if o.Candidates == 0 {
+		o.Candidates = 10
+	}
+	return nil
+}

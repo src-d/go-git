@@ -1688,3 +1688,28 @@ func (s *RepositorySuite) TestBrokenMultipleShallowFetch(c *C) {
 	})
 	c.Assert(err, IsNil)
 }
+
+func (s *RepositorySuite) TestDescribe(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url, Tags: AllTags})
+	c.Assert(err, IsNil)
+
+	datas := map[string]string{
+		"lightweight-tag-g7b8777": "f7b877701fbf855b44c0a9e86f3fdce2c298b07f",
+	}
+
+	for desc, hash := range datas {
+
+		h := plumbing.NewHash(hash)
+		d, err := r.Describe(
+			plumbing.NewHashReference("test", h),
+			&DescribeOptions{})
+
+		c.Assert(err, IsNil)
+		c.Assert(d.String(), Equals, desc)
+	}
+}
