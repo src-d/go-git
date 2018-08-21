@@ -394,19 +394,14 @@ func (p *Packfile) GetByType(typ plumbing.ObjectType) (storer.EncodedObjectIter,
 		plumbing.TreeObject,
 		plumbing.CommitObject,
 		plumbing.TagObject:
-		entries, err := p.Entries()
-		if err != nil {
-			return nil, err
-		}
 
 		return &objectIter{
 			// Easiest way to provide an object decoder is just to pass a Packfile
 			// instance. To not mess with the seeks, it's a new instance with a
 			// different scanner but the same cache and offset to hash map for
 			// reusing as much cache as possible.
-			p:    p,
-			iter: entries,
-			typ:  typ,
+			p:   p,
+			typ: typ,
 		}, nil
 	default:
 		return nil, plumbing.ErrInvalidType
@@ -443,19 +438,17 @@ func (p *Packfile) Close() error {
 }
 
 type objectIter struct {
-	p    *Packfile
-	typ  plumbing.ObjectType
-	iter idxfile.EntryIter
+	p   *Packfile
+	typ plumbing.ObjectType
 }
 
 func (i *objectIter) Next() (plumbing.EncodedObject, error) {
 	for {
-		e, err := i.iter.Next()
-		if err != nil {
+		if _, err := i.p.s.SeekFromStart(0); err != nil {
 			return nil, err
 		}
 
-		obj, err := i.p.GetByOffset(int64(e.Offset))
+		obj, err := i.p.nextObject()
 		if err != nil {
 			return nil, err
 		}
@@ -483,7 +476,6 @@ func (i *objectIter) ForEach(f func(plumbing.EncodedObject) error) error {
 }
 
 func (i *objectIter) Close() {
-	i.iter.Close()
 }
 
 // isInvalid checks whether an error is an os.PathError with an os.ErrInvalid
