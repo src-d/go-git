@@ -13,22 +13,18 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-type SuiteCommon struct{}
+type (
+	SuiteCommon struct{}
 
-type mockKnownHosts struct{}
+	mockKnownHosts struct{}
+)
 
-func (mockKnownHosts) host() string {
-	return "github.com"
-}
+func (mockKnownHosts) host() string { return "github.com" }
 func (mockKnownHosts) knownHosts() []byte {
 	return []byte(`github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==`)
 }
-func (mockKnownHosts) Network() string {
-	return "tcp"
-}
-func (mockKnownHosts) String() string {
-	return "github.com:22"
-}
+func (mockKnownHosts) Network() string { return "tcp" }
+func (mockKnownHosts) String() string  { return "github.com:22" }
 
 var _ = Suite(&SuiteCommon{})
 
