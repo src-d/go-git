@@ -2,6 +2,7 @@
 package filesystem
 
 import (
+	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem/dotgit"
 
 	"gopkg.in/src-d/go-billy.v4"
@@ -24,6 +25,9 @@ type Storage struct {
 
 // Options holds configuration for the storage.
 type Options struct {
+	// Cache is an object cache used to cache deltas.
+	Cache cache.Object
+
 	// ExclusiveAccess means that the filesystem is not modified externally
 	// while the repo is open.
 	ExclusiveAccess bool
@@ -44,16 +48,11 @@ func NewStorageWithOptions(
 	}
 
 	dir := dotgit.NewWithOptions(fs, dirOps)
-	o, err := NewObjectStorageWithOptions(dir, ops)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Storage{
 		fs:  fs,
 		dir: dir,
 
-		ObjectStorage:    o,
+		ObjectStorage:    ObjectStorage{options: ops, dir: dir},
 		ReferenceStorage: ReferenceStorage{dir: dir},
 		IndexStorage:     IndexStorage{dir: dir},
 		ShallowStorage:   ShallowStorage{dir: dir},
@@ -67,6 +66,7 @@ func (s *Storage) Filesystem() billy.Filesystem {
 	return s.fs
 }
 
+// Init initializes .git directory
 func (s *Storage) Init() error {
 	return s.dir.Initialize()
 }
