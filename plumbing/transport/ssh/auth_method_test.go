@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gliderlabs/ssh"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/testdata"
 
 	. "gopkg.in/check.v1"
