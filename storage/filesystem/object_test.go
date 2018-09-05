@@ -26,8 +26,7 @@ var _ = Suite(&FsSuite{})
 
 func (s *FsSuite) TestGetFromObjectFile(c *C) {
 	fs := fixtures.ByTag(".git").ByTag("unpacked").One().DotGit()
-	o, err := NewObjectStorage(dotgit.New(fs))
-	c.Assert(err, IsNil)
+	o := NewObjectStorage(dotgit.New(fs))
 
 	expected := plumbing.NewHash("f3dfe29d268303fc6e1bbce268605fc99573406e")
 	obj, err := o.EncodedObject(plumbing.AnyObject, expected)
@@ -38,8 +37,7 @@ func (s *FsSuite) TestGetFromObjectFile(c *C) {
 func (s *FsSuite) TestGetFromPackfile(c *C) {
 	fixtures.Basic().ByTag(".git").Test(c, func(f *fixtures.Fixture) {
 		fs := f.DotGit()
-		o, err := NewObjectStorage(dotgit.New(fs))
-		c.Assert(err, IsNil)
+		o := NewObjectStorage(dotgit.New(fs))
 
 		expected := plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
 		obj, err := o.EncodedObject(plumbing.AnyObject, expected)
@@ -50,8 +48,7 @@ func (s *FsSuite) TestGetFromPackfile(c *C) {
 
 func (s *FsSuite) TestGetFromPackfileMultiplePackfiles(c *C) {
 	fs := fixtures.ByTag(".git").ByTag("multi-packfile").One().DotGit()
-	o, err := NewObjectStorage(dotgit.New(fs))
-	c.Assert(err, IsNil)
+	o := NewObjectStorage(dotgit.New(fs))
 
 	expected := plumbing.NewHash("8d45a34641d73851e01d3754320b33bb5be3c4d3")
 	obj, err := o.getFromPackfile(expected, false)
@@ -67,8 +64,7 @@ func (s *FsSuite) TestGetFromPackfileMultiplePackfiles(c *C) {
 func (s *FsSuite) TestIter(c *C) {
 	fixtures.ByTag(".git").ByTag("packfile").Test(c, func(f *fixtures.Fixture) {
 		fs := f.DotGit()
-		o, err := NewObjectStorage(dotgit.New(fs))
-		c.Assert(err, IsNil)
+		o := NewObjectStorage(dotgit.New(fs))
 
 		iter, err := o.IterEncodedObjects(plumbing.AnyObject)
 		c.Assert(err, IsNil)
@@ -88,8 +84,7 @@ func (s *FsSuite) TestIterWithType(c *C) {
 	fixtures.ByTag(".git").Test(c, func(f *fixtures.Fixture) {
 		for _, t := range objectTypes {
 			fs := f.DotGit()
-			o, err := NewObjectStorage(dotgit.New(fs))
-			c.Assert(err, IsNil)
+			o := NewObjectStorage(dotgit.New(fs))
 
 			iter, err := o.IterEncodedObjects(t)
 			c.Assert(err, IsNil)
@@ -271,10 +266,7 @@ func BenchmarkGetObjectFromPackfile(b *testing.B) {
 	for _, f := range fixtures.Basic() {
 		b.Run(f.URL, func(b *testing.B) {
 			fs := f.DotGit()
-			o, err := NewObjectStorage(dotgit.New(fs))
-			if err != nil {
-				b.Fatal(err)
-			}
+			o := NewObjectStorage(dotgit.New(fs))
 
 			for i := 0; i < b.N; i++ {
 				expected := plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
