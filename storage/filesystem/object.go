@@ -18,21 +18,29 @@ import (
 )
 
 type ObjectStorage struct {
-	// deltaBaseCache is an object cache uses to cache delta's bases when
-	deltaBaseCache cache.Object
+	options Options
 
 	dir   *dotgit.DotGit
 	index map[plumbing.Hash]idxfile.Index
 }
 
 // NewObjectStorage creates a new ObjectStorage with the given .git directory.
-func NewObjectStorage(dir *dotgit.DotGit) (ObjectStorage, error) {
-	s := ObjectStorage{
-		deltaBaseCache: cache.NewObjectLRUDefault(),
-		dir:            dir,
+func NewObjectStorage(dir *dotgit.DotGit) *ObjectStorage {
+	return NewObjectStorageWithOptions(dir, Options{})
+}
+
+// NewObjectStorageWithOptions creates a new ObjectStorage with the given .git
+// directory and sets its options.
+func NewObjectStorageWithOptions(dir *dotgit.DotGit, ops Options) *ObjectStorage {
+	s := &ObjectStorage{
+		options: ops,
+		dir:     dir,
+	}
+	if s.options.Cache == nil {
+		s.options.Cache = cache.NewObjectLRUDefault()
 	}
 
-	return s, nil
+	return s
 }
 
 func (s *ObjectStorage) requireIndex() error {
@@ -169,10 +177,7 @@ func (s *ObjectStorage) EncodedObject(t plumbing.ObjectType, h plumbing.Hash) (p
 			// Create a new object storage with the DotGit(s) and check for the
 			// required hash object. Skip when not found.
 			for _, dg := range dotgits {
-				o, oe := NewObjectStorage(dg)
-				if oe != nil {
-					continue
-				}
+				o := NewObjectStorage(dg)
 				enobj, enerr := o.EncodedObject(t, h)
 				if enerr != nil {
 					continue
@@ -283,9 +288,13 @@ func (s *ObjectStorage) decodeObjectAt(
 	idx idxfile.Index,
 	offset int64,
 ) (plumbing.EncodedObject, error) {
+	if s.options.Cache == nil {
+		s.options.Cache = cache.NewObjectLRUDefault()
+	}
+
 	hash, err := idx.FindHash(offset)
 	if err == nil {
-		obj, ok := s.deltaBaseCache.Get(hash)
+		obj, ok := s.options.Cache.Get(hash)
 		if ok {
 			return obj, nil
 		}
@@ -295,12 +304,7 @@ func (s *ObjectStorage) decodeObjectAt(
 		return nil, err
 	}
 
-	var p *packfile.Packfile
-	if s.deltaBaseCache != nil {
-		p = packfile.NewPackfileWithCache(idx, s.dir.Fs(), f, s.deltaBaseCache)
-	} else {
-		p = packfile.NewPackfile(idx, s.dir.Fs(), f)
-	}
+	p := packfile.NewPackfileWithCache(idx, s.dir.Fs(), f, s.options.Cache)
 
 	return p.GetByOffset(offset)
 }
@@ -406,7 +410,7 @@ func (s *ObjectStorage) buildPackfileIters(t plumbing.ObjectType, seen map[plumb
 			if err != nil {
 				return nil, err
 			}
-			return newPackfileIter(s.dir.Fs(), pack, t, seen, s.index[h], s.deltaBaseCache)
+			return newPackfileIter(s.dir.Fs(), pack, t, seen, s.index[h], s.options.Cache)
 		},
 	}, nil
 }
