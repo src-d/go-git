@@ -13,8 +13,12 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/armor"
+	openpgperr "golang.org/x/crypto/openpgp/errors"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage"
@@ -51,8 +55,7 @@ func (s *RepositorySuite) TestInitNonStandardDotGit(c *C) {
 
 	fs := osfs.New(dir)
 	dot, _ := fs.Chroot("storage")
-	storage, err := filesystem.NewStorage(dot)
-	c.Assert(err, IsNil)
+	storage := filesystem.NewStorage(dot, cache.NewObjectLRUDefault())
 
 	wt, _ := fs.Chroot("worktree")
 	r, err := Init(storage, wt)
@@ -78,8 +81,7 @@ func (s *RepositorySuite) TestInitStandardDotGit(c *C) {
 
 	fs := osfs.New(dir)
 	dot, _ := fs.Chroot(".git")
-	storage, err := filesystem.NewStorage(dot)
-	c.Assert(err, IsNil)
+	storage := filesystem.NewStorage(dot, cache.NewObjectLRUDefault())
 
 	r, err := Init(storage, fs)
 	c.Assert(err, IsNil)
@@ -878,7 +880,33 @@ func (s *RepositorySuite) TestCloneDetachedHEAD(c *C) {
 	objects, err := r.Objects()
 	c.Assert(err, IsNil)
 	objects.ForEach(func(object.Object) error { count++; return nil })
-	c.Assert(count, Equals, 31)
+	c.Assert(count, Equals, 28)
+}
+
+func (s *RepositorySuite) TestCloneDetachedHEADAndSingle(c *C) {
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{
+		URL:           s.GetBasicLocalRepositoryURL(),
+		ReferenceName: plumbing.ReferenceName("refs/tags/v1.0.0"),
+		SingleBranch:  true,
+	})
+	c.Assert(err, IsNil)
+
+	cfg, err := r.Config()
+	c.Assert(err, IsNil)
+	c.Assert(cfg.Branches, HasLen, 0)
+
+	head, err := r.Reference(plumbing.HEAD, false)
+	c.Assert(err, IsNil)
+	c.Assert(head, NotNil)
+	c.Assert(head.Type(), Equals, plumbing.HashReference)
+	c.Assert(head.Hash().String(), Equals, "6ecf0ef2c2dffb796033e5a02219af86ec6584e5")
+
+	count := 0
+	objects, err := r.Objects()
+	c.Assert(err, IsNil)
+	objects.ForEach(func(object.Object) error { count++; return nil })
+	c.Assert(count, Equals, 28)
 }
 
 func (s *RepositorySuite) TestCloneDetachedHEADAndShallow(c *C) {
@@ -1064,8 +1092,7 @@ func (s *RepositorySuite) TestPushDepth(c *C) {
 
 func (s *RepositorySuite) TestPushNonExistentRemote(c *C) {
 	srcFs := fixtures.Basic().One().DotGit()
-	sto, err := filesystem.NewStorage(srcFs)
-	c.Assert(err, IsNil)
+	sto := filesystem.NewStorage(srcFs, cache.NewObjectLRUDefault())
 
 	r, err := Open(sto, srcFs)
 	c.Assert(err, IsNil)
@@ -1281,10 +1308,396 @@ func (s *RepositorySuite) TestTags(c *C) {
 	c.Assert(count, Equals, 5)
 }
 
+func (s *RepositorySuite) TestCreateTagLightweight(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	expected, err := r.Head()
+	c.Assert(err, IsNil)
+
+	ref, err := r.CreateTag("foobar", expected.Hash(), nil)
+	c.Assert(err, IsNil)
+	c.Assert(ref, NotNil)
+
+	actual, err := r.Tag("foobar")
+	c.Assert(err, IsNil)
+
+	c.Assert(expected.Hash(), Equals, actual.Hash())
+}
+
+func (s *RepositorySuite) TestCreateTagLightweightExists(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	expected, err := r.Head()
+	c.Assert(err, IsNil)
+
+	ref, err := r.CreateTag("lightweight-tag", expected.Hash(), nil)
+	c.Assert(ref, IsNil)
+	c.Assert(err, Equals, ErrTagExists)
+}
+
+func (s *RepositorySuite) TestCreateTagAnnotated(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	h, err := r.Head()
+	c.Assert(err, IsNil)
+
+	expectedHash := h.Hash()
+
+	ref, err := r.CreateTag("foobar", expectedHash, &CreateTagOptions{
+		Tagger:  defaultSignature(),
+		Message: "foo bar baz qux",
+	})
+	c.Assert(err, IsNil)
+
+	tag, err := r.Tag("foobar")
+	c.Assert(err, IsNil)
+
+	obj, err := r.TagObject(tag.Hash())
+	c.Assert(err, IsNil)
+
+	c.Assert(ref, DeepEquals, tag)
+	c.Assert(obj.Hash, Equals, ref.Hash())
+	c.Assert(obj.Type(), Equals, plumbing.TagObject)
+	c.Assert(obj.Target, Equals, expectedHash)
+}
+
+func (s *RepositorySuite) TestCreateTagAnnotatedBadOpts(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	h, err := r.Head()
+	c.Assert(err, IsNil)
+
+	expectedHash := h.Hash()
+
+	ref, err := r.CreateTag("foobar", expectedHash, &CreateTagOptions{
+		Message: "foo bar baz qux",
+	})
+	c.Assert(ref, IsNil)
+	c.Assert(err, Equals, ErrMissingTagger)
+
+	ref, err = r.CreateTag("foobar", expectedHash, &CreateTagOptions{
+		Tagger: defaultSignature(),
+	})
+	c.Assert(ref, IsNil)
+	c.Assert(err, Equals, ErrMissingMessage)
+}
+
+func (s *RepositorySuite) TestCreateTagAnnotatedBadHash(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	ref, err := r.CreateTag("foobar", plumbing.ZeroHash, &CreateTagOptions{
+		Tagger:  defaultSignature(),
+		Message: "foo bar baz qux",
+	})
+	c.Assert(ref, IsNil)
+	c.Assert(err, Equals, plumbing.ErrObjectNotFound)
+}
+
+func (s *RepositorySuite) TestCreateTagSigned(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	h, err := r.Head()
+	c.Assert(err, IsNil)
+
+	key := commitSignKey(c, true)
+	_, err = r.CreateTag("foobar", h.Hash(), &CreateTagOptions{
+		Tagger:  defaultSignature(),
+		Message: "foo bar baz qux",
+		SignKey: key,
+	})
+	c.Assert(err, IsNil)
+
+	tag, err := r.Tag("foobar")
+	c.Assert(err, IsNil)
+
+	obj, err := r.TagObject(tag.Hash())
+	c.Assert(err, IsNil)
+
+	// Verify the tag.
+	pks := new(bytes.Buffer)
+	pkw, err := armor.Encode(pks, openpgp.PublicKeyType, nil)
+	c.Assert(err, IsNil)
+
+	err = key.Serialize(pkw)
+	c.Assert(err, IsNil)
+	err = pkw.Close()
+	c.Assert(err, IsNil)
+
+	actual, err := obj.Verify(pks.String())
+	c.Assert(err, IsNil)
+	c.Assert(actual.PrimaryKey, DeepEquals, key.PrimaryKey)
+}
+
+func (s *RepositorySuite) TestCreateTagSignedBadKey(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	h, err := r.Head()
+	c.Assert(err, IsNil)
+
+	key := commitSignKey(c, false)
+	_, err = r.CreateTag("foobar", h.Hash(), &CreateTagOptions{
+		Tagger:  defaultSignature(),
+		Message: "foo bar baz qux",
+		SignKey: key,
+	})
+	c.Assert(err, Equals, openpgperr.InvalidArgumentError("signing key is encrypted"))
+}
+
+func (s *RepositorySuite) TestCreateTagCanonicalize(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	h, err := r.Head()
+	c.Assert(err, IsNil)
+
+	key := commitSignKey(c, true)
+	_, err = r.CreateTag("foobar", h.Hash(), &CreateTagOptions{
+		Tagger:  defaultSignature(),
+		Message: "\n\nfoo bar baz qux\n\nsome message here",
+		SignKey: key,
+	})
+	c.Assert(err, IsNil)
+
+	tag, err := r.Tag("foobar")
+	c.Assert(err, IsNil)
+
+	obj, err := r.TagObject(tag.Hash())
+	c.Assert(err, IsNil)
+
+	// Assert the new canonicalized message.
+	c.Assert(obj.Message, Equals, "foo bar baz qux\n\nsome message here\n")
+
+	// Verify the tag.
+	pks := new(bytes.Buffer)
+	pkw, err := armor.Encode(pks, openpgp.PublicKeyType, nil)
+	c.Assert(err, IsNil)
+
+	err = key.Serialize(pkw)
+	c.Assert(err, IsNil)
+	err = pkw.Close()
+	c.Assert(err, IsNil)
+
+	actual, err := obj.Verify(pks.String())
+	c.Assert(err, IsNil)
+	c.Assert(actual.PrimaryKey, DeepEquals, key.PrimaryKey)
+}
+
+func (s *RepositorySuite) TestTagLightweight(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	expected := plumbing.NewHash("f7b877701fbf855b44c0a9e86f3fdce2c298b07f")
+
+	tag, err := r.Tag("lightweight-tag")
+	c.Assert(err, IsNil)
+
+	actual := tag.Hash()
+	c.Assert(expected, Equals, actual)
+}
+
+func (s *RepositorySuite) TestTagLightweightMissingTag(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	tag, err := r.Tag("lightweight-tag-tag")
+	c.Assert(tag, IsNil)
+	c.Assert(err, Equals, ErrTagNotFound)
+}
+
+func (s *RepositorySuite) TestDeleteTag(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	err = r.DeleteTag("lightweight-tag")
+	c.Assert(err, IsNil)
+
+	_, err = r.Tag("lightweight-tag")
+	c.Assert(err, Equals, ErrTagNotFound)
+}
+
+func (s *RepositorySuite) TestDeleteTagMissingTag(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	r, _ := Init(memory.NewStorage(), nil)
+	err := r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	err = r.DeleteTag("lightweight-tag-tag")
+	c.Assert(err, Equals, ErrTagNotFound)
+}
+
+func (s *RepositorySuite) TestDeleteTagAnnotated(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	dir, err := ioutil.TempDir("", "go-git-test-deletetag-annotated")
+	c.Assert(err, IsNil)
+
+	defer os.RemoveAll(dir) // clean up
+
+	fss := filesystem.NewStorage(osfs.New(dir), cache.NewObjectLRUDefault())
+
+	r, _ := Init(fss, nil)
+	err = r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	ref, err := r.Tag("annotated-tag")
+	c.Assert(ref, NotNil)
+	c.Assert(err, IsNil)
+
+	obj, err := r.TagObject(ref.Hash())
+	c.Assert(obj, NotNil)
+	c.Assert(err, IsNil)
+
+	err = r.DeleteTag("annotated-tag")
+	c.Assert(err, IsNil)
+
+	_, err = r.Tag("annotated-tag")
+	c.Assert(err, Equals, ErrTagNotFound)
+
+	// Run a prune (and repack, to ensure that we are GCing everything regardless
+	// of the fixture in use) and try to get the tag object again.
+	//
+	// The repo needs to be re-opened after the repack.
+	err = r.Prune(PruneOptions{Handler: r.DeleteObject})
+	c.Assert(err, IsNil)
+
+	err = r.RepackObjects(&RepackConfig{})
+	c.Assert(err, IsNil)
+
+	r, err = PlainOpen(dir)
+	c.Assert(r, NotNil)
+	c.Assert(err, IsNil)
+
+	// Now check to see if the GC was effective in removing the tag object.
+	obj, err = r.TagObject(ref.Hash())
+	c.Assert(obj, IsNil)
+	c.Assert(err, Equals, plumbing.ErrObjectNotFound)
+}
+
+func (s *RepositorySuite) TestDeleteTagAnnotatedUnpacked(c *C) {
+	url := s.GetLocalRepositoryURL(
+		fixtures.ByURL("https://github.com/git-fixtures/tags.git").One(),
+	)
+
+	dir, err := ioutil.TempDir("", "go-git-test-deletetag-annotated-unpacked")
+	c.Assert(err, IsNil)
+
+	defer os.RemoveAll(dir) // clean up
+
+	fss := filesystem.NewStorage(osfs.New(dir), cache.NewObjectLRUDefault())
+
+	r, _ := Init(fss, nil)
+	err = r.clone(context.Background(), &CloneOptions{URL: url})
+	c.Assert(err, IsNil)
+
+	// Create a tag for the deletion test. This ensures that the ultimate loose
+	// object will be unpacked (as we aren't doing anything that should pack it),
+	// so that we can effectively test that a prune deletes it, without having to
+	// resort to a repack.
+	h, err := r.Head()
+	c.Assert(err, IsNil)
+
+	expectedHash := h.Hash()
+
+	ref, err := r.CreateTag("foobar", expectedHash, &CreateTagOptions{
+		Tagger:  defaultSignature(),
+		Message: "foo bar baz qux",
+	})
+	c.Assert(err, IsNil)
+
+	tag, err := r.Tag("foobar")
+	c.Assert(err, IsNil)
+
+	obj, err := r.TagObject(tag.Hash())
+	c.Assert(obj, NotNil)
+	c.Assert(err, IsNil)
+
+	err = r.DeleteTag("foobar")
+	c.Assert(err, IsNil)
+
+	_, err = r.Tag("foobar")
+	c.Assert(err, Equals, ErrTagNotFound)
+
+	// As mentioned, only run a prune. We are not testing for packed objects
+	// here.
+	err = r.Prune(PruneOptions{Handler: r.DeleteObject})
+	c.Assert(err, IsNil)
+
+	// Now check to see if the GC was effective in removing the tag object.
+	obj, err = r.TagObject(ref.Hash())
+	c.Assert(obj, IsNil)
+	c.Assert(err, Equals, plumbing.ErrObjectNotFound)
+}
+
 func (s *RepositorySuite) TestBranches(c *C) {
 	f := fixtures.ByURL("https://github.com/git-fixtures/root-references.git").One()
-	sto, err := filesystem.NewStorage(f.DotGit())
-	c.Assert(err, IsNil)
+	sto := filesystem.NewStorage(f.DotGit(), cache.NewObjectLRUDefault())
 	r, err := Open(sto, f.DotGit())
 	c.Assert(err, IsNil)
 
@@ -1501,8 +1914,7 @@ func (s *RepositorySuite) TestWorktreeBare(c *C) {
 
 func (s *RepositorySuite) TestResolveRevision(c *C) {
 	f := fixtures.ByURL("https://github.com/git-fixtures/basic.git").One()
-	sto, err := filesystem.NewStorage(f.DotGit())
-	c.Assert(err, IsNil)
+	sto := filesystem.NewStorage(f.DotGit(), cache.NewObjectLRUDefault())
 	r, err := Open(sto, f.DotGit())
 	c.Assert(err, IsNil)
 
@@ -1573,8 +1985,7 @@ func (s *RepositorySuite) testRepackObjects(
 	srcFs := fixtures.ByTag("unpacked").One().DotGit()
 	var sto storage.Storer
 	var err error
-	sto, err = filesystem.NewStorage(srcFs)
-	c.Assert(err, IsNil)
+	sto = filesystem.NewStorage(srcFs, cache.NewObjectLRUDefault())
 
 	los := sto.(storer.LooseObjectStorer)
 	c.Assert(los, NotNil)
@@ -1719,4 +2130,57 @@ func (s *RepositorySuite) TestBrokenMultipleShallowFetch(c *C) {
 		return nil
 	})
 	c.Assert(err, IsNil)
+}
+
+func BenchmarkObjects(b *testing.B) {
+	if err := fixtures.Init(); err != nil {
+		b.Fatal(err)
+	}
+
+	defer func() {
+		if err := fixtures.Clean(); err != nil {
+			b.Fatal(err)
+		}
+	}()
+
+	for _, f := range fixtures.ByTag("packfile") {
+		if f.DotGitHash == plumbing.ZeroHash {
+			continue
+		}
+
+		b.Run(f.URL, func(b *testing.B) {
+			fs := f.DotGit()
+			storer := filesystem.NewStorage(fs, cache.NewObjectLRUDefault())
+
+			worktree, err := fs.Chroot(filepath.Dir(fs.Root()))
+			if err != nil {
+				b.Fatal(err)
+			}
+
+			repo, err := Open(storer, worktree)
+			if err != nil {
+				b.Fatal(err)
+			}
+
+			for i := 0; i < b.N; i++ {
+				iter, err := repo.Objects()
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				for {
+					_, err := iter.Next()
+					if err == io.EOF {
+						break
+					}
+
+					if err != nil {
+						b.Fatal(err)
+					}
+				}
+
+				iter.Close()
+			}
+		})
+	}
 }
