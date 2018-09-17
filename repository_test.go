@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -567,7 +566,7 @@ func (s *RepositorySuite) TestPlainClone(c *C) {
 	c.Assert(cfg.Branches["master"].Name, Equals, "master")
 }
 
-func (s *RepositorySuite) TestPlainCloneContext(c *C) {
+func (s *RepositorySuite) TestPlainCloneContextWithProperParameters(c *C) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -583,7 +582,7 @@ func (s *RepositorySuite) TestPlainCloneContextWithIncorrectRepo(c *C) {
 	cancel()
 
 	tmpDir := c.MkDir()
-	repoDir := path.Join(path.Dir(tmpDir), "repoDir")
+	repoDir := filepath.Join(tmpDir, "repoDir") //path.Join(path.Dir(tmpDir), "repoDir")
 	r, err := PlainCloneContext(ctx, repoDir, false, &CloneOptions{
 		URL: "incorrectOnPurpose",
 	})
@@ -593,6 +592,21 @@ func (s *RepositorySuite) TestPlainCloneContextWithIncorrectRepo(c *C) {
 	_, err = os.Stat(repoDir)
 	dirNotExist := os.IsNotExist(err)
 	c.Assert(dirNotExist, Equals, true)
+}
+
+func (s *RepositorySuite) TestPlainCloneContextWithNotEmptyDir(c *C) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	tmpDir := c.MkDir()
+	err := ioutil.WriteFile(filepath.Join(tmpDir, "dummyFile"), []byte(fmt.Sprint("dummyContent")), 0644)
+	c.Assert(err, IsNil)
+
+	r, err := PlainCloneContext(ctx, tmpDir, false, &CloneOptions{
+		URL: "incorrectOnPurpose",
+	})
+	c.Assert(r, IsNil)
+	c.Assert(err, Equals, ErrDirNotEmpty)
 }
 
 func (s *RepositorySuite) TestPlainCloneWithRecurseSubmodules(c *C) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	stdioutil "io/ioutil"
 	"os"
 	"path/filepath"
@@ -345,6 +346,32 @@ func PlainClone(path string, isBare bool, o *CloneOptions) (*Repository, error) 
 // operation is complete, an error is returned. The context only affects to the
 // transport operations.
 func PlainCloneContext(ctx context.Context, path string, isBare bool, o *CloneOptions) (*Repository, error) {
+	dirEmpty := false
+	dirExist := false
+
+	file, err := os.Stat(path)
+	pathNotExist := os.IsNotExist(err)
+
+	if !pathNotExist {
+		dirExist = file.IsDir()
+	}
+
+	if dirExist {
+		fh, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer fh.Close()
+
+		names, err := fh.Readdirnames(1)
+
+		if err == io.EOF && len(names) == 0 {
+			dirEmpty = true
+		} else {
+			return nil, ErrDirNotEmpty
+		}
+	}
+
 	r, err := PlainInit(path, isBare)
 	if err != nil {
 		return nil, err
@@ -352,8 +379,28 @@ func PlainCloneContext(ctx context.Context, path string, isBare bool, o *CloneOp
 
 	err = r.clone(ctx, o)
 	if err != nil && err != ErrRepositoryAlreadyExists {
-		os.RemoveAll(path)
-		return nil, err
+		if dirEmpty {
+			fh, err := os.Open(path)
+			if err != nil {
+				return nil, err
+			}
+			defer fh.Close()
+
+			names, err := fh.Readdirnames(-1)
+			if err != nil && err != io.EOF {
+				return nil, err
+			}
+
+			for _, name := range names {
+				err = os.RemoveAll(filepath.Join(path, name))
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else if !dirExist {
+			os.RemoveAll(path)
+			return nil, err
+		}
 	}
 
 	return r, err
