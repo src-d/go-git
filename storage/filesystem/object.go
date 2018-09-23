@@ -244,9 +244,19 @@ func (s *ObjectStorage) EncodedObjectSize(h plumbing.Hash) (
 // EncodedObject returns the object with the given hash, by searching for it in
 // the packfile and the git object directories.
 func (s *ObjectStorage) EncodedObject(t plumbing.ObjectType, h plumbing.Hash) (plumbing.EncodedObject, error) {
-	obj, err := s.getFromUnpacked(h)
-	if err == plumbing.ErrObjectNotFound {
+	var obj plumbing.EncodedObject
+	var err error
+
+	if s.index != nil {
 		obj, err = s.getFromPackfile(h, false)
+		if err == plumbing.ErrObjectNotFound {
+			obj, err = s.getFromUnpacked(h)
+		}
+	} else {
+		obj, err = s.getFromUnpacked(h)
+		if err == plumbing.ErrObjectNotFound {
+			obj, err = s.getFromPackfile(h, false)
+		}
 	}
 
 	// If the error is still object not found, check if it's a shared object
