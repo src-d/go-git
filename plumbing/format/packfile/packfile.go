@@ -79,15 +79,7 @@ func (p *Packfile) GetByOffset(o int64) (plumbing.EncodedObject, error) {
 		}
 	}
 
-	if _, err := p.s.SeekFromStart(o); err != nil {
-		if err == io.EOF || isInvalid(err) {
-			return nil, plumbing.ErrObjectNotFound
-		}
-
-		return nil, err
-	}
-
-	return p.nextObject()
+	return p.objectAtOffset(o)
 }
 
 // GetSizeByOffset retrieves the size of the encoded object from the
@@ -106,6 +98,12 @@ func (p *Packfile) GetSizeByOffset(o int64) (size int64, err error) {
 		return 0, err
 	}
 	return h.Length, nil
+}
+
+func (p *Packfile) objectHeaderAtOffset(offset int64) (*ObjectHeader, error) {
+	h, err := p.s.SeekObjectHeader(offset)
+	p.s.pendingObject = nil
+	return h, err
 }
 
 func (p *Packfile) nextObjectHeader() (*ObjectHeader, error) {
@@ -154,11 +152,7 @@ func (p *Packfile) getObjectType(h *ObjectHeader) (typ plumbing.ObjectType, err 
 		if baseType, ok := p.offsetToType[offset]; ok {
 			typ = baseType
 		} else {
-			if _, err = p.s.SeekFromStart(offset); err != nil {
-				return
-			}
-
-			h, err = p.nextObjectHeader()
+			h, err = p.objectHeaderAtOffset(offset)
 			if err != nil {
 				return
 			}
@@ -175,8 +169,8 @@ func (p *Packfile) getObjectType(h *ObjectHeader) (typ plumbing.ObjectType, err 
 	return
 }
 
-func (p *Packfile) nextObject() (plumbing.EncodedObject, error) {
-	h, err := p.nextObjectHeader()
+func (p *Packfile) objectAtOffset(offset int64) (plumbing.EncodedObject, error) {
+	h, err := p.objectHeaderAtOffset(offset)
 	if err != nil {
 		if err == io.EOF || isInvalid(err) {
 			return nil, plumbing.ErrObjectNotFound
@@ -233,11 +227,7 @@ func (p *Packfile) getObjectContent(offset int64) (io.ReadCloser, error) {
 		}
 	}
 
-	if _, err := p.s.SeekFromStart(offset); err != nil {
-		return nil, err
-	}
-
-	h, err := p.nextObjectHeader()
+	h, err := p.objectHeaderAtOffset(offset)
 	if err != nil {
 		return nil, err
 	}
