@@ -23,21 +23,24 @@ type ObjectStorage struct {
 	// deltaBaseCache is an object cache uses to cache delta's bases when
 	deltaBaseCache cache.Object
 
+	simpleObjectCache cache.Object
+
 	dir   *dotgit.DotGit
 	index map[plumbing.Hash]idxfile.Index
 }
 
 // NewObjectStorage creates a new ObjectStorage with the given .git directory and cache.
-func NewObjectStorage(dir *dotgit.DotGit, cache cache.Object) *ObjectStorage {
-	return NewObjectStorageWithOptions(dir, cache, Options{})
+func NewObjectStorage(dir *dotgit.DotGit, deltaBaseCache cache.Object) *ObjectStorage {
+	return NewObjectStorageWithOptions(dir, deltaBaseCache, Options{})
 }
 
 // NewObjectStorageWithOptions creates a new ObjectStorage with the given .git directory, cache and extra options
-func NewObjectStorageWithOptions(dir *dotgit.DotGit, cache cache.Object, ops Options) *ObjectStorage {
+func NewObjectStorageWithOptions(dir *dotgit.DotGit, deltaBaseCache cache.Object, ops Options) *ObjectStorage {
 	return &ObjectStorage{
-		options:        ops,
-		deltaBaseCache: cache,
-		dir:            dir,
+		options:           ops,
+		deltaBaseCache:    deltaBaseCache,
+		simpleObjectCache: cache.NewObjectLRU(cache.MiByte),
+		dir:               dir,
 	}
 }
 
@@ -296,6 +299,10 @@ func (s *ObjectStorage) DeltaObject(t plumbing.ObjectType,
 }
 
 func (s *ObjectStorage) getFromUnpacked(h plumbing.Hash) (obj plumbing.EncodedObject, err error) {
+	if cacheObj, found := s.simpleObjectCache.Get(h); found {
+		return cacheObj, nil
+	}
+
 	f, err := s.dir.Object(h)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -326,6 +333,8 @@ func (s *ObjectStorage) getFromUnpacked(h plumbing.Hash) (obj plumbing.EncodedOb
 	if err != nil {
 		return nil, err
 	}
+
+	s.simpleObjectCache.Put(obj);
 
 	_, err = io.Copy(w, r)
 	return obj, err
