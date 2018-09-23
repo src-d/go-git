@@ -423,7 +423,7 @@ type bufferedSeeker struct {
 }
 
 func (r *bufferedSeeker) Seek(offset int64, whence int) (int64, error) {
-	if whence == io.SeekCurrent {
+	if whence == io.SeekCurrent && offset == 0 {
 		current, err := r.r.Seek(offset, whence)
 		if err != nil {
 			return current, err
