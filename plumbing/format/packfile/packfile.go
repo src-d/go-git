@@ -180,7 +180,7 @@ func (p *Packfile) objectAtOffset(offset int64) (plumbing.EncodedObject, error) 
 
 	// If we have no filesystem, we will return a MemoryObject instead
 	// of an FSObject.
-	if p.fs == nil || h.Length <= 16 * 1024 {
+	if p.fs == nil || h.Length <= 16*1024 {
 		return p.getNextObject(h)
 	}
 
@@ -319,8 +319,6 @@ func (p *Packfile) fillOFSDeltaObjectContent(obj plumbing.EncodedObject, offset 
 		if err != nil {
 			return err
 		}
-
-		p.cachePut(base)
 	}
 
 	obj.SetType(base.Type())
