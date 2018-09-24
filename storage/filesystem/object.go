@@ -20,27 +20,25 @@ import (
 type ObjectStorage struct {
 	options Options
 
-	// deltaBaseCache is an object cache uses to cache delta's bases when
-	deltaBaseCache cache.Object
-
-	simpleObjectCache cache.Object
+	// objectCache is an object cache uses to cache delta's bases and also recently
+	// loaded loose objects
+	objectCache cache.Object
 
 	dir   *dotgit.DotGit
 	index map[plumbing.Hash]idxfile.Index
 }
 
 // NewObjectStorage creates a new ObjectStorage with the given .git directory and cache.
-func NewObjectStorage(dir *dotgit.DotGit, deltaBaseCache cache.Object) *ObjectStorage {
-	return NewObjectStorageWithOptions(dir, deltaBaseCache, Options{})
+func NewObjectStorage(dir *dotgit.DotGit, objectCache cache.Object) *ObjectStorage {
+	return NewObjectStorageWithOptions(dir, objectCache, Options{})
 }
 
 // NewObjectStorageWithOptions creates a new ObjectStorage with the given .git directory, cache and extra options
-func NewObjectStorageWithOptions(dir *dotgit.DotGit, deltaBaseCache cache.Object, ops Options) *ObjectStorage {
+func NewObjectStorageWithOptions(dir *dotgit.DotGit, objectCache cache.Object, ops Options) *ObjectStorage {
 	return &ObjectStorage{
-		options:           ops,
-		deltaBaseCache:    deltaBaseCache,
-		simpleObjectCache: cache.NewObjectLRU(cache.MiByte),
-		dir:               dir,
+		options:     ops,
+		objectCache: objectCache,
+		dir:         dir,
 	}
 }
 
@@ -267,7 +265,7 @@ func (s *ObjectStorage) EncodedObject(t plumbing.ObjectType, h plumbing.Hash) (p
 			// Create a new object storage with the DotGit(s) and check for the
 			// required hash object. Skip when not found.
 			for _, dg := range dotgits {
-				o := NewObjectStorage(dg, s.deltaBaseCache)
+				o := NewObjectStorage(dg, s.objectCache)
 				enobj, enerr := o.EncodedObject(t, h)
 				if enerr != nil {
 					continue
@@ -309,7 +307,7 @@ func (s *ObjectStorage) DeltaObject(t plumbing.ObjectType,
 }
 
 func (s *ObjectStorage) getFromUnpacked(h plumbing.Hash) (obj plumbing.EncodedObject, err error) {
-	if cacheObj, found := s.simpleObjectCache.Get(h); found {
+	if cacheObj, found := s.objectCache.Get(h); found {
 		return cacheObj, nil
 	}
 
@@ -344,7 +342,7 @@ func (s *ObjectStorage) getFromUnpacked(h plumbing.Hash) (obj plumbing.EncodedOb
 		return nil, err
 	}
 
-	s.simpleObjectCache.Put(obj);
+	s.objectCache.Put(obj);
 
 	_, err = io.Copy(w, r)
 	return obj, err
@@ -388,7 +386,7 @@ func (s *ObjectStorage) decodeObjectAt(
 ) (plumbing.EncodedObject, error) {
 	hash, err := idx.FindHash(offset)
 	if err == nil {
-		obj, ok := s.deltaBaseCache.Get(hash)
+		obj, ok := s.objectCache.Get(hash)
 		if ok {
 			return obj, nil
 		}
@@ -399,8 +397,8 @@ func (s *ObjectStorage) decodeObjectAt(
 	}
 
 	var p *packfile.Packfile
-	if s.deltaBaseCache != nil {
-		p = packfile.NewPackfileWithCache(idx, s.dir.Fs(), f, s.deltaBaseCache)
+	if s.objectCache != nil {
+		p = packfile.NewPackfileWithCache(idx, s.dir.Fs(), f, s.objectCache)
 	} else {
 		p = packfile.NewPackfile(idx, s.dir.Fs(), f)
 	}
@@ -510,7 +508,7 @@ func (s *ObjectStorage) buildPackfileIters(
 			}
 			return newPackfileIter(
 				s.dir.Fs(), pack, t, seen, s.index[h],
-				s.deltaBaseCache, s.options.KeepDescriptors,
+				s.objectCache, s.options.KeepDescriptors,
 			)
 		},
 	}, nil
