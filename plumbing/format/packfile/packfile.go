@@ -21,6 +21,16 @@ var (
 	ErrZLib = NewError("zlib reading error")
 )
 
+// When reading small objects from packfile it is beneficial to do so at
+// once to exploit the buffered I/O. In many cases the objects are so small
+// that they were already loaded to memory when the object header was
+// loaded from the packfile. Wrapping in FSObject would cause this buffered
+// data to be thrown away and then re-read later, with the additional
+// seeking causing reloads from disk. Objects smaller than this threshold
+// are now always read into memory and stored in cache instead of being
+// wrapped in FSObject.
+const smallObjectThreshold = 16 * 1024
+
 // Packfile allows retrieving information from inside a packfile.
 type Packfile struct {
 	idxfile.Index
@@ -180,7 +190,7 @@ func (p *Packfile) objectAtOffset(offset int64) (plumbing.EncodedObject, error) 
 
 	// If we have no filesystem, we will return a MemoryObject instead
 	// of an FSObject.
-	if p.fs == nil || h.Length <= 16*1024 {
+	if p.fs == nil || h.Length <= smallObjectThreshold {
 		return p.getNextObject(h)
 	}
 
