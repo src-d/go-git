@@ -78,6 +78,11 @@ func (w *Worktree) status(commit plumbing.Hash) (Status, error) {
 		return nil, err
 	}
 
+	cfg, err := w.r.Config()
+	if err != nil {
+		return nil, err
+	}
+
 	for _, ch := range right {
 		a, err := ch.Action()
 		if err != nil {
@@ -479,11 +484,25 @@ func (w *Worktree) doUpdateFileToIndex(e *index.Entry, filename string, h plumbi
 		return err
 	}
 
+	isNew := e.Hash == plumbing.ZeroHash
 	e.Hash = h
 	e.ModifiedAt = info.ModTime()
-	e.Mode, err = filemode.NewFromOSFileMode(info.Mode())
+
+	cfg, err := w.r.Config()
 	if err != nil {
 		return err
+	}
+	if cfg.Core.FileMode || !info.Mode().IsRegular() {
+		e.Mode, err = filemode.NewFromOSFileMode(info.Mode())
+		if err != nil {
+			return err
+		}
+	} else if isNew {
+		// https://github.com/git/git/blob/2d3b1c576c85b7f5db1f418907af00ab88e0c303/cache.h#L276-L280
+		// If this is a new file, make it a regular file. Otherwise, e.Mode
+		// can be kept as-is. This avoids the index marking the file as modified
+		// when only the mode has changed and fileMode == false
+		e.Mode = filemode.Regular
 	}
 
 	if e.Mode.IsRegular() {
