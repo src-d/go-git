@@ -576,7 +576,7 @@ func (s *RepositorySuite) TestPlainCloneContextWithProperParameters(c *C) {
 		URL: s.GetBasicLocalRepositoryURL(),
 	})
 
-	c.Assert(r, NoNill)
+	c.Assert(r, NotNill)
 	c.Assert(err, NotNil)
 }
 
