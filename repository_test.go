@@ -572,10 +572,11 @@ func (s *RepositorySuite) TestPlainCloneContextWithProperParameters(c *C) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err := PlainCloneContext(ctx, c.MkDir(), false, &CloneOptions{
+	r, err := PlainCloneContext(ctx, c.MkDir(), false, &CloneOptions{
 		URL: s.GetBasicLocalRepositoryURL(),
 	})
 
+	c.Assert(r, NoNill)
 	c.Assert(err, NotNil)
 }
 
@@ -584,7 +585,7 @@ func (s *RepositorySuite) TestPlainCloneContextWithIncorrectRepo(c *C) {
 	cancel()
 
 	tmpDir := c.MkDir()
-	repoDir := filepath.Join(tmpDir, "repoDir") //path.Join(path.Dir(tmpDir), "repoDir")
+	repoDir := filepath.Join(tmpDir, "repoDir")
 	r, err := PlainCloneContext(ctx, repoDir, false, &CloneOptions{
 		URL: "incorrectOnPurpose",
 	})
@@ -601,10 +602,15 @@ func (s *RepositorySuite) TestPlainCloneContextWithNotEmptyDir(c *C) {
 	cancel()
 
 	tmpDir := c.MkDir()
-	err := ioutil.WriteFile(filepath.Join(tmpDir, "dummyFile"), []byte(fmt.Sprint("dummyContent")), 0644)
+	repoDirPath := filepath.Join(tmpDir, "repoDir")
+	err := os.Mkdir(repoDirPath, 0777)
 	c.Assert(err, IsNil)
 
-	r, err := PlainCloneContext(ctx, tmpDir, false, &CloneOptions{
+	dummyFile := filepath.Join(repoDirPath, "dummyFile")
+	err = ioutil.WriteFile(dummyFile, []byte(fmt.Sprint("dummyContent")), 0644)
+	c.Assert(err, IsNil)
+
+	r, err := PlainCloneContext(ctx, repoDirPath, false, &CloneOptions{
 		URL: "incorrectOnPurpose",
 	})
 	c.Assert(r, IsNil)
