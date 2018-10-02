@@ -141,7 +141,7 @@ type blame struct {
 	path string
 	// the commit of the final revision of the file to blame
 	fRev *object.Commit
-	// the chain of revisions affecting the the file to blame
+	// the chain of revisions affecting the file to blame
 	revs []*object.Commit
 	// the contents of the file across all its revisions
 	data []string
