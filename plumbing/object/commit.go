@@ -192,12 +192,17 @@ func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 		}
 
 		if !message {
-			line = bytes.TrimSpace(line)
+			line = bytes.TrimSuffix(line, []byte{'\n'})
 			if len(line) == 0 {
 				message = true
 				continue
 			}
 
+			if line[0] == byte(' ') {
+				continue
+			}
+
+			line = bytes.TrimSpace(line)
 			split := bytes.SplitN(line, []byte{' '}, 2)
 
 			var data []byte
