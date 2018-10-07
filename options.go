@@ -330,6 +330,8 @@ type LogOptions struct {
 	// set Order=LogOrderCommitterTime for ordering by committer time (more compatible with `git log`)
 	// set Order=LogOrderBSF for Breadth-first search
 	Order LogOrder
+
+	FileName *string
 }
 
 var (
