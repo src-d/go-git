@@ -22,21 +22,30 @@ func NewCommitFileIterFromIter(fileName string, commitIter CommitIter) CommitIte
 }
 
 func (c *commitFileIter) Next() (*Commit, error) {
-	var err error
 	if c.currentCommit == nil {
+		var err error
 		c.currentCommit, err = c.sourceIter.Next()
 		if err != nil {
 			return nil, err
 		}
 	}
+	commit, commitErr := c.getNextFileCommit()
 
+	// Setting current-commit to nil to prevent unwanted states when errors are raised
+	if commitErr != nil {
+		c.currentCommit = nil
+	}
+	return commit, commitErr
+}
+
+func (c *commitFileIter) getNextFileCommit() (*Commit, error) {
 	for {
 		// Parent-commit can be nil if the current-commit is the initial commit
 		parentCommit, parentCommitErr := c.sourceIter.Next()
 		if parentCommitErr != nil {
+			// If the parent-commit is beyond the initial commit, keep it nil
 			if parentCommitErr != io.EOF {
-				err = parentCommitErr
-				break
+				return nil, parentCommitErr
 			}
 			parentCommit = nil
 		}
@@ -44,8 +53,7 @@ func (c *commitFileIter) Next() (*Commit, error) {
 		// Fetch the trees of the current and parent commits
 		currentTree, currTreeErr := c.currentCommit.Tree()
 		if currTreeErr != nil {
-			err = currTreeErr
-			break
+			return nil, currTreeErr
 		}
 
 		var parentTree *Tree
@@ -53,16 +61,14 @@ func (c *commitFileIter) Next() (*Commit, error) {
 			var parentTreeErr error
 			parentTree, parentTreeErr = parentCommit.Tree()
 			if parentTreeErr != nil {
-				err = parentTreeErr
-				break
+				return nil, parentTreeErr
 			}
 		}
 
 		// Find diff between current and parent trees
 		changes, diffErr := DiffTree(currentTree, parentTree)
 		if diffErr != nil {
-			err = diffErr
-			break
+			return nil, diffErr
 		}
 
 		foundChangeForFile := false
@@ -82,16 +88,11 @@ func (c *commitFileIter) Next() (*Commit, error) {
 			return prevCommit, nil
 		}
 
-		// If there are no more commits to be found, then return with EOF
+		// If not matches found and if parent-commit is beyond the initial commit, then return with EOF
 		if parentCommit == nil {
-			err = io.EOF
-			break
+			return nil, io.EOF
 		}
 	}
-
-	// Setting current-commit to nil to prevent unwanted states when errors are raised
-	c.currentCommit = nil
-	return nil, err
 }
 
 func (c *commitFileIter) ForEach(cb func(*Commit) error) error {
