@@ -331,6 +331,8 @@ type LogOptions struct {
 	// set Order=LogOrderBSF for Breadth-first search
 	Order LogOrder
 
+	// Show only those commits in which the specified file was inserted/updated.
+	// It is equivalent to running `git log -- <file-name>`.
 	FileName *string
 }
 
