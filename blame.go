@@ -124,7 +124,11 @@ func newLine(author, text string, date time.Time, hash plumbing.Hash) *Line {
 
 func newLines(contents []string, commits []*object.Commit) ([]*Line, error) {
 	if len(contents) != len(commits) {
-		return nil, errors.New("contents and commits have different length")
+		if len(contents) == len(commits)-1 && contents[len(contents)-1] != "\n" {
+			contents = append(contents, "\n")
+		} else {
+			return nil, errors.New("contents and commits have different length")
+		}
 	}
 	result := make([]*Line, 0, len(contents))
 	for i := range contents {
