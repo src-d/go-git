@@ -155,9 +155,7 @@ func (r *Remote) PushContext(ctx context.Context, o *PushOptions) (err error) {
 		}
 	}
 
-	useRefDeltas := !ar.Capabilities.Supports(capability.OFSDelta)
-
-	rs, err := pushHashes(ctx, s, r.s, req, hashesToPush, useRefDeltas)
+	rs, err := pushHashes(ctx, s, r.s, req, hashesToPush, r.useRefDeltas(ar))
 	if err != nil {
 		return err
 	}
@@ -167,6 +165,10 @@ func (r *Remote) PushContext(ctx context.Context, o *PushOptions) (err error) {
 	}
 
 	return r.updateRemoteReferenceStorage(req, rs)
+}
+
+func (r *Remote) useRefDeltas(ar *packp.AdvRefs) bool {
+	return !ar.Capabilities.Supports(capability.OFSDelta)
 }
 
 func (r *Remote) newReferenceUpdateRequest(
