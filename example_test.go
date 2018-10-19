@@ -91,15 +91,6 @@ func ExamplePlainClone_withBasicAuth() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Prints the content of the CHANGELOG file from the cloned repository
-	changelog, err := os.Open(filepath.Join(dir, "CHANGELOG"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	io.Copy(os.Stdout, changelog)
-	// Output: Initial changelog
 }
 
 func ExamplePlainClone_withTokenAuth() {
@@ -115,7 +106,7 @@ func ExamplePlainClone_withTokenAuth() {
 	_, err = git.PlainClone(dir, false, &git.CloneOptions{
 		URL: "https://github.com/git-fixtures/basic.git",
 		Auth: &http.BasicAuth{
-			Username: "abc123",
+			Username: "abc123", // anything except an empty string
 			Password: "github_access_token",
 		},
 	})
@@ -123,15 +114,6 @@ func ExamplePlainClone_withTokenAuth() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Prints the content of the CHANGELOG file from the cloned repository
-	changelog, err := os.Open(filepath.Join(dir, "CHANGELOG"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	io.Copy(os.Stdout, changelog)
-	// Output: Initial changelog
 }
 
 func ExampleRepository_References() {
