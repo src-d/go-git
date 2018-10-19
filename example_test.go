@@ -11,6 +11,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 
 	"gopkg.in/src-d/go-billy.v4/memfs"
@@ -53,6 +54,70 @@ func ExamplePlainClone() {
 	// Clones the repository into the given dir, just as a normal git clone does
 	_, err = git.PlainClone(dir, false, &git.CloneOptions{
 		URL: "https://github.com/git-fixtures/basic.git",
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Prints the content of the CHANGELOG file from the cloned repository
+	changelog, err := os.Open(filepath.Join(dir, "CHANGELOG"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	io.Copy(os.Stdout, changelog)
+	// Output: Initial changelog
+}
+
+func ExamplePlainClone_withBasicAuth() {
+	// Tempdir to clone the repository
+	dir, err := ioutil.TempDir("", "clone-example")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer os.RemoveAll(dir) // clean up
+
+	// Clones the repository into the given dir, just as a normal git clone does
+	_, err = git.PlainClone(dir, false, &git.CloneOptions{
+		URL: "https://github.com/git-fixtures/basic.git",
+		Auth: &http.BasicAuth{
+			Username: "username",
+			Password: "password",
+		},
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Prints the content of the CHANGELOG file from the cloned repository
+	changelog, err := os.Open(filepath.Join(dir, "CHANGELOG"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	io.Copy(os.Stdout, changelog)
+	// Output: Initial changelog
+}
+
+func ExamplePlainClone_withTokenAuth() {
+	// Tempdir to clone the repository
+	dir, err := ioutil.TempDir("", "clone-example")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer os.RemoveAll(dir) // clean up
+
+	// Clones the repository into the given dir, just as a normal git clone does
+	_, err = git.PlainClone(dir, false, &git.CloneOptions{
+		URL: "https://github.com/git-fixtures/basic.git",
+		Auth: &http.BasicAuth{
+			Username: "abc123",
+			Password: "github_access_token",
+		},
 	})
 
 	if err != nil {
