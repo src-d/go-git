@@ -70,7 +70,7 @@ func ExamplePlainClone() {
 	// Output: Initial changelog
 }
 
-func ExamplePlainClone_withBasicAuth() {
+func ExamplePlainClone_usernamePassword() {
 	// Tempdir to clone the repository
 	dir, err := ioutil.TempDir("", "clone-example")
 	if err != nil {
@@ -93,7 +93,7 @@ func ExamplePlainClone_withBasicAuth() {
 	}
 }
 
-func ExamplePlainClone_withTokenAuth() {
+func ExamplePlainClone_accessToken() {
 	// Tempdir to clone the repository
 	dir, err := ioutil.TempDir("", "clone-example")
 	if err != nil {
