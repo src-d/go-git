@@ -23,6 +23,7 @@ The recommended way to install *go-git* is:
 ```
 go get -u gopkg.in/src-d/go-git.v4/...
 ```
+If it dosen't work make you you have golang installed.
 
 > We use [gopkg.in](http://labix.org/gopkg.in) for having a versioned API, this means that when `go get` clones the package, is the latest tag matching `v4.*` cloned and not the master branch.
 
