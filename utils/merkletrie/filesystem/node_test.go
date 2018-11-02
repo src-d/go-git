@@ -2,6 +2,8 @@ package filesystem
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -193,6 +195,27 @@ func (s *NoderSuite) TestDiffDirectory(c *C) {
 	a, err := ch[0].Action()
 	c.Assert(err, IsNil)
 	c.Assert(a, Equals, merkletrie.Modify)
+}
+
+func (s *NoderSuite) TestSymlink(c *C) {
+	fs := memfs.New()
+	vimPath := "/usr/bin/vim"
+	fs.Symlink(vimPath, "vi")
+
+	n := NewRootNode(fs, nil)
+	cs, err := n.Children()
+	c.Assert(err, IsNil)
+	c.Assert(cs, HasLen, 1)
+	vi := cs[0]
+	h := vi.Hash()
+
+	hasher := sha1.New()
+	_, err = hasher.Write([]byte(fmt.Sprintf("blob %d\x00%s", len(vimPath), vimPath)))
+	c.Assert(err, IsNil)
+	expected := hasher.Sum(nil)
+
+	c.Assert(expected, DeepEquals, []byte{0xa9, 0x1b, 0xec, 0x4d, 0xac, 0x36, 0x58, 0x9a, 0x97, 0x85, 0x8b, 0x1b, 0x4b, 0x0b, 0x42, 0x90, 0x49, 0x2d, 0xf4, 0xdb})
+	c.Assert(h, DeepEquals, expected)
 }
 
 func WriteFile(fs billy.Filesystem, filename string, data []byte, perm os.FileMode) error {

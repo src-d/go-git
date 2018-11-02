@@ -144,7 +144,11 @@ func (n *node) calculateHash(path string, file os.FileInfo) ([]byte, error) {
 	var hash plumbing.Hash
 	var err error
 	if file.Mode()&os.ModeSymlink != 0 {
-		hash, err = n.doCalculateHashForSymlink(path, file)
+		hash, err := n.doCalculateHashForSymlink(path, file)
+		if err != nil {
+			return nil, err
+		}
+		return hash[:], nil
 	} else {
 		hash, err = n.doCalculateHashForRegular(path, file)
 	}
@@ -183,7 +187,7 @@ func (n *node) doCalculateHashForSymlink(path string, file os.FileInfo) (plumbin
 		return plumbing.ZeroHash, err
 	}
 
-	h := plumbing.NewHasher(plumbing.BlobObject, file.Size())
+	h := plumbing.NewHasher(plumbing.BlobObject, int64(len(target)))
 	if _, err := h.Write([]byte(target)); err != nil {
 		return plumbing.ZeroHash, err
 	}
