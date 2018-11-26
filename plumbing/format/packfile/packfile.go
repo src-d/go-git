@@ -190,7 +190,14 @@ func (p *Packfile) objectAtOffset(offset int64) (plumbing.EncodedObject, error) 
 
 	// If we have no filesystem, we will return a MemoryObject instead
 	// of an FSObject.
-	if p.fs == nil || h.Length <= smallObjectThreshold {
+	if p.fs == nil {
+		return p.getNextObject(h)
+	}
+
+	// If the object is not a delta and it's small enough then read it
+	// completely into memory now since it is already read from disk
+	// into buffer anyway.
+	if h.Length <= smallObjectThreshold && h.Type != plumbing.OFSDeltaObject && h.Type != plumbing.REFDeltaObject {
 		return p.getNextObject(h)
 	}
 
