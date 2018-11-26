@@ -207,7 +207,7 @@ func (s *ObjectStorage) encodedObjectSizeFromPackfile(h plumbing.Hash) (
 	idx := s.index[pack]
 	hash, err := idx.FindHash(offset)
 	if err == nil {
-		obj, ok := s.deltaBaseCache.Get(hash)
+		obj, ok := s.objectCache.Get(hash)
 		if ok {
 			return obj.Size(), nil
 		}
@@ -216,8 +216,8 @@ func (s *ObjectStorage) encodedObjectSizeFromPackfile(h plumbing.Hash) (
 	}
 
 	var p *packfile.Packfile
-	if s.deltaBaseCache != nil {
-		p = packfile.NewPackfileWithCache(idx, s.dir.Fs(), f, s.deltaBaseCache)
+	if s.objectCache != nil {
+		p = packfile.NewPackfileWithCache(idx, s.dir.Fs(), f, s.objectCache)
 	} else {
 		p = packfile.NewPackfile(idx, s.dir.Fs(), f)
 	}
@@ -342,7 +342,7 @@ func (s *ObjectStorage) getFromUnpacked(h plumbing.Hash) (obj plumbing.EncodedOb
 		return nil, err
 	}
 
-	s.objectCache.Put(obj);
+	s.objectCache.Put(obj)
 
 	_, err = io.Copy(w, r)
 	return obj, err
@@ -417,7 +417,7 @@ func (s *ObjectStorage) decodeDeltaObjectAt(
 	}
 
 	p := packfile.NewScanner(f)
-	header, err := p.SeekObjectHeader(offset);
+	header, err := p.SeekObjectHeader(offset)
 	if err != nil {
 		return nil, err
 	}
