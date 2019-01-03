@@ -1,8 +1,9 @@
 package object
 
 import (
-	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"io"
+
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 type commitFileIter struct {

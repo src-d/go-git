@@ -1042,26 +1042,50 @@ func (r *Repository) Log(o *LogOptions) (object.CommitIter, error) {
 		return nil, err
 	}
 
-	var commitIter object.CommitIter
+	var (
+		commitIterFunc func(*object.Commit) object.CommitIter
+		commitIter     object.CommitIter
+	)
 	switch o.Order {
 	case LogOrderDefault:
-		commitIter = object.NewCommitPreorderIter(commit, nil, nil)
+		commitIterFunc = func(c *object.Commit) object.CommitIter {
+			return object.NewCommitPreorderIter(c, nil, nil)
+		}
 	case LogOrderDFS:
-		commitIter = object.NewCommitPreorderIter(commit, nil, nil)
+		commitIterFunc = func(c *object.Commit) object.CommitIter {
+			return object.NewCommitPreorderIter(c, nil, nil)
+		}
 	case LogOrderDFSPost:
-		commitIter = object.NewCommitPostorderIter(commit, nil)
+		commitIterFunc = func(c *object.Commit) object.CommitIter {
+			return object.NewCommitPostorderIter(c, nil)
+		}
 	case LogOrderBSF:
-		commitIter = object.NewCommitIterBSF(commit, nil, nil)
+		commitIterFunc = func(c *object.Commit) object.CommitIter {
+			return object.NewCommitIterBSF(c, nil, nil)
+		}
 	case LogOrderCommitterTime:
-		commitIter = object.NewCommitIterCTime(commit, nil, nil)
+		commitIterFunc = func(c *object.Commit) object.CommitIter {
+			return object.NewCommitIterCTime(c, nil, nil)
+		}
 	default:
 		return nil, fmt.Errorf("invalid Order=%v", o.Order)
 	}
+	commitIter = commitIterFunc(commit)
 
-	if o.FileName == nil {
-		return commitIter, nil
+	if o.All {
+		refIter, err := r.References()
+		if err != nil {
+			return nil, err
+		}
+
+		commitIter = object.NewCommitAllRefsIter(r.Storer, commitIterFunc, commitIter, refIter)
 	}
-	return object.NewCommitFileIterFromIter(*o.FileName, commitIter), nil
+
+	if o.FileName != nil {
+		commitIter = object.NewCommitFileIterFromIter(*o.FileName, commitIter)
+	}
+
+	return commitIter, nil
 }
 
 // Tags returns all the tag References in a repository.
