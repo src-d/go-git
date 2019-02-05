@@ -150,6 +150,20 @@ func (c *Commit) ID() plumbing.Hash {
 	return c.Hash
 }
 
+// Message returns the commit message.
+//
+// Message is present to fulfill external interfaces.
+func (c *Commit) GetMessage() string {
+	return c.Message
+}
+
+// ParentHashes returns the hashes of the parent commits.
+//
+// ParentHashes is present to fulfill external interfaces.
+func (c *Commit) GetParentHashes() []plumbing.Hash {
+	return c.ParentHashes
+}
+
 // Type returns the type of object. It always returns plumbing.CommitObject.
 //
 // Type is present to fulfill the Object interface.
