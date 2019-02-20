@@ -13,12 +13,10 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 
 	"github.com/mitchellh/go-homedir"
-	"github.com/xanzy/ssh-agent"
+	sshagent "github.com/xanzy/ssh-agent"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 )
-
-const DefaultUsername = "git"
 
 // AuthMethod is the interface all auth methods for the ssh client
 // must implement. The clientConfig method returns the ssh client
@@ -271,7 +269,7 @@ func getDefaultKnownHostsFiles() ([]string, error) {
 	}
 
 	return []string{
-		filepath.Join(homeDirPath, "/.ssh/known_hosts"),
+		filepath.Join(homeDirPath, ".ssh", "known_hosts"),
 		"/etc/ssh/ssh_known_hosts",
 	}, nil
 }
