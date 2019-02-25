@@ -322,9 +322,9 @@ func getFileStatsFromFilePatches(filePatches []fdiff.FilePatch) FileStats {
 		for _, chunk := range fp.Chunks() {
 			switch chunk.Type() {
 			case fdiff.Add:
-				cs.Addition += strings.Count(chunk.Content(), "\n")
+				cs.Addition += strings.Count(chunk.Content(), "\n") + 1
 			case fdiff.Delete:
-				cs.Deletion += strings.Count(chunk.Content(), "\n")
+				cs.Deletion += strings.Count(chunk.Content(), "\n") + 1
 			}
 		}
 
