@@ -193,7 +193,7 @@ func (t *Tag) encode(o plumbing.EncodedObject, includeSig bool) (err error) {
 		return err
 	}
 
-	if _, err = fmt.Fprint(w, t.Message); err != nil {
+	if _, err = fmt.Fprintf(w, "%s\n", t.Message); err != nil {
 		return err
 	}
 
