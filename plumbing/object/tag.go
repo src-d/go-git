@@ -157,6 +157,8 @@ func (t *Tag) Decode(o plumbing.EncodedObject) (err error) {
 
 			t.Message += string(l) + "\n"
 		}
+
+		t.Message = strings.TrimSuffix(t.Message, "\n")
 	} else {
 		t.Message = string(data)
 	}
