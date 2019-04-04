@@ -157,8 +157,7 @@ func (t *Tag) Decode(o plumbing.EncodedObject) (err error) {
 
 			t.Message += string(l) + "\n"
 		}
-
-		t.Message = strings.TrimSuffix(t.Message, "\n")
+		t.Message = strings.TrimRight(t.Message, "\n")
 	} else {
 		t.Message = string(data)
 	}
@@ -189,11 +188,7 @@ func (t *Tag) encode(o plumbing.EncodedObject, includeSig bool) (err error) {
 		return err
 	}
 
-	if _, err = fmt.Fprint(w, "\n\n"); err != nil {
-		return err
-	}
-
-	if _, err = fmt.Fprintf(w, "%s\n", t.Message); err != nil {
+	if _, err = fmt.Fprintf(w, "\n\n%s\n", strings.TrimRight(t.Message, "\n")); err != nil {
 		return err
 	}
 
