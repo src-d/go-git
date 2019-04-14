@@ -519,6 +519,46 @@ func (s *SuiteDotGit) TestObjectPackWithKeepDescriptors(c *C) {
 
 }
 
+func (s *SuiteDotGit) TestObjectPackWithMaxOpenDescriptors(c *C) {
+	f := fixtures.ByTag("multi-packfile").One()
+	fs := f.DotGit()
+	dir := NewWithOptions(fs, Options{MaxOpenDescriptors: 1})
+
+	hashes, err := dir.ObjectPacks()
+	c.Assert(hashes, HasLen, 2)
+
+	pack, err := dir.ObjectPack(hashes[0])
+	c.Assert(err, IsNil)
+	c.Assert(filepath.Ext(pack.Name()), Equals, ".pack")
+
+	// Move to an specific offset
+	pack.Seek(42, os.SEEK_SET)
+
+	pack, err = dir.ObjectPack(hashes[0])
+	c.Assert(err, IsNil)
+
+	// If the file is the same the offset should be the same
+	offset, err := pack.Seek(0, os.SEEK_CUR)
+	c.Assert(err, IsNil)
+	c.Assert(offset, Equals, int64(42))
+
+	// Open second pack file, this should close the first
+	pack2, err := dir.ObjectPack(hashes[1])
+	c.Assert(err, IsNil)
+	c.Assert(filepath.Ext(pack.Name()), Equals, ".pack")
+
+	// Move second pack file to a specific offset
+	_, err = pack2.Seek(42, os.SEEK_SET)
+	c.Assert(err, IsNil)
+
+	// Seeking in first pack file (now closed) should error
+	_, err = pack.Seek(42, os.SEEK_SET)
+	c.Assert(err, NotNil)
+
+	err = dir.Close()
+	c.Assert(err, IsNil)
+}
+
 func (s *SuiteDotGit) TestObjectPackIdx(c *C) {
 	f := fixtures.Basic().ByTag(".git").One()
 	fs := f.DotGit()

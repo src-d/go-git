@@ -224,7 +224,9 @@ func PlainInit(path string, isBare bool) (*Repository, error) {
 		dot, _ = wt.Chroot(GitDirName)
 	}
 
-	s := filesystem.NewStorage(dot, cache.NewObjectLRUDefault())
+	s := filesystem.NewStorageWithOptions(dot, cache.NewObjectLRUDefault(), filesystem.Options{
+		MaxOpenDescriptors: 100,
+	})
 
 	return Init(s, wt)
 }
@@ -252,7 +254,9 @@ func PlainOpenWithOptions(path string, o *PlainOpenOptions) (*Repository, error)
 		return nil, err
 	}
 
-	s := filesystem.NewStorage(dot, cache.NewObjectLRUDefault())
+	s := filesystem.NewStorageWithOptions(dot, cache.NewObjectLRUDefault(), filesystem.Options{
+		MaxOpenDescriptors: 100,
+	})
 
 	return Open(s, wt)
 }

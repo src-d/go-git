@@ -66,6 +66,9 @@ type Options struct {
 	// KeepDescriptors makes the file descriptors to be reused but they will
 	// need to be manually closed calling Close().
 	KeepDescriptors bool
+	// MaxOpenDescriptors is the max number of file descriptors to keep
+	// open. If KeepDescriptors is true, all file descriptors will remain open.
+	MaxOpenDescriptors int
 }
 
 // The DotGit type represents a local git repository on disk. This
@@ -83,7 +86,9 @@ type DotGit struct {
 	packList   []plumbing.Hash
 	packMap    map[plumbing.Hash]struct{}
 
-	files map[string]billy.File
+	fileList    []plumbing.Hash
+	fileListIdx int
+	fileMap     map[plumbing.Hash]billy.File
 }
 
 // New returns a DotGit value ready to be used. The path argument must
@@ -132,8 +137,8 @@ func (d *DotGit) Initialize() error {
 // Close closes all opened files.
 func (d *DotGit) Close() error {
 	var firstError error
-	if d.files != nil {
-		for _, f := range d.files {
+	if d.fileMap != nil {
+		for _, f := range d.fileMap {
 			err := f.Close()
 			if err != nil && firstError == nil {
 				firstError = err
@@ -141,7 +146,9 @@ func (d *DotGit) Close() error {
 			}
 		}
 
-		d.files = nil
+		d.fileMap = nil
+		d.fileList = nil
+		d.fileListIdx = 0
 	}
 
 	if firstError != nil {
@@ -245,8 +252,20 @@ func (d *DotGit) objectPackPath(hash plumbing.Hash, extension string) string {
 }
 
 func (d *DotGit) objectPackOpen(hash plumbing.Hash, extension string) (billy.File, error) {
-	if d.files == nil {
-		d.files = make(map[string]billy.File)
+	if d.fileMap == nil {
+		if d.options.MaxOpenDescriptors > 0 {
+			d.fileList = make([]plumbing.Hash, d.options.MaxOpenDescriptors)
+			d.fileMap = make(map[plumbing.Hash]billy.File, d.options.MaxOpenDescriptors)
+		} else {
+			d.fileMap = make(map[plumbing.Hash]billy.File)
+		}
+	}
+
+	if extension == "pack" {
+		f, ok := d.fileMap[hash]
+		if ok {
+			return f, nil
+		}
 	}
 
 	err := d.hasPack(hash)
@@ -255,11 +274,6 @@ func (d *DotGit) objectPackOpen(hash plumbing.Hash, extension string) (billy.Fil
 	}
 
 	path := d.objectPackPath(hash, extension)
-	f, ok := d.files[path]
-	if ok {
-		return f, nil
-	}
-
 	pack, err := d.fs.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -269,8 +283,28 @@ func (d *DotGit) objectPackOpen(hash plumbing.Hash, extension string) (billy.Fil
 		return nil, err
 	}
 
-	if d.options.KeepDescriptors && extension == "pack" {
-		d.files[path] = pack
+	if extension == "pack" {
+		if d.options.KeepDescriptors {
+			d.fileMap[hash] = pack
+		} else if d.options.MaxOpenDescriptors > 0 {
+			if next := d.fileList[d.fileListIdx]; !next.IsZero() {
+				open := d.fileMap[next]
+				delete(d.fileMap, next)
+				if open != nil {
+					if err = open.Close(); err != nil {
+						return nil, err
+					}
+				}
+			}
+
+			d.fileList[d.fileListIdx] = hash
+			d.fileMap[hash] = pack
+
+			d.fileListIdx++
+			if d.fileListIdx >= len(d.fileList) {
+				d.fileListIdx = 0
+			}
+		}
 	}
 
 	return pack, nil

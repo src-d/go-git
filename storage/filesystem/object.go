@@ -366,7 +366,7 @@ func (s *ObjectStorage) getFromPackfile(h plumbing.Hash, canBeDelta bool) (
 		return nil, err
 	}
 
-	if !s.options.KeepDescriptors {
+	if !s.options.KeepDescriptors && s.options.MaxOpenDescriptors == 0 {
 		defer ioutil.CheckClose(f, &err)
 	}
 
