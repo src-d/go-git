@@ -297,7 +297,7 @@ func (c *Commit) Stats() (FileStats, error) {
 }
 
 // StatsContext returns the stats of a commit. Error will be return if context
-// expires. Provided context must be non-nil
+// expires. Provided context must be non-nil.
 func (c *Commit) StatsContext(ctx context.Context) (FileStats, error) {
 	fromTree, err := c.Tree()
 	if err != nil {
