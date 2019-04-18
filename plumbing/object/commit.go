@@ -77,7 +77,7 @@ func (c *Commit) Tree() (*Tree, error) {
 }
 
 // PatchContext returns the Patch between the actual commit and the provided one.
-// Error will be return if context expires. Provided context must be non-nil
+// Error will be return if context expires. Provided context must be non-nil.
 func (c *Commit) PatchContext(ctx context.Context, to *Commit) (*Patch, error) {
 	fromTree, err := c.Tree()
 	if err != nil {
