@@ -415,7 +415,7 @@ func (s *ObjectStorage) decodeDeltaObjectAt(
 		return nil, err
 	}
 
-	p := packfile.NewScanner(f)
+	p := packfile.NewScannerWithOptions(f, packfile.ScannerOptions{NoChecksum: true})
 	header, err := p.SeekObjectHeader(offset)
 	if err != nil {
 		return nil, err

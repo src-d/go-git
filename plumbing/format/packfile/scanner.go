@@ -53,12 +53,28 @@ type Scanner struct {
 	IsSeekable bool
 }
 
-// NewScanner returns a new Scanner based on a reader, if the given reader
-// implements io.ReadSeeker the Scanner will be also Seekable
-func NewScanner(r io.Reader) *Scanner {
+// ScannerOptions specifies options for use by NewScannerWithOptions
+type ScannerOptions struct {
+	// Avoid calculating the CRC checksums
+	NoChecksum bool
+}
+
+// NewScannerWithOptions returns a new Scanner based on a reader, if
+// the given reader implements io.ReadSeeker the Scanner will be also
+// Seekable. Additional options can be specified to disable checksum
+// calculation.
+func NewScannerWithOptions(r io.Reader, ops ScannerOptions) *Scanner {
 	seeker, ok := r.(io.ReadSeeker)
 	if !ok {
 		seeker = &trackableReader{Reader: r}
+	}
+
+	if ops.NoChecksum {
+		return &Scanner{
+			r:          newByteReadSeeker(seeker),
+			crc:        nil,
+			IsSeekable: ok,
+		}
 	}
 
 	crc := crc32.NewIEEE()
@@ -67,6 +83,12 @@ func NewScanner(r io.Reader) *Scanner {
 		crc:        crc,
 		IsSeekable: ok,
 	}
+}
+
+// NewScanner returns a new Scanner based on a reader, if the given reader
+// implements io.ReadSeeker the Scanner will be also Seekable
+func NewScanner(r io.Reader) *Scanner {
+	return NewScannerWithOptions(r, ScannerOptions{})
 }
 
 // Header reads the whole packfile header (signature, version and object count).
@@ -184,7 +206,9 @@ func (s *Scanner) NextObjectHeader() (*ObjectHeader, error) {
 func (s *Scanner) nextObjectHeader() (*ObjectHeader, error) {
 	defer s.Flush()
 
-	s.crc.Reset()
+	if s.crc != nil {
+		s.crc.Reset()
+	}
 
 	h := &ObjectHeader{}
 	s.pendingObject = h
@@ -304,12 +328,18 @@ func (s *Scanner) readLength(first byte) (int64, error) {
 // NextObject writes the content of the next object into the reader, returns
 // the number of bytes written, the CRC32 of the content and an error, if any
 func (s *Scanner) NextObject(w io.Writer) (written int64, crc32 uint32, err error) {
-	defer s.crc.Reset()
+	if s.crc != nil {
+		defer s.crc.Reset()
+	}
 
 	s.pendingObject = nil
 	written, err = s.copyObject(w)
 	s.Flush()
-	crc32 = s.crc.Sum32()
+	if s.crc != nil {
+		crc32 = s.crc.Sum32()
+	} else {
+		crc32 = 0
+	}
 	return
 }
 
