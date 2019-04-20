@@ -24,8 +24,9 @@ type ObjectStorage struct {
 	// loaded loose objects
 	objectCache cache.Object
 
-	dir   *dotgit.DotGit
-	index map[plumbing.Hash]idxfile.Index
+	dir       *dotgit.DotGit
+	index     map[plumbing.Hash]idxfile.Index
+	packfiles map[plumbing.Hash]*packfile.Packfile
 }
 
 // NewObjectStorage creates a new ObjectStorage with the given .git directory and cache.
@@ -215,14 +216,7 @@ func (s *ObjectStorage) encodedObjectSizeFromPackfile(h plumbing.Hash) (
 		return 0, err
 	}
 
-	var p *packfile.Packfile
-	if s.objectCache != nil {
-		p = packfile.NewPackfileWithCache(idx, s.dir.Fs(), f, s.objectCache)
-	} else {
-		p = packfile.NewPackfile(idx, s.dir.Fs(), f)
-	}
-
-	return p.GetSizeByOffset(offset)
+	return s.getPackfile(f, idx, pack).GetSizeByOffset(offset)
 }
 
 // EncodedObjectSize returns the plaintext size of the given object,
@@ -372,16 +366,37 @@ func (s *ObjectStorage) getFromPackfile(h plumbing.Hash, canBeDelta bool) (
 
 	idx := s.index[pack]
 	if canBeDelta {
-		return s.decodeDeltaObjectAt(f, idx, offset, hash)
+		return s.decodeDeltaObjectAt(f, idx, offset, hash, pack)
 	}
 
-	return s.decodeObjectAt(f, idx, offset)
+	return s.decodeObjectAt(f, idx, offset, hash, pack)
+}
+
+func (s *ObjectStorage) getPackfile(f billy.File, idx idxfile.Index, pack plumbing.Hash) *packfile.Packfile {
+	var p *packfile.Packfile
+	var ok bool
+
+	if p, ok = s.packfiles[pack]; !ok {
+		if s.objectCache != nil {
+			p = packfile.NewPackfileWithCache(idx, s.dir.Fs(), f, s.objectCache)
+		} else {
+			p = packfile.NewPackfile(idx, s.dir.Fs(), f)
+		}
+
+		if s.options.KeepDescriptors {
+			s.packfiles[pack] = p
+		}
+	}
+
+	return p
 }
 
 func (s *ObjectStorage) decodeObjectAt(
 	f billy.File,
 	idx idxfile.Index,
 	offset int64,
+	hash plumbing.Hash,
+	pack plumbing.Hash,
 ) (plumbing.EncodedObject, error) {
 	hash, err := idx.FindHash(offset)
 	if err == nil {
@@ -410,6 +425,7 @@ func (s *ObjectStorage) decodeDeltaObjectAt(
 	idx idxfile.Index,
 	offset int64,
 	hash plumbing.Hash,
+	pack plumbing.Hash,
 ) (plumbing.EncodedObject, error) {
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return nil, err
@@ -434,7 +450,7 @@ func (s *ObjectStorage) decodeDeltaObjectAt(
 			return nil, err
 		}
 	default:
-		return s.decodeObjectAt(f, idx, offset)
+		return s.decodeObjectAt(f, idx, offset, hash, pack)
 	}
 
 	obj := &plumbing.MemoryObject{}
@@ -515,6 +531,11 @@ func (s *ObjectStorage) buildPackfileIters(
 
 // Close closes all opened files.
 func (s *ObjectStorage) Close() error {
+	for _, p := range s.packfiles {
+		p.Close()
+	}
+	s.packfiles = make(map[plumbing.Hash]*packfile.Packfile)
+
 	return s.dir.Close()
 }
 
