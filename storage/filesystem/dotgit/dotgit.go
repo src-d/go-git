@@ -66,6 +66,9 @@ type Options struct {
 	// KeepDescriptors makes the file descriptors to be reused but they will
 	// need to be manually closed calling Close().
 	KeepDescriptors bool
+	// CommonDir sets the directory used for accessing non-worktree files that
+	// would normally be taken from the root directory.
+	CommonDir billy.Filesystem
 }
 
 // The DotGit type represents a local git repository on disk. This
@@ -73,6 +76,7 @@ type Options struct {
 type DotGit struct {
 	options Options
 	fs      billy.Filesystem
+	localfs billy.Filesystem
 
 	// incoming object directory information
 	incomingChecked bool
@@ -96,9 +100,14 @@ func New(fs billy.Filesystem) *DotGit {
 // NewWithOptions sets non default configuration options.
 // See New for complete help.
 func NewWithOptions(fs billy.Filesystem, o Options) *DotGit {
+	if o.CommonDir == nil {
+		o.CommonDir = fs
+	}
+
 	return &DotGit{
 		options: o,
-		fs:      fs,
+		fs:      o.CommonDir,
+		localfs: fs,
 	}
 }
 
@@ -923,13 +932,23 @@ func (d *DotGit) addRefFromHEAD(refs *[]*plumbing.Reference) error {
 
 func (d *DotGit) readReferenceFile(path, name string) (ref *plumbing.Reference, err error) {
 	path = d.fs.Join(path, d.fs.Join(strings.Split(name, "/")...))
-	f, err := d.fs.Open(path)
+
+	f, err := d.fsFromRefPath(path).Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer ioutil.CheckClose(f, &err)
 
 	return d.readReferenceFrom(f, name)
+}
+
+func (d *DotGit) fsFromRefPath(path string) billy.Filesystem {
+	// In general, all pseudo refs are per working tree and all refs starting
+	// with "refs/" are shared.
+	if strings.HasPrefix(path, "refs/") {
+		return d.fs
+	}
+	return d.localfs
 }
 
 func (d *DotGit) CountLooseRefs() (int, error) {
