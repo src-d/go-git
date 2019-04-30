@@ -248,6 +248,8 @@ func (s *RepositorySuite) TestPullAdd(c *C) {
 	ExecuteOnPath(c, path,
 		"touch foo",
 		"git add foo",
+                "git config user.email foo@example.com",
+                "git config user.name foo",
 		"git commit -m foo foo",
 	)
 
