@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io"
 	"sort"
+	"sync"
+	"sync/atomic"
 
 	encbin "encoding/binary"
 
@@ -56,8 +58,11 @@ type MemoryIndex struct {
 	PackfileChecksum [20]byte
 	IdxChecksum      [20]byte
 
+	// if =1, map will not change any more. no need lock for read
+	// if =0, all rw must using lock
+	offsetHashIsFull int32
+	offsetHashLock   sync.Mutex
 	offsetHash       map[int64]plumbing.Hash
-	offsetHashIsFull bool
 }
 
 var _ Index = (*MemoryIndex)(nil)
@@ -125,12 +130,16 @@ func (idx *MemoryIndex) FindOffset(h plumbing.Hash) (int64, error) {
 
 	offset := idx.getOffset(k, i)
 
-	if !idx.offsetHashIsFull {
-		// Save the offset for reverse lookup
-		if idx.offsetHash == nil {
-			idx.offsetHash = make(map[int64]plumbing.Hash)
+	if atomic.LoadInt32(&idx.offsetHashIsFull) == 0 {
+		idx.offsetHashLock.Lock()
+		defer idx.offsetHashLock.Unlock()
+		if idx.offsetHashIsFull == 0 {
+			// Save the offset for reverse lookup
+			if idx.offsetHash == nil {
+				idx.offsetHash = make(map[int64]plumbing.Hash)
+			}
+			idx.offsetHash[int64(offset)] = h
 		}
-		idx.offsetHash[int64(offset)] = h
 	}
 
 	return int64(offset), nil
@@ -172,21 +181,24 @@ func (idx *MemoryIndex) FindHash(o int64) (plumbing.Hash, error) {
 	var hash plumbing.Hash
 	var ok bool
 
-	if idx.offsetHash != nil {
-		if hash, ok = idx.offsetHash[o]; ok {
-			return hash, nil
+	if atomic.LoadInt32(&idx.offsetHashIsFull) == 0 {
+		idx.offsetHashLock.Lock()
+		defer idx.offsetHashLock.Unlock()
+
+		if idx.offsetHash != nil {
+			if hash, ok = idx.offsetHash[o]; ok {
+				return hash, nil
+			}
+		}
+
+		if idx.offsetHashIsFull == 0 {
+			if err := idx.genOffsetHash(); err != nil {
+				return plumbing.ZeroHash, err
+			}
 		}
 	}
 
-	// Lazily generate the reverse offset/hash map if required.
-	if !idx.offsetHashIsFull || idx.offsetHash == nil {
-		if err := idx.genOffsetHash(); err != nil {
-			return plumbing.ZeroHash, err
-		}
-
-		hash, ok = idx.offsetHash[o]
-	}
-
+	hash, ok = idx.offsetHash[o]
 	if !ok {
 		return plumbing.ZeroHash, plumbing.ErrObjectNotFound
 	}
@@ -195,14 +207,14 @@ func (idx *MemoryIndex) FindHash(o int64) (plumbing.Hash, error) {
 }
 
 // genOffsetHash generates the offset/hash mapping for reverse search.
+// need to be protected with idx.offsetHashLock
 func (idx *MemoryIndex) genOffsetHash() error {
 	count, err := idx.Count()
 	if err != nil {
 		return err
 	}
 
-	idx.offsetHash = make(map[int64]plumbing.Hash, count)
-	idx.offsetHashIsFull = true
+	offsetHash := make(map[int64]plumbing.Hash, count)
 
 	var hash plumbing.Hash
 	i := uint32(0)
@@ -211,10 +223,13 @@ func (idx *MemoryIndex) genOffsetHash() error {
 		for secondLevel := uint32(0); i < fanoutValue; i++ {
 			copy(hash[:], idx.Names[mappedFirstLevel][secondLevel*objectIDLength:])
 			offset := int64(idx.getOffset(mappedFirstLevel, int(secondLevel)))
-			idx.offsetHash[offset] = hash
+			offsetHash[offset] = hash
 			secondLevel++
 		}
 	}
+
+	idx.offsetHash = offsetHash
+	atomic.StoreInt32(&idx.offsetHashIsFull, 1)
 
 	return nil
 }
