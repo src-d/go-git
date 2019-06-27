@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -512,6 +513,12 @@ func (w *Worktree) checkoutChangeRegularFile(name string,
 	return nil
 }
 
+var copyBufferPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 32*1024)
+	},
+}
+
 func (w *Worktree) checkoutFile(f *object.File) (err error) {
 	mode, err := f.Mode.ToOSFileMode()
 	if err != nil {
@@ -535,8 +542,9 @@ func (w *Worktree) checkoutFile(f *object.File) (err error) {
 	}
 
 	defer ioutil.CheckClose(to, &err)
-
-	_, err = io.Copy(to, from)
+	buf := copyBufferPool.Get().([]byte)
+	_, err = io.CopyBuffer(to, from, buf)
+	copyBufferPool.Put(buf)
 	return
 }
 
