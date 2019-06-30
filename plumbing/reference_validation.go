@@ -286,6 +286,7 @@ func (v *RefNameChecker) HandleOnlyAtSign() error {
 	return nil
 }
 
+// This runs everything
 func (v *RefNameChecker) CheckRefName() error {
 	handles := []func() error{
 		v.HandleLeadingDot,
