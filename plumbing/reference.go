@@ -34,10 +34,9 @@ var (
 type ReferenceType int8
 
 const (
-	InvalidReference   ReferenceType = 0
-	HashReference      ReferenceType = 1
-	SymbolicReference  ReferenceType = 2
-	MalformedReference ReferenceType = 3
+	InvalidReference  ReferenceType = 0
+	HashReference     ReferenceType = 1
+	SymbolicReference ReferenceType = 2
 )
 
 func (r ReferenceType) String() string {
@@ -48,8 +47,6 @@ func (r ReferenceType) String() string {
 		return "hash-reference"
 	case SymbolicReference:
 		return "symbolic-reference"
-	case MalformedReference:
-		return "malformed-reference"
 	}
 
 	return ""
