@@ -57,6 +57,9 @@ var (
 		`a/na@{me`,
 		`a/name`,
 	}
+	OnlyAtSignNames = []string{
+		`@`,
+	}
 )
 
 func (s *ReferenceValidationSuite) TestValidateHandleLeadingDot(c *C) {
@@ -353,6 +356,29 @@ func (s *ReferenceValidationSuite) TestSkipHandleAtOpenBrace(c *C) {
 	for _, name := range AtOpenBraceNames {
 		s.Checker.Name = ReferenceName(name)
 		err := s.Checker.HandleAtOpenBrace()
+		c.Assert(err, IsNil)
+	}
+}
+
+func (s *ReferenceValidationSuite) TestValidateHandleOnlyAtSign(c *C) {
+	s.Checker.ActionOptions.HandleOnlyAtSign = SANITIZE
+	s.Checker.Name = ReferenceName(OnlyAtSignNames[0])
+	err := s.Checker.HandleOnlyAtSign()
+	c.Assert(err, ErrorMatches, fmt.Sprint(ErrRefOnlyAtSign))
+}
+
+func (s *ReferenceValidationSuite) TestSanitizeHandleOnlyAtSign(c *C) {
+	s.Checker.ActionOptions.HandleOnlyAtSign = SANITIZE
+	s.Checker.Name = ReferenceName(OnlyAtSignNames[0])
+	err := s.Checker.HandleOnlyAtSign()
+	c.Assert(err, ErrorMatches, fmt.Sprint(ErrRefOnlyAtSign))
+}
+
+func (s *ReferenceValidationSuite) TestSkipHandleOnlyAtSign(c *C) {
+	s.Checker.ActionOptions.HandleOnlyAtSign = SKIP
+	for _, name := range OnlyAtSignNames {
+		s.Checker.Name = ReferenceName(name)
+		err := s.Checker.HandleOnlyAtSign()
 		c.Assert(err, IsNil)
 	}
 }

@@ -28,6 +28,7 @@ var (
 	ErrRefConsecutiveForwardSlashes = errors.New("ref name cannot have consectutive forward slashes")
 	ErrRefTrailingDot               = errors.New("ref name cannot end with a dot")
 	ErrRefAtOpenBrace               = errors.New("ref name cannot include at-open-brace")
+	ErrRefOnlyAtSign                = errors.New("ref name cannot only be an at sign")
 )
 
 var (
@@ -43,6 +44,7 @@ var (
 	PatternAtOpenBrace                 = regexp.MustCompile(`@{`)
 	PatternExcludedCharactersAlternate = regexp.MustCompile(`[\000-\037\177 ~^:?[]+`)
 	PatternOneAllowedAsterisk          = regexp.MustCompile(`^[^*]+?\*?[^*]+?$`)
+	PatternOnlyAtSign                  = regexp.MustCompile(`^@$`)
 )
 
 type CheckRefOptions struct {
@@ -87,6 +89,8 @@ type ActionOptions struct {
 	HandleTrailingDot ActionChoice
 	// They cannot contain a sequence @{
 	HandleAtOpenBrace ActionChoice
+	// They cannot be the single character @
+	HandleOnlyAtSign ActionChoice
 }
 
 // https://git-scm.com/docs/git-check-ref-format
@@ -117,6 +121,7 @@ func NewActionOptions(default_value ActionChoice) *ActionOptions {
 		HandleConsecutiveForwardSlashes: default_value,
 		HandleTrailingDot:               default_value,
 		HandleAtOpenBrace:               default_value,
+		HandleOnlyAtSign:                default_value,
 	}
 }
 
@@ -271,6 +276,16 @@ func (v *RefNameChecker) HandleAtOpenBrace() error {
 	return nil
 }
 
+func (v *RefNameChecker) HandleOnlyAtSign() error {
+	if SKIP == v.ActionOptions.HandleOnlyAtSign {
+		return nil
+	}
+	if PatternOnlyAtSign.MatchString(v.Name.String()) {
+		return ErrRefOnlyAtSign
+	}
+	return nil
+}
+
 func (v *RefNameChecker) CheckRefName() error {
 	handles := []func() error{
 		v.HandleLeadingDot,
@@ -283,6 +298,7 @@ func (v *RefNameChecker) CheckRefName() error {
 		v.HandleConsecutiveForwardSlashes,
 		v.HandleTrailingDot,
 		v.HandleAtOpenBrace,
+		v.HandleOnlyAtSign,
 	}
 	for _, handle := range handles {
 		err := handle()
