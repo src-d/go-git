@@ -1,4 +1,4 @@
-// +build darwin freebsd netbsd
+// +build darwin freebsd netbsd openbsd
 
 package git
 
@@ -19,8 +19,4 @@ func init() {
 			e.UID = os.Uid
 		}
 	}
-}
-
-func isSymlinkWindowsNonAdmin(err error) bool {
-	return false
 }

@@ -88,7 +88,7 @@ func (s *upSession) doRequest(
 	}
 
 	applyHeadersToRequest(req, content, s.endpoint.Host, transport.UploadPackServiceName)
-	s.ApplyAuthToRequest(req)
+	s.applyAuthToRequest(req)
 
 	res, err := s.client.Do(req.WithContext(ctx))
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
@@ -52,7 +51,8 @@ const (
 
 func (s *RevListSuite) SetUpTest(c *C) {
 	s.Suite.SetUpSuite(c)
-	sto := filesystem.NewStorage(fixtures.Basic().One().DotGit(), cache.NewObjectLRUDefault())
+	sto, err := filesystem.NewStorage(fixtures.Basic().One().DotGit())
+	c.Assert(err, IsNil)
 	s.Storer = sto
 }
 
@@ -67,7 +67,8 @@ func (s *RevListSuite) TestRevListObjects_Submodules(c *C) {
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5": true,
 	}
 
-	sto := filesystem.NewStorage(fixtures.ByTag("submodule").One().DotGit(), cache.NewObjectLRUDefault())
+	sto, err := filesystem.NewStorage(fixtures.ByTag("submodule").One().DotGit())
+	c.Assert(err, IsNil)
 
 	ref, err := storer.ResolveReference(sto, plumbing.HEAD)
 	c.Assert(err, IsNil)
@@ -108,9 +109,10 @@ func (s *RevListSuite) TestRevListObjects(c *C) {
 }
 
 func (s *RevListSuite) TestRevListObjectsTagObject(c *C) {
-	sto := filesystem.NewStorage(
+	sto, err := filesystem.NewStorage(
 		fixtures.ByTag("tags").
-			ByURL("https://github.com/git-fixtures/tags.git").One().DotGit(), cache.NewObjectLRUDefault())
+			ByURL("https://github.com/git-fixtures/tags.git").One().DotGit())
+	c.Assert(err, IsNil)
 
 	expected := map[string]bool{
 		"70846e9a10ef7b41064b40f07713d5b8b9a8fc73": true,

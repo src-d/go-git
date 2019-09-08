@@ -23,7 +23,7 @@ func main() {
 	})
 	CheckIfError(err)
 
-	// Gets the HEAD history from HEAD, just like this command:
+	// Gets the HEAD history from HEAD, just like does:
 	Info("git log")
 
 	// ... retrieves the branch pointed by HEAD

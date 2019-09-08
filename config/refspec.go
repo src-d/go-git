@@ -15,7 +15,7 @@ const (
 
 var (
 	ErrRefSpecMalformedSeparator = errors.New("malformed refspec, separators are wrong")
-	ErrRefSpecMalformedWildcard  = errors.New("malformed refspec, mismatched number of wildcards")
+	ErrRefSpecMalformedWildcard  = errors.New("malformed refspec, missmatched number of wildcards")
 )
 
 // RefSpec is a mapping from local branches to remote references
@@ -62,13 +62,7 @@ func (s RefSpec) IsDelete() bool {
 // Src return the src side.
 func (s RefSpec) Src() string {
 	spec := string(s)
-
-	var start int
-	if s.IsForceUpdate() {
-		start = 1
-	} else {
-		start = 0
-	}
+	start := strings.Index(spec, refSpecForce) + 1
 	end := strings.Index(spec, refSpecSeparator)
 
 	return spec[start:end]

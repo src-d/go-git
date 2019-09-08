@@ -3,7 +3,6 @@ package server_test
 import (
 	"testing"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/server"
@@ -54,7 +53,8 @@ func (s *BaseSuite) prepareRepositories(c *C) {
 	fs := fixtures.Basic().One().DotGit()
 	s.Endpoint, err = transport.NewEndpoint(fs.Root())
 	c.Assert(err, IsNil)
-	s.loader[s.Endpoint.String()] = filesystem.NewStorage(fs, cache.NewObjectLRUDefault())
+	s.loader[s.Endpoint.String()], err = filesystem.NewStorage(fs)
+	c.Assert(err, IsNil)
 
 	s.EmptyEndpoint, err = transport.NewEndpoint("/empty.git")
 	c.Assert(err, IsNil)

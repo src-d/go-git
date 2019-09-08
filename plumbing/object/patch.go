@@ -2,8 +2,6 @@ package object
 
 import (
 	"bytes"
-	"context"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -17,25 +15,10 @@ import (
 	dmp "github.com/sergi/go-diff/diffmatchpatch"
 )
 
-var (
-	ErrCanceled = errors.New("operation canceled")
-)
-
 func getPatch(message string, changes ...*Change) (*Patch, error) {
-	ctx := context.Background()
-	return getPatchContext(ctx, message, changes...)
-}
-
-func getPatchContext(ctx context.Context, message string, changes ...*Change) (*Patch, error) {
 	var filePatches []fdiff.FilePatch
 	for _, c := range changes {
-		select {
-		case <-ctx.Done():
-			return nil, ErrCanceled
-		default:
-		}
-
-		fp, err := filePatchWithContext(ctx, c)
+		fp, err := filePatch(c)
 		if err != nil {
 			return nil, err
 		}
@@ -46,7 +29,7 @@ func getPatchContext(ctx context.Context, message string, changes ...*Change) (*
 	return &Patch{message, filePatches}, nil
 }
 
-func filePatchWithContext(ctx context.Context, c *Change) (fdiff.FilePatch, error) {
+func filePatch(c *Change) (fdiff.FilePatch, error) {
 	from, to, err := c.Files()
 	if err != nil {
 		return nil, err
@@ -69,12 +52,6 @@ func filePatchWithContext(ctx context.Context, c *Change) (fdiff.FilePatch, erro
 
 	var chunks []fdiff.Chunk
 	for _, d := range diffs {
-		select {
-		case <-ctx.Done():
-			return nil, ErrCanceled
-		default:
-		}
-
 		var op fdiff.Operation
 		switch d.Type {
 		case dmp.DiffEqual:
@@ -93,11 +70,6 @@ func filePatchWithContext(ctx context.Context, c *Change) (fdiff.FilePatch, erro
 		from:   c.From,
 		to:     c.To,
 	}, nil
-
-}
-
-func filePatch(c *Change) (fdiff.FilePatch, error) {
-	return filePatchWithContext(context.Background(), c)
 }
 
 func fileContent(f *File) (content string, isBinary bool, err error) {

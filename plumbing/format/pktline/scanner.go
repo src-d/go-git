@@ -97,7 +97,7 @@ func (s *Scanner) readPayloadLen() (int, error) {
 		return 0, nil
 	case n <= lenSize:
 		return 0, ErrInvalidPktLen
-	case n > OversizePayloadMax+lenSize:
+	case n > MaxPayloadSize+lenSize:
 		return 0, ErrInvalidPktLen
 	default:
 		return n - lenSize, nil

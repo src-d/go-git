@@ -2,17 +2,13 @@ package packfile_test
 
 import (
 	"bytes"
-	"io"
 	"math/rand"
-	"testing"
 
-	"gopkg.in/src-d/go-billy.v4/memfs"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/cache"
-	"gopkg.in/src-d/go-git.v4/plumbing/format/idxfile"
 	. "gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
+	"gopkg.in/src-d/go-git.v4/storage/memory"
 
 	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git-fixtures.v3"
@@ -25,38 +21,30 @@ type EncoderAdvancedSuite struct {
 var _ = Suite(&EncoderAdvancedSuite{})
 
 func (s *EncoderAdvancedSuite) TestEncodeDecode(c *C) {
-	if testing.Short() {
-		c.Skip("skipping test in short mode.")
-	}
-
 	fixs := fixtures.Basic().ByTag("packfile").ByTag(".git")
 	fixs = append(fixs, fixtures.ByURL("https://github.com/src-d/go-git.git").
 		ByTag("packfile").ByTag(".git").One())
 	fixs.Test(c, func(f *fixtures.Fixture) {
-		storage := filesystem.NewStorage(f.DotGit(), cache.NewObjectLRUDefault())
+		storage, err := filesystem.NewStorage(f.DotGit())
+		c.Assert(err, IsNil)
 		s.testEncodeDecode(c, storage, 10)
 	})
+
 }
 
 func (s *EncoderAdvancedSuite) TestEncodeDecodeNoDeltaCompression(c *C) {
-	if testing.Short() {
-		c.Skip("skipping test in short mode.")
-	}
-
 	fixs := fixtures.Basic().ByTag("packfile").ByTag(".git")
 	fixs = append(fixs, fixtures.ByURL("https://github.com/src-d/go-git.git").
 		ByTag("packfile").ByTag(".git").One())
 	fixs.Test(c, func(f *fixtures.Fixture) {
-		storage := filesystem.NewStorage(f.DotGit(), cache.NewObjectLRUDefault())
+		storage, err := filesystem.NewStorage(f.DotGit())
+		c.Assert(err, IsNil)
 		s.testEncodeDecode(c, storage, 0)
 	})
 }
 
-func (s *EncoderAdvancedSuite) testEncodeDecode(
-	c *C,
-	storage storer.Storer,
-	packWindow uint,
-) {
+func (s *EncoderAdvancedSuite) testEncodeDecode(c *C, storage storer.Storer, packWindow uint) {
+
 	objIter, err := storage.IterEncodedObjects(plumbing.AnyObject)
 	c.Assert(err, IsNil)
 
@@ -83,35 +71,16 @@ func (s *EncoderAdvancedSuite) testEncodeDecode(
 	encodeHash, err := enc.Encode(hashes, packWindow)
 	c.Assert(err, IsNil)
 
-	fs := memfs.New()
-	f, err := fs.Create("packfile")
+	scanner := NewScanner(buf)
+	storage = memory.NewStorage()
+	d, err := NewDecoder(scanner, storage)
+	c.Assert(err, IsNil)
+	decodeHash, err := d.Decode()
 	c.Assert(err, IsNil)
 
-	_, err = f.Write(buf.Bytes())
-	c.Assert(err, IsNil)
-
-	_, err = f.Seek(0, io.SeekStart)
-	c.Assert(err, IsNil)
-
-	w := new(idxfile.Writer)
-	parser, err := NewParser(NewScanner(f), w)
-	c.Assert(err, IsNil)
-
-	_, err = parser.Parse()
-	c.Assert(err, IsNil)
-	index, err := w.Index()
-	c.Assert(err, IsNil)
-
-	_, err = f.Seek(0, io.SeekStart)
-	c.Assert(err, IsNil)
-
-	p := NewPackfile(index, fs, f)
-
-	decodeHash, err := p.ID()
-	c.Assert(err, IsNil)
 	c.Assert(encodeHash, Equals, decodeHash)
 
-	objIter, err = p.GetAll()
+	objIter, err = storage.IterEncodedObjects(plumbing.AnyObject)
 	c.Assert(err, IsNil)
 	obtainedObjects := map[plumbing.Hash]bool{}
 	err = objIter.ForEach(func(o plumbing.EncodedObject) error {

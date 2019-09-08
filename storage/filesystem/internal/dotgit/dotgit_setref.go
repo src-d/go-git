@@ -9,7 +9,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
-func (d *DotGit) setRef(fileName, content string, old *plumbing.Reference) (err error) {
+func (d *DotGit) setRef(fileName, content string, old *plumbing.Reference) error {
 	// If we are not checking an old ref, just truncate the file.
 	mode := os.O_RDWR | os.O_CREATE
 	if old == nil {

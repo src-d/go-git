@@ -4,7 +4,6 @@ import (
 	"sort"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
@@ -26,7 +25,8 @@ type DiffTreeSuite struct {
 func (s *DiffTreeSuite) SetUpSuite(c *C) {
 	s.Suite.SetUpSuite(c)
 	s.Fixture = fixtures.Basic().One()
-	sto := filesystem.NewStorage(s.Fixture.DotGit(), cache.NewObjectLRUDefault())
+	sto, err := filesystem.NewStorage(s.Fixture.DotGit())
+	c.Assert(err, IsNil)
 	s.Storer = sto
 	s.cache = make(map[string]storer.EncodedObjectStorer)
 }
@@ -45,17 +45,25 @@ func (s *DiffTreeSuite) storageFromPackfile(f *fixtures.Fixture) storer.EncodedO
 		return sto
 	}
 
-	storer := memory.NewStorage()
+	sto = memory.NewStorage()
 
 	pf := f.Packfile()
+
 	defer pf.Close()
 
-	if err := packfile.UpdateObjectStorage(storer, pf); err != nil {
+	n := packfile.NewScanner(pf)
+	d, err := packfile.NewDecoder(n, sto)
+	if err != nil {
 		panic(err)
 	}
 
-	s.cache[f.URL] = storer
-	return storer
+	_, err = d.Decode()
+	if err != nil {
+		panic(err)
+	}
+
+	s.cache[f.URL] = sto
+	return sto
 }
 
 var _ = Suite(&DiffTreeSuite{})

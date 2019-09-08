@@ -4,10 +4,8 @@ package http
 import (
 	"bytes"
 	"fmt"
-	"net"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
@@ -30,12 +28,10 @@ func applyHeadersToRequest(req *http.Request, content *bytes.Buffer, host string
 	req.Header.Add("Content-Length", strconv.Itoa(content.Len()))
 }
 
-const infoRefsPath = "/info/refs"
-
-func advertisedReferences(s *session, serviceName string) (ref *packp.AdvRefs, err error) {
+func advertisedReferences(s *session, serviceName string) (*packp.AdvRefs, error) {
 	url := fmt.Sprintf(
-		"%s%s?service=%s",
-		s.endpoint.String(), infoRefsPath, serviceName,
+		"%s/info/refs?service=%s",
+		s.endpoint.String(), serviceName,
 	)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -43,22 +39,21 @@ func advertisedReferences(s *session, serviceName string) (ref *packp.AdvRefs, e
 		return nil, err
 	}
 
-	s.ApplyAuthToRequest(req)
+	s.applyAuthToRequest(req)
 	applyHeadersToRequest(req, nil, s.endpoint.Host, serviceName)
 	res, err := s.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	s.ModifyEndpointIfRedirect(res)
 	defer ioutil.CheckClose(res.Body, &err)
 
-	if err = NewErr(res); err != nil {
+	if err := NewErr(res); err != nil {
 		return nil, err
 	}
 
 	ar := packp.NewAdvRefs()
-	if err = ar.Decode(res.Body); err != nil {
+	if err := ar.Decode(res.Body); err != nil {
 		if err == packp.ErrEmptyAdvRefs {
 			err = transport.ErrEmptyRemoteRepository
 		}
@@ -134,42 +129,16 @@ func newSession(c *http.Client, ep *transport.Endpoint, auth transport.AuthMetho
 	return s, nil
 }
 
-func (s *session) ApplyAuthToRequest(req *http.Request) {
+func (*session) Close() error {
+	return nil
+}
+
+func (s *session) applyAuthToRequest(req *http.Request) {
 	if s.auth == nil {
 		return
 	}
 
 	s.auth.setAuth(req)
-}
-
-func (s *session) ModifyEndpointIfRedirect(res *http.Response) {
-	if res.Request == nil {
-		return
-	}
-
-	r := res.Request
-	if !strings.HasSuffix(r.URL.Path, infoRefsPath) {
-		return
-	}
-
-	h, p, err := net.SplitHostPort(r.URL.Host)
-	if err != nil {
-		h = r.URL.Host
-	}
-	if p != "" {
-		port, err := strconv.Atoi(p)
-		if err == nil {
-			s.endpoint.Port = port
-		}
-	}
-	s.endpoint.Host = h
-
-	s.endpoint.Protocol = r.URL.Scheme
-	s.endpoint.Path = r.URL.Path[:len(r.URL.Path)-len(infoRefsPath)]
-}
-
-func (*session) Close() error {
-	return nil
 }
 
 // AuthMethod is concrete implementation of common.AuthMethod for HTTP services
@@ -212,38 +181,6 @@ func (a *BasicAuth) String() string {
 	}
 
 	return fmt.Sprintf("%s - %s:%s", a.Name(), a.Username, masked)
-}
-
-// TokenAuth implements an http.AuthMethod that can be used with http transport
-// to authenticate with HTTP token authentication (also known as bearer
-// authentication).
-//
-// IMPORTANT: If you are looking to use OAuth tokens with popular servers (e.g.
-// GitHub, Bitbucket, GitLab) you should use BasicAuth instead. These servers
-// use basic HTTP authentication, with the OAuth token as user or password.
-// Check the documentation of your git server for details.
-type TokenAuth struct {
-	Token string
-}
-
-func (a *TokenAuth) setAuth(r *http.Request) {
-	if a == nil {
-		return
-	}
-	r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", a.Token))
-}
-
-// Name is name of the auth
-func (a *TokenAuth) Name() string {
-	return "http-token-auth"
-}
-
-func (a *TokenAuth) String() string {
-	masked := "*******"
-	if a.Token == "" {
-		masked = "<empty>"
-	}
-	return fmt.Sprintf("%s - %s", a.Name(), masked)
 }
 
 // Err is a dedicated error to return errors based on status code

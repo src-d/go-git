@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
@@ -23,7 +22,8 @@ func (s *PruneSuite) testPrune(c *C, deleteTime time.Time) {
 	srcFs := fixtures.ByTag("unpacked").One().DotGit()
 	var sto storage.Storer
 	var err error
-	sto = filesystem.NewStorage(srcFs, cache.NewObjectLRUDefault())
+	sto, err = filesystem.NewStorage(srcFs)
+	c.Assert(err, IsNil)
 
 	los := sto.(storer.LooseObjectStorer)
 	c.Assert(los, NotNil)

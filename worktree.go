@@ -13,7 +13,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
-	"gopkg.in/src-d/go-git.v4/plumbing/format/gitignore"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/index"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
@@ -28,15 +27,12 @@ var (
 	ErrWorktreeNotClean  = errors.New("worktree is not clean")
 	ErrSubmoduleNotFound = errors.New("submodule not found")
 	ErrUnstagedChanges   = errors.New("worktree contains unstaged changes")
-	ErrGitModulesSymlink = errors.New(gitmodulesFile + " is a symlink")
 )
 
 // Worktree represents a git worktree.
 type Worktree struct {
 	// Filesystem underlying filesystem.
 	Filesystem billy.Filesystem
-	// External excludes not found in the repository .gitignore
-	Excludes []gitignore.Pattern
 
 	r *Repository
 }
@@ -558,22 +554,6 @@ func (w *Worktree) checkoutFileSymlink(f *object.File) (err error) {
 	}
 
 	err = w.Filesystem.Symlink(string(bytes), f.Name)
-
-	// On windows, this might fail.
-	// Follow Git on Windows behavior by writing the link as it is.
-	if err != nil && isSymlinkWindowsNonAdmin(err) {
-		mode, _ := f.Mode.ToOSFileMode()
-
-		to, err := w.Filesystem.OpenFile(f.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode.Perm())
-		if err != nil {
-			return err
-		}
-
-		defer ioutil.CheckClose(to, &err)
-
-		_, err = to.Write(bytes)
-		return err
-	}
 	return
 }
 
@@ -625,6 +605,10 @@ func (w *Worktree) getTreeFromCommitHash(commit plumbing.Hash) (*object.Tree, er
 	}
 
 	return c.Tree()
+}
+
+func (w *Worktree) initializeIndex() error {
+	return w.r.Storer.SetIndex(&index.Index{Version: 2})
 }
 
 var fillSystemInfo func(e *index.Entry, sys interface{})
@@ -681,18 +665,7 @@ func (w *Worktree) newSubmodule(fromModules, fromConfig *config.Submodule) *Subm
 	return m
 }
 
-func (w *Worktree) isSymlink(path string) bool {
-	if s, err := w.Filesystem.Lstat(path); err == nil {
-		return s.Mode()&os.ModeSymlink != 0
-	}
-	return false
-}
-
 func (w *Worktree) readGitmodulesFile() (*config.Modules, error) {
-	if w.isSymlink(gitmodulesFile) {
-		return nil, ErrGitModulesSymlink
-	}
-
 	f, err := w.Filesystem.Open(gitmodulesFile)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -713,54 +686,29 @@ func (w *Worktree) readGitmodulesFile() (*config.Modules, error) {
 }
 
 // Clean the worktree by removing untracked files.
-// An empty dir could be removed - this is what  `git clean -f -d .` does.
 func (w *Worktree) Clean(opts *CleanOptions) error {
 	s, err := w.Status()
 	if err != nil {
 		return err
 	}
 
-	root := ""
-	files, err := w.Filesystem.ReadDir(root)
-	if err != nil {
-		return err
-	}
-	return w.doClean(s, opts, root, files)
-}
-
-func (w *Worktree) doClean(status Status, opts *CleanOptions, dir string, files []os.FileInfo) error {
-	for _, fi := range files {
-		if fi.Name() == ".git" {
+	// Check Worktree status to be Untracked, obtain absolute path and delete.
+	for relativePath, status := range s {
+		// Check if the path contains a directory and if Dir options is false,
+		// skip the path.
+		if relativePath != filepath.Base(relativePath) && !opts.Dir {
 			continue
 		}
 
-		// relative path under the root
-		path := filepath.Join(dir, fi.Name())
-		if fi.IsDir() {
-			if !opts.Dir {
-				continue
-			}
-
-			subfiles, err := w.Filesystem.ReadDir(path)
-			if err != nil {
+		// Remove the file only if it's an untracked file.
+		if status.Worktree == Untracked {
+			absPath := filepath.Join(w.Filesystem.Root(), relativePath)
+			if err := os.Remove(absPath); err != nil {
 				return err
-			}
-			err = w.doClean(status, opts, path, subfiles)
-			if err != nil {
-				return err
-			}
-		} else {
-			if status.IsUntracked(path) {
-				if err := w.Filesystem.Remove(path); err != nil {
-					return err
-				}
 			}
 		}
 	}
 
-	if opts.Dir {
-		return doCleanDirectories(w.Filesystem, dir)
-	}
 	return nil
 }
 
@@ -906,18 +854,15 @@ func rmFileAndDirIfEmpty(fs billy.Filesystem, name string) error {
 		return err
 	}
 
-	dir := filepath.Dir(name)
-	return doCleanDirectories(fs, dir)
-}
-
-// doCleanDirectories removes empty subdirs (without files)
-func doCleanDirectories(fs billy.Filesystem, dir string) error {
-	files, err := fs.ReadDir(dir)
+	path := filepath.Dir(name)
+	files, err := fs.ReadDir(path)
 	if err != nil {
 		return err
 	}
+
 	if len(files) == 0 {
-		return fs.Remove(dir)
+		fs.Remove(path)
 	}
+
 	return nil
 }

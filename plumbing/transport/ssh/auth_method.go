@@ -124,9 +124,6 @@ type PublicKeys struct {
 // (PKCS#1), DSA (OpenSSL), and ECDSA private keys.
 func NewPublicKeys(user string, pemBytes []byte, password string) (*PublicKeys, error) {
 	block, _ := pem.Decode(pemBytes)
-	if block == nil {
-		return nil, errors.New("invalid PEM data")
-	}
 	if x509.IsEncryptedPEMBlock(block) {
 		key, err := x509.DecryptPEMBlock(block, []byte(password))
 		if err != nil {
@@ -236,7 +233,7 @@ func (a *PublicKeysCallback) ClientConfig() (*ssh.ClientConfig, error) {
 // NewKnownHostsCallback returns ssh.HostKeyCallback based on a file based on a
 // known_hosts file. http://man.openbsd.org/sshd#SSH_KNOWN_HOSTS_FILE_FORMAT
 //
-// If list of files is empty, then it will be read from the SSH_KNOWN_HOSTS
+// If files is empty, the list of files will be read from the SSH_KNOWN_HOSTS
 // environment variable, example:
 //   /home/foo/custom_known_hosts_file:/etc/custom_known/hosts_file
 //
@@ -244,15 +241,13 @@ func (a *PublicKeysCallback) ClientConfig() (*ssh.ClientConfig, error) {
 //   ~/.ssh/known_hosts
 //   /etc/ssh/ssh_known_hosts
 func NewKnownHostsCallback(files ...string) (ssh.HostKeyCallback, error) {
-	var err error
-
-	if len(files) == 0 {
-		if files, err = getDefaultKnownHostsFiles(); err != nil {
-			return nil, err
-		}
+	files, err := getDefaultKnownHostsFiles()
+	if err != nil {
+		return nil, err
 	}
 
-	if files, err = filterKnownHostsFiles(files...); err != nil {
+	files, err = filterKnownHostsFiles(files...)
+	if err != nil {
 		return nil, err
 	}
 

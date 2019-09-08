@@ -4,7 +4,6 @@ import (
 	"sort"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
@@ -24,7 +23,8 @@ type ChangeAdaptorSuite struct {
 func (s *ChangeAdaptorSuite) SetUpSuite(c *C) {
 	s.Suite.SetUpSuite(c)
 	s.Fixture = fixtures.Basic().One()
-	sto := filesystem.NewStorage(s.Fixture.DotGit(), cache.NewObjectLRUDefault())
+	sto, err := filesystem.NewStorage(s.Fixture.DotGit())
+	c.Assert(err, IsNil)
 	s.Storer = sto
 }
 

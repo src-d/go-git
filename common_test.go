@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
@@ -60,7 +59,10 @@ func (s *BaseSuite) NewRepository(f *fixtures.Fixture) *Repository {
 	dotgit = f.DotGit()
 	worktree = memfs.New()
 
-	st := filesystem.NewStorage(dotgit, cache.NewObjectLRUDefault())
+	st, err := filesystem.NewStorage(dotgit)
+	if err != nil {
+		panic(err)
+	}
 
 	r, err := Open(st, worktree)
 	if err != nil {
@@ -87,7 +89,10 @@ func (s *BaseSuite) NewRepositoryWithEmptyWorktree(f *fixtures.Fixture) *Reposit
 
 	worktree := memfs.New()
 
-	st := filesystem.NewStorage(dotgit, cache.NewObjectLRUDefault())
+	st, err := filesystem.NewStorage(dotgit)
+	if err != nil {
+		panic(err)
+	}
 
 	r, err := Open(st, worktree)
 	if err != nil {
@@ -108,7 +113,14 @@ func (s *BaseSuite) NewRepositoryFromPackfile(f *fixtures.Fixture) *Repository {
 	p := f.Packfile()
 	defer p.Close()
 
-	if err := packfile.UpdateObjectStorage(storer, p); err != nil {
+	n := packfile.NewScanner(p)
+	d, err := packfile.NewDecoder(n, storer)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = d.Decode()
+	if err != nil {
 		panic(err)
 	}
 

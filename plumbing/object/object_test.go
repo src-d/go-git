@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
@@ -27,7 +26,8 @@ type BaseObjectsSuite struct {
 func (s *BaseObjectsSuite) SetUpSuite(c *C) {
 	s.Suite.SetUpSuite(c)
 	s.Fixture = fixtures.Basic().One()
-	storer := filesystem.NewStorage(s.Fixture.DotGit(), cache.NewObjectLRUDefault())
+	storer, err := filesystem.NewStorage(s.Fixture.DotGit())
+	c.Assert(err, IsNil)
 	s.Storer = storer
 }
 
@@ -197,9 +197,8 @@ func (s *ObjectsSuite) TestObjectIter(c *C) {
 		}
 
 		c.Assert(err, IsNil)
-		c.Assert(o.ID(), Equals, objects[i].ID())
-		c.Assert(o.Type(), Equals, objects[i].Type())
-		i++
+		c.Assert(o, DeepEquals, objects[i])
+		i += 1
 	}
 
 	iter.Close()

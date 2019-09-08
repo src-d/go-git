@@ -2,7 +2,6 @@ package packp
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -69,119 +68,30 @@ func (a *AdvRefs) AddReference(r *plumbing.Reference) error {
 
 func (a *AdvRefs) AllReferences() (memory.ReferenceStorage, error) {
 	s := memory.ReferenceStorage{}
-	if err := a.addRefs(s); err != nil {
+	if err := addRefs(s, a); err != nil {
 		return s, plumbing.NewUnexpectedError(err)
 	}
 
 	return s, nil
 }
 
-func (a *AdvRefs) addRefs(s storer.ReferenceStorer) error {
-	for name, hash := range a.References {
+func addRefs(s storer.ReferenceStorer, ar *AdvRefs) error {
+	for name, hash := range ar.References {
 		ref := plumbing.NewReferenceFromStrings(name, hash.String())
 		if err := s.SetReference(ref); err != nil {
 			return err
 		}
 	}
 
-	if a.supportSymrefs() {
-		return a.addSymbolicRefs(s)
-	}
-
-	return a.resolveHead(s)
+	return addSymbolicRefs(s, ar)
 }
 
-// If the server does not support symrefs capability,
-// we need to guess the reference where HEAD is pointing to.
-//
-// Git versions prior to 1.8.4.3 has an special procedure to get
-// the reference where is pointing to HEAD:
-// - Check if a reference called master exists. If exists and it
-//	 has the same hash as HEAD hash, we can say that HEAD is pointing to master
-// - If master does not exists or does not have the same hash as HEAD,
-//   order references and check in that order if that reference has the same
-//   hash than HEAD. If yes, set HEAD pointing to that branch hash
-// - If no reference is found, throw an error
-func (a *AdvRefs) resolveHead(s storer.ReferenceStorer) error {
-	if a.Head == nil {
+func addSymbolicRefs(s storer.ReferenceStorer, ar *AdvRefs) error {
+	if !hasSymrefs(ar) {
 		return nil
 	}
 
-	ref, err := s.Reference(plumbing.ReferenceName(plumbing.Master))
-
-	// check first if HEAD is pointing to master
-	if err == nil {
-		ok, err := a.createHeadIfCorrectReference(ref, s)
-		if err != nil {
-			return err
-		}
-
-		if ok {
-			return nil
-		}
-	}
-
-	if err != nil && err != plumbing.ErrReferenceNotFound {
-		return err
-	}
-
-	// From here we are trying to guess the branch that HEAD is pointing
-	refIter, err := s.IterReferences()
-	if err != nil {
-		return err
-	}
-
-	var refNames []string
-	err = refIter.ForEach(func(r *plumbing.Reference) error {
-		refNames = append(refNames, string(r.Name()))
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	sort.Strings(refNames)
-
-	var headSet bool
-	for _, refName := range refNames {
-		ref, err := s.Reference(plumbing.ReferenceName(refName))
-		if err != nil {
-			return err
-		}
-		ok, err := a.createHeadIfCorrectReference(ref, s)
-		if err != nil {
-			return err
-		}
-		if ok {
-			headSet = true
-			break
-		}
-	}
-
-	if !headSet {
-		return plumbing.ErrReferenceNotFound
-	}
-
-	return nil
-}
-
-func (a *AdvRefs) createHeadIfCorrectReference(
-	reference *plumbing.Reference,
-	s storer.ReferenceStorer) (bool, error) {
-	if reference.Hash() == *a.Head {
-		headRef := plumbing.NewSymbolicReference(plumbing.HEAD, reference.Name())
-		if err := s.SetReference(headRef); err != nil {
-			return false, err
-		}
-
-		return true, nil
-	}
-
-	return false, nil
-}
-
-func (a *AdvRefs) addSymbolicRefs(s storer.ReferenceStorer) error {
-	for _, symref := range a.Capabilities.Get(capability.SymRef) {
+	for _, symref := range ar.Capabilities.Get(capability.SymRef) {
 		chunks := strings.Split(symref, ":")
 		if len(chunks) != 2 {
 			err := fmt.Errorf("bad number of `:` in symref value (%q)", symref)
@@ -198,6 +108,6 @@ func (a *AdvRefs) addSymbolicRefs(s storer.ReferenceStorer) error {
 	return nil
 }
 
-func (a *AdvRefs) supportSymrefs() bool {
-	return a.Capabilities.Supports(capability.SymRef)
+func hasSymrefs(ar *AdvRefs) bool {
+	return ar.Capabilities.Supports(capability.SymRef)
 }

@@ -4,7 +4,6 @@ import (
 	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
@@ -45,7 +44,8 @@ var fileIterTests = []struct {
 func (s *FileSuite) TestIter(c *C) {
 	for i, t := range fileIterTests {
 		f := fixtures.ByURL(t.repo).One()
-		sto := filesystem.NewStorage(f.DotGit(), cache.NewObjectLRUDefault())
+		sto, err := filesystem.NewStorage(f.DotGit())
+		c.Assert(err, IsNil)
 
 		h := plumbing.NewHash(t.commit)
 		commit, err := GetCommit(sto, h)
@@ -106,7 +106,8 @@ hs_err_pid*
 func (s *FileSuite) TestContents(c *C) {
 	for i, t := range contentsTests {
 		f := fixtures.ByURL(t.repo).One()
-		sto := filesystem.NewStorage(f.DotGit(), cache.NewObjectLRUDefault())
+		sto, err := filesystem.NewStorage(f.DotGit())
+		c.Assert(err, IsNil)
 
 		h := plumbing.NewHash(t.commit)
 		commit, err := GetCommit(sto, h)
@@ -159,7 +160,8 @@ var linesTests = []struct {
 func (s *FileSuite) TestLines(c *C) {
 	for i, t := range linesTests {
 		f := fixtures.ByURL(t.repo).One()
-		sto := filesystem.NewStorage(f.DotGit(), cache.NewObjectLRUDefault())
+		sto, err := filesystem.NewStorage(f.DotGit())
+		c.Assert(err, IsNil)
 
 		h := plumbing.NewHash(t.commit)
 		commit, err := GetCommit(sto, h)
@@ -193,7 +195,8 @@ var ignoreEmptyDirEntriesTests = []struct {
 func (s *FileSuite) TestIgnoreEmptyDirEntries(c *C) {
 	for i, t := range ignoreEmptyDirEntriesTests {
 		f := fixtures.ByURL(t.repo).One()
-		sto := filesystem.NewStorage(f.DotGit(), cache.NewObjectLRUDefault())
+		sto, err := filesystem.NewStorage(f.DotGit())
+		c.Assert(err, IsNil)
 
 		h := plumbing.NewHash(t.commit)
 		commit, err := GetCommit(sto, h)
@@ -248,7 +251,9 @@ func (s *FileSuite) TestFileIter(c *C) {
 
 func (s *FileSuite) TestFileIterSubmodule(c *C) {
 	dotgit := fixtures.ByURL("https://github.com/git-fixtures/submodule.git").One().DotGit()
-	st := filesystem.NewStorage(dotgit, cache.NewObjectLRUDefault())
+	st, err := filesystem.NewStorage(dotgit)
+
+	c.Assert(err, IsNil)
 
 	hash := plumbing.NewHash("b685400c1f9316f350965a5993d350bc746b0bf4")
 	commit, err := GetCommit(st, hash)

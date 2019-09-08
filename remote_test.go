@@ -9,9 +9,6 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/cache"
-	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
-	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
@@ -100,20 +97,6 @@ func (s *RemoteSuite) TestFetch(c *C) {
 	}, []*plumbing.Reference{
 		plumbing.NewReferenceFromStrings("refs/remotes/origin/master", "f7b877701fbf855b44c0a9e86f3fdce2c298b07f"),
 	})
-}
-
-func (s *RemoteSuite) TestFetchNonExistantReference(c *C) {
-	r := newRemote(memory.NewStorage(), &config.RemoteConfig{
-		URLs: []string{s.GetLocalRepositoryURL(fixtures.ByTag("tags").One())},
-	})
-
-	err := r.Fetch(&FetchOptions{
-		RefSpecs: []config.RefSpec{
-			config.RefSpec("+refs/heads/foo:refs/remotes/origin/foo"),
-		},
-	})
-
-	c.Assert(err, ErrorMatches, "couldn't find remote ref.*")
 }
 
 func (s *RemoteSuite) TestFetchContext(c *C) {
@@ -240,7 +223,7 @@ func (s *RemoteSuite) TestFetchWithPackfileWriter(c *C) {
 
 	defer os.RemoveAll(dir) // clean up
 
-	fss := filesystem.NewStorage(osfs.New(dir), cache.NewObjectLRUDefault())
+	fss, err := filesystem.NewStorage(osfs.New(dir))
 	c.Assert(err, IsNil)
 
 	mock := &mockPackfileWriter{Storer: fss}
@@ -377,7 +360,8 @@ func (s *RemoteSuite) TestFetchFastForwardFS(c *C) {
 
 	defer os.RemoveAll(dir) // clean up
 
-	fss := filesystem.NewStorage(osfs.New(dir), cache.NewObjectLRUDefault())
+	fss, err := filesystem.NewStorage(osfs.New(dir))
+	c.Assert(err, IsNil)
 
 	// This exercises `storage.filesystem.Storage.CheckAndSetReference()`.
 	s.testFetchFastForward(c, fss)
@@ -401,7 +385,8 @@ func (s *RemoteSuite) TestPushToEmptyRepository(c *C) {
 	c.Assert(err, IsNil)
 
 	srcFs := fixtures.Basic().One().DotGit()
-	sto := filesystem.NewStorage(srcFs, cache.NewObjectLRUDefault())
+	sto, err := filesystem.NewStorage(srcFs)
+	c.Assert(err, IsNil)
 
 	r := newRemote(sto, &config.RemoteConfig{
 		Name: DefaultRemoteName,
@@ -438,7 +423,8 @@ func (s *RemoteSuite) TestPushContext(c *C) {
 	c.Assert(err, IsNil)
 
 	fs := fixtures.ByURL("https://github.com/git-fixtures/tags.git").One().DotGit()
-	sto := filesystem.NewStorage(fs, cache.NewObjectLRUDefault())
+	sto, err := filesystem.NewStorage(fs)
+	c.Assert(err, IsNil)
 
 	r := newRemote(sto, &config.RemoteConfig{
 		Name: DefaultRemoteName,
@@ -460,7 +446,8 @@ func (s *RemoteSuite) TestPushTags(c *C) {
 	c.Assert(err, IsNil)
 
 	fs := fixtures.ByURL("https://github.com/git-fixtures/tags.git").One().DotGit()
-	sto := filesystem.NewStorage(fs, cache.NewObjectLRUDefault())
+	sto, err := filesystem.NewStorage(fs)
+	c.Assert(err, IsNil)
 
 	r := newRemote(sto, &config.RemoteConfig{
 		Name: DefaultRemoteName,
@@ -483,14 +470,15 @@ func (s *RemoteSuite) TestPushTags(c *C) {
 
 func (s *RemoteSuite) TestPushNoErrAlreadyUpToDate(c *C) {
 	fs := fixtures.Basic().One().DotGit()
-	sto := filesystem.NewStorage(fs, cache.NewObjectLRUDefault())
+	sto, err := filesystem.NewStorage(fs)
+	c.Assert(err, IsNil)
 
 	r := newRemote(sto, &config.RemoteConfig{
 		Name: DefaultRemoteName,
 		URLs: []string{fs.Root()},
 	})
 
-	err := r.Push(&PushOptions{
+	err = r.Push(&PushOptions{
 		RefSpecs: []config.RefSpec{"refs/heads/*:refs/heads/*"},
 	})
 	c.Assert(err, Equals, NoErrAlreadyUpToDate)
@@ -498,7 +486,8 @@ func (s *RemoteSuite) TestPushNoErrAlreadyUpToDate(c *C) {
 
 func (s *RemoteSuite) TestPushDeleteReference(c *C) {
 	fs := fixtures.Basic().One().DotGit()
-	sto := filesystem.NewStorage(fs, cache.NewObjectLRUDefault())
+	sto, err := filesystem.NewStorage(fs)
+	c.Assert(err, IsNil)
 
 	r, err := PlainClone(c.MkDir(), true, &CloneOptions{
 		URL: fs.Root(),
@@ -522,7 +511,8 @@ func (s *RemoteSuite) TestPushDeleteReference(c *C) {
 
 func (s *RemoteSuite) TestPushRejectNonFastForward(c *C) {
 	fs := fixtures.Basic().One().DotGit()
-	server := filesystem.NewStorage(fs, cache.NewObjectLRUDefault())
+	server, err := filesystem.NewStorage(fs)
+	c.Assert(err, IsNil)
 
 	r, err := PlainClone(c.MkDir(), true, &CloneOptions{
 		URL: fs.Root(),
@@ -549,10 +539,12 @@ func (s *RemoteSuite) TestPushRejectNonFastForward(c *C) {
 
 func (s *RemoteSuite) TestPushForce(c *C) {
 	f := fixtures.Basic().One()
-	sto := filesystem.NewStorage(f.DotGit(), cache.NewObjectLRUDefault())
+	sto, err := filesystem.NewStorage(f.DotGit())
+	c.Assert(err, IsNil)
 
 	dstFs := f.DotGit()
-	dstSto := filesystem.NewStorage(dstFs, cache.NewObjectLRUDefault())
+	dstSto, err := filesystem.NewStorage(dstFs)
+	c.Assert(err, IsNil)
 
 	url := dstFs.Root()
 	r := newRemote(sto, &config.RemoteConfig{
@@ -696,7 +688,8 @@ func (s *RemoteSuite) TestPushWrongRemoteName(c *C) {
 
 func (s *RemoteSuite) TestGetHaves(c *C) {
 	f := fixtures.Basic().One()
-	sto := filesystem.NewStorage(f.DotGit(), cache.NewObjectLRUDefault())
+	sto, err := filesystem.NewStorage(f.DotGit())
+	c.Assert(err, IsNil)
 
 	var localRefs = []*plumbing.Reference{
 		plumbing.NewReferenceFromStrings(
@@ -747,77 +740,4 @@ func (s *RemoteSuite) TestList(c *C) {
 		}
 		c.Assert(found, Equals, true)
 	}
-}
-
-func (s *RemoteSuite) TestUpdateShallows(c *C) {
-	hashes := []plumbing.Hash{
-		plumbing.NewHash("0000000000000000000000000000000000000001"),
-		plumbing.NewHash("0000000000000000000000000000000000000002"),
-		plumbing.NewHash("0000000000000000000000000000000000000003"),
-		plumbing.NewHash("0000000000000000000000000000000000000004"),
-		plumbing.NewHash("0000000000000000000000000000000000000005"),
-		plumbing.NewHash("0000000000000000000000000000000000000006"),
-	}
-
-	tests := []struct {
-		hashes []plumbing.Hash
-		result []plumbing.Hash
-	}{
-		// add to empty shallows
-		{hashes[0:2], hashes[0:2]},
-		// add new hashes
-		{hashes[2:4], hashes[0:4]},
-		// add some hashes already in shallow list
-		{hashes[2:6], hashes[0:6]},
-		// add all hashes
-		{hashes[0:6], hashes[0:6]},
-		// add empty list
-		{nil, hashes[0:6]},
-	}
-
-	remote := newRemote(memory.NewStorage(), &config.RemoteConfig{
-		Name: DefaultRemoteName,
-	})
-
-	shallows, err := remote.s.Shallow()
-	c.Assert(err, IsNil)
-	c.Assert(len(shallows), Equals, 0)
-
-	resp := new(packp.UploadPackResponse)
-	o := &FetchOptions{
-		Depth: 1,
-	}
-
-	for _, t := range tests {
-		resp.Shallows = t.hashes
-		err = remote.updateShallow(o, resp)
-		c.Assert(err, IsNil)
-
-		shallow, err := remote.s.Shallow()
-		c.Assert(err, IsNil)
-		c.Assert(len(shallow), Equals, len(t.result))
-		c.Assert(shallow, DeepEquals, t.result)
-	}
-}
-
-func (s *RemoteSuite) TestUseRefDeltas(c *C) {
-	url := c.MkDir()
-	_, err := PlainInit(url, true)
-	c.Assert(err, IsNil)
-
-	fs := fixtures.ByURL("https://github.com/git-fixtures/tags.git").One().DotGit()
-	sto := filesystem.NewStorage(fs, cache.NewObjectLRUDefault())
-
-	r := newRemote(sto, &config.RemoteConfig{
-		Name: DefaultRemoteName,
-		URLs: []string{url},
-	})
-
-	ar := packp.NewAdvRefs()
-
-	ar.Capabilities.Add(capability.OFSDelta)
-	c.Assert(r.useRefDeltas(ar), Equals, false)
-
-	ar.Capabilities.Delete(capability.OFSDelta)
-	c.Assert(r.useRefDeltas(ar), Equals, true)
 }

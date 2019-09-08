@@ -237,13 +237,9 @@ func (c *hunksGenerator) addLineNumbers(la, lb int, linesBefore int, i int, op O
 	// we need to search for a reference for the next diff
 	switch {
 	case linesBefore != 0 && c.ctxLines != 0:
-		if lb > c.ctxLines {
-			clb = lb - c.ctxLines + 1
-		} else {
-			clb = 1
-		}
+		clb = lb - c.ctxLines + 1
 	case c.ctxLines == 0:
-		clb = lb
+		clb = lb - c.ctxLines
 	case i != len(c.chunks)-1:
 		next := c.chunks[i+1]
 		if next.Type() == op || next.Type() == Equal {
@@ -266,15 +262,11 @@ func (c *hunksGenerator) processEqualsLines(ls []string, i int) {
 		c.current.AddOp(Equal, c.afterContext...)
 		c.afterContext = nil
 	} else {
-		ctxLines := c.ctxLines
-		if ctxLines > len(c.afterContext) {
-			ctxLines = len(c.afterContext)
-		}
-		c.current.AddOp(Equal, c.afterContext[:ctxLines]...)
+		c.current.AddOp(Equal, c.afterContext[:c.ctxLines]...)
 		c.hunks = append(c.hunks, c.current)
 
 		c.current = nil
-		c.beforeContext = c.afterContext[ctxLines:]
+		c.beforeContext = c.afterContext[c.ctxLines:]
 		c.afterContext = nil
 	}
 }

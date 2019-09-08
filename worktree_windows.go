@@ -3,7 +3,6 @@
 package git
 
 import (
-	"os"
 	"syscall"
 	"time"
 
@@ -18,18 +17,4 @@ func init() {
 			e.CreatedAt = time.Unix(seconds, nanoseconds)
 		}
 	}
-}
-
-func isSymlinkWindowsNonAdmin(err error) bool {
-	const ERROR_PRIVILEGE_NOT_HELD syscall.Errno = 1314
-
-	if err != nil {
-		if errLink, ok := err.(*os.LinkError); ok {
-			if errNo, ok := errLink.Err.(syscall.Errno); ok {
-				return errNo == ERROR_PRIVILEGE_NOT_HELD
-			}
-		}
-	}
-
-	return false
 }
