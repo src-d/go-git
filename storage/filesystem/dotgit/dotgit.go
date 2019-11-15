@@ -8,6 +8,8 @@ import (
 	"io"
 	stdioutil "io/ioutil"
 	"os"
+	"os/user"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -21,15 +23,17 @@ import (
 )
 
 const (
-	suffix         = ".git"
-	packedRefsPath = "packed-refs"
-	configPath     = "config"
-	indexPath      = "index"
-	shallowPath    = "shallow"
-	modulePath     = "modules"
-	objectsPath    = "objects"
-	packPath       = "pack"
-	refsPath       = "refs"
+	suffix           = ".git"
+	packedRefsPath   = "packed-refs"
+	systemConfigPath = "/etc/gitconfig"
+	userConfigFile   = ".gitconfig"
+	configPath       = "config"
+	indexPath        = "index"
+	shallowPath      = "shallow"
+	modulePath       = "modules"
+	objectsPath      = "objects"
+	packPath         = "pack"
+	refsPath         = "refs"
 
 	tmpPackedRefsPrefix = "._packed-refs"
 
@@ -154,6 +158,23 @@ func (d *DotGit) Close() error {
 // ConfigWriter returns a file pointer for write to the config file
 func (d *DotGit) ConfigWriter() (billy.File, error) {
 	return d.fs.Create(configPath)
+}
+
+// Config returns a file pointer for read to the config file
+func (d *DotGit) SystemConfig() ([]byte, error) {
+	return stdioutil.ReadFile(systemConfigPath)
+}
+
+// UserConfig returns a file pointer for read to the users config file
+func (d *DotGit) UserConfig() ([]byte, error) {
+	usr, err := user.Current()
+	if err != nil {
+		usr = &user.User{
+			HomeDir: os.Getenv("HOME"),
+		}
+	}
+
+	return stdioutil.ReadFile(path.Join(usr.HomeDir, userConfigFile))
 }
 
 // Config returns a file pointer for read to the config file

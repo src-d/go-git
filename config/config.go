@@ -62,6 +62,7 @@ type Config struct {
 	// Branches list of branches, the key is the branch name and should
 	// equal Branch.Name
 	Branches map[string]*Branch
+	User     *User
 	// Raw contains the raw information of a config file. The main goal is
 	// preserve the parsed information from the original format, to avoid
 	// dropping unsupported fields.
@@ -74,6 +75,7 @@ func NewConfig() *Config {
 		Remotes:    make(map[string]*RemoteConfig),
 		Submodules: make(map[string]*Submodule),
 		Branches:   make(map[string]*Branch),
+		User:       new(User),
 		Raw:        format.New(),
 	}
 
@@ -121,6 +123,9 @@ const (
 	windowKey        = "window"
 	mergeKey         = "merge"
 	rebaseKey        = "rebase"
+	userSection      = "user"
+	nameKey          = "name"
+	emailKey         = "email"
 
 	// DefaultPackWindow holds the number of previous objects used to
 	// generate deltas. The value 10 is the same used by git command.
@@ -138,6 +143,7 @@ func (c *Config) Unmarshal(b []byte) error {
 	}
 
 	c.unmarshalCore()
+	c.unmarshalUser()
 	if err := c.unmarshalPack(); err != nil {
 		return err
 	}
@@ -158,6 +164,16 @@ func (c *Config) unmarshalCore() {
 
 	c.Core.Worktree = s.Options.Get(worktreeKey)
 	c.Core.CommentChar = s.Options.Get(commentCharKey)
+}
+
+func (c *Config) unmarshalUser() {
+	s := c.Raw.Section(userSection)
+	if name := s.Options.Get(nameKey); name != "" {
+		c.User.Name = name
+	}
+	if email := s.Options.Get(emailKey); email != "" {
+		c.User.Email = email
+	}
 }
 
 func (c *Config) unmarshalPack() error {
@@ -224,6 +240,7 @@ func (c *Config) Marshal() ([]byte, error) {
 	c.marshalRemotes()
 	c.marshalSubmodules()
 	c.marshalBranches()
+	c.marshalUser()
 
 	buf := bytes.NewBuffer(nil)
 	if err := format.NewEncoder(buf).Encode(c.Raw); err != nil {
@@ -239,6 +256,14 @@ func (c *Config) marshalCore() {
 
 	if c.Core.Worktree != "" {
 		s.SetOption(worktreeKey, c.Core.Worktree)
+	}
+}
+
+func (c *Config) marshalUser() {
+	if c.User.Name != "" || c.User.Email != "" {
+		s := c.Raw.Section(userSection)
+		s.SetOption(nameKey, c.User.Name)
+		s.SetOption(emailKey, c.User.Email)
 	}
 }
 
