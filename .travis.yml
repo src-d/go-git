@@ -3,6 +3,7 @@ language: go
 go:
   - "1.11"
   - "1.12"
+  - "1.13"
 
 go_import_path: gopkg.in/src-d/go-git.v4
 
