@@ -261,6 +261,10 @@ func dotGitToOSFilesystems(path string, detect bool) (dot, wt billy.Filesystem, 
 	if path, err = filepath.Abs(path); err != nil {
 		return nil, nil, err
 	}
+	if target, err := filepath.EvalSymlinks(path); err == nil {
+		path = target
+	}
+
 	var fs billy.Filesystem
 	var fi os.FileInfo
 	for {
