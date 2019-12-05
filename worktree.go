@@ -47,7 +47,7 @@ type Worktree struct {
 // Returns nil if the operation is successful, NoErrAlreadyUpToDate if there are
 // no changes to be fetched, or an error.
 //
-// Pull only supports merges where the can be resolved as a fast-forward.
+// Pull only supports merges that can be resolved as a fast-forward.
 func (w *Worktree) Pull(o *PullOptions) error {
 	return w.PullContext(context.Background(), o)
 }
@@ -56,7 +56,7 @@ func (w *Worktree) Pull(o *PullOptions) error {
 // branch. Returns nil if the operation is successful, NoErrAlreadyUpToDate if
 // there are no changes to be fetched, or an error.
 //
-// Pull only supports merges where the can be resolved as a fast-forward.
+// Pull only supports merges that can be resolved as a fast-forward.
 //
 // The provided Context must be non-nil. If the context expires before the
 // operation is complete, an error is returned. The context only affects to the
