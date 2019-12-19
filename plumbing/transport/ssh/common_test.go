@@ -62,6 +62,31 @@ func (s *SuiteCommon) TestDefaultSSHConfig(c *C) {
 	c.Assert(cmd.getHostWithPort(), Equals, "foo.local:42")
 }
 
+func (s *SuiteCommon) TestSetUserSSHConfig(c *C) {
+	defer func() {
+		DefaultSSHConfig = ssh_config.DefaultUserSettings
+	}()
+
+	DefaultSSHConfig = &mockSSHConfig{map[string]map[string]string{
+		"github.com": {
+			"Hostname": "foo.local",
+			"Port":     "42",
+			"User":     "AUser",
+		},
+	}}
+
+	ep, err := transport.NewEndpoint("git@github.com:foo/bar.git")
+	c.Assert(err, IsNil)
+
+	cmd := &command{endpoint: ep}
+	err = cmd.setAuthFromEndpoint()
+	c.Assert(err, IsNil)
+	auth, ok := cmd.auth.(*PublicKeysCallback)
+	c.Assert(ok, Equals, true)
+	c.Assert(auth, NotNil)
+	c.Assert(auth.User, Equals, "AUser")
+}
+
 func (s *SuiteCommon) TestDefaultSSHConfigNil(c *C) {
 	defer func() {
 		DefaultSSHConfig = ssh_config.DefaultUserSettings
@@ -89,9 +114,8 @@ func (s *SuiteCommon) TestDefaultSSHConfigWildcard(c *C) {
 
 	ep, err := transport.NewEndpoint("git@github.com:foo/bar.git")
 	c.Assert(err, IsNil)
-
 	cmd := &command{endpoint: ep}
-	c.Assert(cmd.getHostWithPort(), Equals, "github.com:22")
+	c.Assert(cmd.getHostWithPort(), Equals, "github.com:42")
 }
 
 type mockSSHConfig struct {

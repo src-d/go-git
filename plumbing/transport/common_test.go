@@ -90,7 +90,7 @@ func (s *SuiteCommon) TestNewEndpointSCPLike(c *C) {
 	c.Assert(e.User, Equals, "git")
 	c.Assert(e.Password, Equals, "")
 	c.Assert(e.Host, Equals, "github.com")
-	c.Assert(e.Port, Equals, 22)
+	c.Assert(e.Port, Equals, 0)
 	c.Assert(e.Path, Equals, "user/repository.git")
 	c.Assert(e.String(), Equals, "ssh://git@github.com/user/repository.git")
 }

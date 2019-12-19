@@ -232,7 +232,7 @@ func parseSCPLike(endpoint string) (*Endpoint, bool) {
 	user, host, portStr, path := giturl.FindScpLikeComponents(endpoint)
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		port = 22
+		port = 0
 	}
 
 	return &Endpoint{

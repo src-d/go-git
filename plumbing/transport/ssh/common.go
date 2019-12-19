@@ -156,12 +156,22 @@ func dial(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
 }
 
 func (c *command) getHostWithPort() string {
-	if addr, found := c.doGetHostWithPortFromSSHConfig(); found {
-		return addr
-	}
-
 	host := c.endpoint.Host
 	port := c.endpoint.Port
+	if DefaultSSHConfig != nil {
+		configHost := DefaultSSHConfig.Get(c.endpoint.Host, "Hostname")
+		if configHost != "" {
+			host = configHost
+		}
+
+		configPort := DefaultSSHConfig.Get(c.endpoint.Host, "Port")
+		if configPort != "" && port == 0 {
+			if i, err := strconv.Atoi(configPort); err == nil {
+				port = i
+			}
+		}
+	}
+
 	if port <= 0 {
 		port = DefaultPort
 	}
@@ -169,37 +179,14 @@ func (c *command) getHostWithPort() string {
 	return fmt.Sprintf("%s:%d", host, port)
 }
 
-func (c *command) doGetHostWithPortFromSSHConfig() (addr string, found bool) {
-	if DefaultSSHConfig == nil {
-		return
-	}
-
-	host := c.endpoint.Host
-	port := c.endpoint.Port
-
-	configHost := DefaultSSHConfig.Get(c.endpoint.Host, "Hostname")
-	if configHost != "" {
-		host = configHost
-		found = true
-	}
-
-	if !found {
-		return
-	}
-
-	configPort := DefaultSSHConfig.Get(c.endpoint.Host, "Port")
-	if configPort != "" {
-		if i, err := strconv.Atoi(configPort); err == nil {
-			port = i
-		}
-	}
-
-	addr = fmt.Sprintf("%s:%d", host, port)
-	return
-}
-
 func (c *command) setAuthFromEndpoint() error {
 	var err error
+	if DefaultSSHConfig != nil {
+		usrConfig := DefaultSSHConfig.Get(c.endpoint.Host, "User")
+		if usrConfig != "" {
+			c.endpoint.User = usrConfig
+		}
+	}
 	c.auth, err = DefaultAuthBuilder(c.endpoint.User)
 	return err
 }
