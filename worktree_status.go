@@ -490,7 +490,7 @@ func (w *Worktree) doUpdateFileToIndex(e *index.Entry, filename string, h plumbi
 		return err
 	}
 
-	if e.Mode.IsRegular() {
+	if e.Mode.IsFile() {
 		e.Size = uint32(info.Size())
 	}
 
