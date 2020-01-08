@@ -22,10 +22,10 @@ import (
 	"strconv"
 	"strings"
 
-	giturl "gopkg.in/src-d/go-git.v4/internal/url"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
-	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
+	giturl "github.com/goabstract/go-git/internal/url"
+	"github.com/goabstract/go-git/plumbing"
+	"github.com/goabstract/go-git/plumbing/protocol/packp"
+	"github.com/goabstract/go-git/plumbing/protocol/packp/capability"
 )
 
 var (

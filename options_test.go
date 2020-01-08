@@ -2,7 +2,7 @@ package git
 
 import (
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	"github.com/goabstract/go-git/plumbing/object"
 )
 
 type OptionsSuite struct {

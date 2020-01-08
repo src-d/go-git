@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/utils/ioutil"
+	"github.com/goabstract/go-git/plumbing"
+	"github.com/goabstract/go-git/utils/ioutil"
 
 	"gopkg.in/src-d/go-billy.v4"
 )

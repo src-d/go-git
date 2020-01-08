@@ -11,15 +11,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
-	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
-	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport"
-	"gopkg.in/src-d/go-git.v4/storage/memory"
+	"github.com/goabstract/go-git/plumbing"
+	"github.com/goabstract/go-git/plumbing/format/packfile"
+	"github.com/goabstract/go-git/plumbing/protocol/packp"
+	"github.com/goabstract/go-git/plumbing/protocol/packp/capability"
+	"github.com/goabstract/go-git/plumbing/transport"
+	"github.com/goabstract/go-git/storage/memory"
 
+	fixtures "github.com/goabstract/go-git-fixtures"
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-git-fixtures.v3"
 )
 
 type ReceivePackSuite struct {

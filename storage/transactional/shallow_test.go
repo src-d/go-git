@@ -2,8 +2,8 @@ package transactional
 
 import (
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/storage/memory"
+	"github.com/goabstract/go-git/plumbing"
+	"github.com/goabstract/go-git/storage/memory"
 )
 
 var _ = Suite(&ShallowSuite{})

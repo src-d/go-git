@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"github.com/goabstract/go-git/plumbing/transport"
 
 	. "gopkg.in/check.v1"
 )

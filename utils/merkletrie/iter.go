@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/src-d/go-git.v4/utils/merkletrie/internal/frame"
-	"gopkg.in/src-d/go-git.v4/utils/merkletrie/noder"
+	"github.com/goabstract/go-git/utils/merkletrie/internal/frame"
+	"github.com/goabstract/go-git/utils/merkletrie/noder"
 )
 
 // Iter is an iterator for merkletries (only the trie part of the

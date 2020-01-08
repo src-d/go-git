@@ -11,9 +11,9 @@ import (
 	stdioutil "io/ioutil"
 	"sync"
 
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/utils/binary"
-	"gopkg.in/src-d/go-git.v4/utils/ioutil"
+	"github.com/goabstract/go-git/plumbing"
+	"github.com/goabstract/go-git/utils/binary"
+	"github.com/goabstract/go-git/utils/ioutil"
 )
 
 var (

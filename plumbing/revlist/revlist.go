@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
-	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"github.com/goabstract/go-git/plumbing"
+	"github.com/goabstract/go-git/plumbing/filemode"
+	"github.com/goabstract/go-git/plumbing/object"
+	"github.com/goabstract/go-git/plumbing/storer"
 )
 
 // Objects applies a complementary set. It gets all the hashes from all

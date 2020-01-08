@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/transport"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport/internal/common"
+	"github.com/goabstract/go-git/plumbing/transport"
+	"github.com/goabstract/go-git/plumbing/transport/internal/common"
 )
 
 // DefaultClient is the default local client.

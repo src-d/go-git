@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	"gopkg.in/src-d/go-git.v4/plumbing/transport"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport/test"
+	"github.com/goabstract/go-git/plumbing/transport"
+	"github.com/goabstract/go-git/plumbing/transport/test"
 
 	"github.com/gliderlabs/ssh"
 	stdssh "golang.org/x/crypto/ssh"
