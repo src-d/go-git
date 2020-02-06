@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/src-d/go-billy.v4/util"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -257,13 +258,18 @@ func diffTreeIsEquals(a, b noder.Hasher) bool {
 	return bytes.Equal(hashA, hashB)
 }
 
-// Add adds the file contents of a file in the worktree to the index. if the
-// file is already staged in the index no error is returned. If a file deleted
-// from the Workspace is given, the file is removed from the index. If a
-// directory given, adds the files and all his sub-directories recursively in
-// the worktree to the index. If any of the files is already staged in the index
-// no error is returned. When path is a file, the blob.Hash is returned.
-func (w *Worktree) Add(path string) (plumbing.Hash, error) {
+// add files and using .gitignore pattern
+func (w *Worktree) AddWithIgnore(path string) (plumbing.Hash, error) {
+	patterns, err := gitignore.ReadPatterns(w.Filesystem, nil)
+	if err != nil {
+		return plumbing.ZeroHash, err
+	}
+
+	patterns = append(patterns, w.Excludes...)
+	return w.innerAdd(path, patterns)
+}
+
+func (w *Worktree) innerAdd(path string, ignorePattern []gitignore.Pattern) (plumbing.Hash, error) {
 	// TODO(mcuadros): remove plumbing.Hash from signature at v5.
 	s, err := w.Status()
 	if err != nil {
@@ -280,9 +286,9 @@ func (w *Worktree) Add(path string) (plumbing.Hash, error) {
 
 	fi, err := w.Filesystem.Lstat(path)
 	if err != nil || !fi.IsDir() {
-		added, h, err = w.doAddFile(idx, s, path)
+		added, h, err = w.doAddFile(idx, s, path, ignorePattern)
 	} else {
-		added, err = w.doAddDirectory(idx, s, path)
+		added, err = w.doAddDirectory(idx, s, path, ignorePattern)
 	}
 
 	if err != nil {
@@ -296,10 +302,28 @@ func (w *Worktree) Add(path string) (plumbing.Hash, error) {
 	return h, w.r.Storer.SetIndex(idx)
 }
 
-func (w *Worktree) doAddDirectory(idx *index.Index, s Status, directory string) (added bool, err error) {
+// Add adds the file contents of a file in the worktree to the index. if the
+// file is already staged in the index no error is returned. If a file deleted
+// from the Workspace is given, the file is removed from the index. If a
+// directory given, adds the files and all his sub-directories recursively in
+// the worktree to the index. If any of the files is already staged in the index
+// no error is returned. When path is a file, the blob.Hash is returned.
+func (w *Worktree) Add(path string) (plumbing.Hash, error) {
+	return w.innerAdd(path, make([]gitignore.Pattern, 0))
+}
+
+func (w *Worktree) doAddDirectory(idx *index.Index, s Status, directory string, ignorePattern []gitignore.Pattern) (added bool, err error) {
 	files, err := w.Filesystem.ReadDir(directory)
 	if err != nil {
 		return false, err
+	}
+	if len(ignorePattern) > 0 {
+		m := gitignore.NewMatcher(ignorePattern)
+		matchPath := strings.Split(directory, string(os.PathSeparator))
+		if m.Match(matchPath, true) {
+			// ignore
+			return false, nil
+		}
 	}
 
 	for _, file := range files {
@@ -311,9 +335,9 @@ func (w *Worktree) doAddDirectory(idx *index.Index, s Status, directory string) 
 				// ignore special git directory
 				continue
 			}
-			a, err = w.doAddDirectory(idx, s, name)
+			a, err = w.doAddDirectory(idx, s, name, ignorePattern)
 		} else {
-			a, _, err = w.doAddFile(idx, s, name)
+			a, _, err = w.doAddFile(idx, s, name, ignorePattern)
 		}
 
 		if err != nil {
@@ -360,9 +384,9 @@ func (w *Worktree) AddGlob(pattern string) error {
 
 		var added bool
 		if fi.IsDir() {
-			added, err = w.doAddDirectory(idx, s, file)
+			added, err = w.doAddDirectory(idx, s, file, make([]gitignore.Pattern, 0))
 		} else {
-			added, _, err = w.doAddFile(idx, s, file)
+			added, _, err = w.doAddFile(idx, s, file, make([]gitignore.Pattern, 0))
 		}
 
 		if err != nil {
@@ -383,9 +407,17 @@ func (w *Worktree) AddGlob(pattern string) error {
 
 // doAddFile create a new blob from path and update the index, added is true if
 // the file added is different from the index.
-func (w *Worktree) doAddFile(idx *index.Index, s Status, path string) (added bool, h plumbing.Hash, err error) {
+func (w *Worktree) doAddFile(idx *index.Index, s Status, path string, ignorePattern []gitignore.Pattern) (added bool, h plumbing.Hash, err error) {
 	if s.File(path).Worktree == Unmodified {
 		return false, h, nil
+	}
+	if len(ignorePattern) > 0 {
+		m := gitignore.NewMatcher(ignorePattern)
+		matchPath := strings.Split(path, string(os.PathSeparator))
+		if m.Match(matchPath, false) {
+			// ignore
+			return false, h, nil
+		}
 	}
 
 	h, err = w.copyFileToStorage(path)
