@@ -33,6 +33,9 @@ func (s *ConfigSuite) TestUnmarshal(c *C) {
 [branch "master"]
         remote = origin
         merge = refs/heads/master
+[user]
+		name = Soandso
+		email = soandso@example.com
 `)
 
 	cfg := NewConfig()
@@ -58,6 +61,8 @@ func (s *ConfigSuite) TestUnmarshal(c *C) {
 	c.Assert(cfg.Submodules["qux"].Branch, Equals, "bar")
 	c.Assert(cfg.Branches["master"].Remote, Equals, "origin")
 	c.Assert(cfg.Branches["master"].Merge, Equals, plumbing.ReferenceName("refs/heads/master"))
+	c.Assert(cfg.User.Name, Equals, "Soandso")
+	c.Assert(cfg.User.Email, Equals, "soandso@example.com")
 }
 
 func (s *ConfigSuite) TestMarshal(c *C) {
@@ -80,6 +85,9 @@ func (s *ConfigSuite) TestMarshal(c *C) {
 [branch "master"]
 	remote = origin
 	merge = refs/heads/master
+[user]
+	name = Soandso
+	email = soandso@example.com
 `)
 
 	cfg := NewConfig()
@@ -112,10 +120,11 @@ func (s *ConfigSuite) TestMarshal(c *C) {
 		Remote: "origin",
 		Merge:  "refs/heads/master",
 	}
+	cfg.User.Name = "Soandso"
+	cfg.User.Email = "soandso@example.com"
 
 	b, err := cfg.Marshal()
 	c.Assert(err, IsNil)
-
 	c.Assert(string(b), Equals, string(output))
 }
 
@@ -135,6 +144,9 @@ func (s *ConfigSuite) TestUnmarshalMarshal(c *C) {
 [branch "master"]
 	remote = origin
 	merge = refs/heads/master
+[user]
+	name = Soandso
+	email = soandso@example.com
 `)
 
 	cfg := NewConfig()

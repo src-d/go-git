@@ -44,7 +44,6 @@ func ApplyDelta(target, base plumbing.EncodedObject, delta []byte) error {
 		return err
 	}
 
-
 	target.SetSize(int64(dst.Len()))
 
 	b := byteSlicePool.Get().([]byte)
@@ -108,7 +107,7 @@ func patchDelta(dst *bytes.Buffer, src, delta []byte) error {
 				invalidOffsetSize(offset, sz, srcSz) {
 				break
 			}
-			dst.Write(src[offset:offset+sz])
+			dst.Write(src[offset : offset+sz])
 			remainingTargetSz -= sz
 		} else if isCopyFromDelta(cmd) {
 			sz := uint(cmd) // cmd is the size itself

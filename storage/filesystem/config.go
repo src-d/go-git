@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"fmt"
 	stdioutil "io/ioutil"
 	"os"
 
@@ -15,11 +16,64 @@ type ConfigStorage struct {
 
 func (c *ConfigStorage) Config() (conf *config.Config, err error) {
 	cfg := config.NewConfig()
+	var b []byte
+	data := []byte("\n")
 
+	if b, err = c.systemConfig(); err != nil {
+		return nil, err
+	}
+	data = append(data, b...)
+	data = append(data, []byte("\n")...)
+
+	if b, err = c.userConfig(); err != nil {
+		return nil, err
+	}
+	data = append(data, b...)
+	data = append(data, []byte("\n")...)
+
+	if b, err = c.localConfig(); err != nil {
+		return nil, err
+	}
+	data = append(data, b...)
+	data = append(data, []byte("\n")...)
+
+	if err = cfg.Unmarshal(data); err != nil {
+		return nil, err
+	}
+
+	return cfg, err
+}
+
+func (c *ConfigStorage) systemConfig() (b []byte, err error) {
+	if b, err = c.dir.SystemConfig(); err != nil {
+		if os.IsNotExist(err) {
+			return []byte{}, nil
+		}
+
+		return nil, err
+	}
+
+	return b, nil
+}
+
+func (c *ConfigStorage) userConfig() (b []byte, err error) {
+	if b, err = c.dir.UserConfig(); err != nil {
+		fmt.Println("USER ERROR: ", err)
+		if os.IsNotExist(err) {
+			return []byte{}, nil
+		}
+
+		return nil, err
+	}
+
+	return b, nil
+}
+
+func (c *ConfigStorage) localConfig() (b []byte, err error) {
 	f, err := c.dir.Config()
 	if err != nil {
 		if os.IsNotExist(err) {
-			return cfg, nil
+			return []byte{}, nil
 		}
 
 		return nil, err
@@ -27,16 +81,12 @@ func (c *ConfigStorage) Config() (conf *config.Config, err error) {
 
 	defer ioutil.CheckClose(f, &err)
 
-	b, err := stdioutil.ReadAll(f)
+	b, err = stdioutil.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = cfg.Unmarshal(b); err != nil {
-		return nil, err
-	}
-
-	return cfg, err
+	return b, nil
 }
 
 func (c *ConfigStorage) SetConfig(cfg *config.Config) (err error) {
