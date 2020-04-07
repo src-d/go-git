@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 
 	"gopkg.in/src-d/go-git.v4/internal/url"
 	format "gopkg.in/src-d/go-git.v4/plumbing/format/config"
@@ -44,6 +45,10 @@ type Config struct {
 		// CommentChar is the character indicating the start of a
 		// comment for commands like commit and tag
 		CommentChar string
+		// FileMode is normally set to true to tell git to respect and store
+		// the executable bit, but it may be set to false in certain cases where
+		// those aren't handled correctly, most notably on Windows.
+		FileMode bool
 	}
 
 	Pack struct {
@@ -116,6 +121,7 @@ const (
 	fetchKey         = "fetch"
 	urlKey           = "url"
 	bareKey          = "bare"
+	fileModeKey      = "filemode"
 	worktreeKey      = "worktree"
 	commentCharKey   = "commentChar"
 	windowKey        = "window"
@@ -150,11 +156,31 @@ func (c *Config) Unmarshal(b []byte) error {
 	return c.unmarshalRemotes()
 }
 
+// Based off of git source code
+// https://github.com/git/git/blob/2d3b1c576c85b7f5db1f418907af00ab88e0c303/config.c#L1042-L1057
+func parseBool(opts format.Options, key string, def bool) bool {
+	v, exists := opts.GetValue(key)
+	if !exists {
+		return def
+	}
+	switch strings.ToLower(v) {
+	case "false", "no", "off":
+		return false
+	case "true", "yes", "on":
+		return true
+	}
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return def
+	}
+	return i != 0
+}
+
 func (c *Config) unmarshalCore() {
 	s := c.Raw.Section(coreSection)
-	if s.Options.Get(bareKey) == "true" {
-		c.Core.IsBare = true
-	}
+
+	c.Core.IsBare = parseBool(s.Options, bareKey, c.Core.IsBare)
+	c.Core.FileMode = parseBool(s.Options, fileModeKey, true)
 
 	c.Core.Worktree = s.Options.Get(worktreeKey)
 	c.Core.CommentChar = s.Options.Get(commentCharKey)
@@ -236,6 +262,7 @@ func (c *Config) Marshal() ([]byte, error) {
 func (c *Config) marshalCore() {
 	s := c.Raw.Section(coreSection)
 	s.SetOption(bareKey, fmt.Sprintf("%t", c.Core.IsBare))
+	s.SetOption(fileModeKey, fmt.Sprintf("%t", c.Core.FileMode))
 
 	if c.Core.Worktree != "" {
 		s.SetOption(worktreeKey, c.Core.Worktree)

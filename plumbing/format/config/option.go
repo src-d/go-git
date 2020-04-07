@@ -45,13 +45,19 @@ func (opts Options) GoString() string {
 // In order to get all possible values for the same key,
 // use GetAll.
 func (opts Options) Get(key string) string {
+	ret, _ := opts.GetValue(key)
+	return ret
+}
+
+// GetValue is similar to Get, but returns also whether the value was found.
+func (opts Options) GetValue(key string) (string, bool) {
 	for i := len(opts) - 1; i >= 0; i-- {
 		o := opts[i]
 		if o.IsKey(key) {
-			return o.Value
+			return o.Value, true
 		}
 	}
-	return ""
+	return "", false
 }
 
 // GetAll returns all possible values for the same key.
