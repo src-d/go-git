@@ -76,7 +76,7 @@ aql> SELECT name, target, url FROM test.reference
 
 ### Reading the repository
 
-Running the `log` command, a `git log --online` like result is printed:
+Running the `log` command, a `git log --oneline` like result is printed:
 
 ```sh
 go-git-aerospike log https://github.com/src-d/flamingo.git
