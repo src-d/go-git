@@ -2,6 +2,7 @@
 
 ![go-git logo](https://cdn.rawgit.com/src-d/artwork/02036484/go-git/files/go-git-github-readme-header.png)
 [![GoDoc](https://godoc.org/gopkg.in/src-d/go-git.v4?status.svg)](https://godoc.org/github.com/src-d/go-git) [![Build Status](https://travis-ci.org/src-d/go-git.svg)](https://travis-ci.org/src-d/go-git) [![Build status](https://ci.appveyor.com/api/projects/status/nyidskwifo4py6ub?svg=true)](https://ci.appveyor.com/project/mcuadros/go-git) [![codecov.io](https://codecov.io/github/src-d/go-git/coverage.svg)](https://codecov.io/github/src-d/go-git) [![Go Report Card](https://goreportcard.com/badge/github.com/src-d/go-git)](https://goreportcard.com/report/github.com/src-d/go-git)
+[![TODOs](https://img.shields.io/endpoint?url=https://api.tickgit.com/badge?repo=github.com/src-d/go-git)](https://www.tickgit.com/browse?repo=github.com/src-d/go-git)
 
 *go-git* is a highly extensible git implementation library written in **pure Go**.
 
