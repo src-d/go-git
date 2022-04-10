@@ -286,6 +286,18 @@ func (p *Parser) resolveDeltas() error {
 				if err := p.resolveObject(ioutil.Discard, child, content); err != nil {
 					return err
 				}
+
+				extRef, ok := p.oiByHash[child.SHA1]
+				if ok && extRef.ExternalRef {
+					// replace parent placeholder
+					p.oiByHash[child.SHA1] = child
+
+					// adopt children
+					child.Children = extRef.Children
+					for _, c := range child.Children {
+						c.Parent = child
+					}
+				}
 			}
 
 			// Remove the delta from the cache.
